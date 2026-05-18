@@ -99,6 +99,32 @@ export default async function DashboardPage() {
       .in("status", ["pending", "scheduled", "in_progress"]),
   ]);
 
+  // Today's full schedule for the bottom panel
+  const { data: todayOrdersRaw } = await supabase
+    .from("orders")
+    .select(
+      `id, order_code, scheduled_at, status, total,
+       customer:customers(name),
+       address:customer_addresses(district),
+       items:order_items(technician_id)`,
+    )
+    .gte("scheduled_at", today.start)
+    .lt("scheduled_at", today.end)
+    .neq("status", "cancelled")
+    .order("scheduled_at");
+
+  type TodayRow = {
+    id: string;
+    order_code: string;
+    scheduled_at: string;
+    status: string;
+    total: number;
+    customer: { name: string } | null;
+    address: { district: string } | null;
+    items: { technician_id: string | null }[];
+  };
+  const todayOrders = (todayOrdersRaw as TodayRow[] | null) ?? [];
+
   const orders = (monthOrders as MonthOrder[] | null) ?? [];
 
   let monthRevenue = 0;
@@ -154,6 +180,12 @@ export default async function DashboardPage() {
       .sort((a, b) => b.total - a.total);
 
   const maxTotal = Math.max(1, ...technicianRows.map((t) => t.total));
+
+  // Resolve technician names for today's schedule
+  const techNameMap = new Map(
+    ((techProfiles as { id: string; name: string; role: string; active: boolean }[] | null) ?? [])
+      .map((p) => [p.id, p.name] as const),
+  );
 
   return (
     <div className="p-8 space-y-6">
@@ -289,6 +321,58 @@ export default async function DashboardPage() {
                 );
               })}
             </div>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>今日案件（{todayOrders.length}）</CardTitle>
+        </CardHeader>
+        <CardBody className="p-0">
+          {todayOrders.length === 0 ? (
+            <p className="p-5 text-sm text-zinc-500">今天沒有排定的案件</p>
+          ) : (
+            <ul className="divide-y divide-zinc-200">
+              {todayOrders.map((o) => {
+                const techIds = Array.from(
+                  new Set(
+                    o.items
+                      .map((it) => it.technician_id)
+                      .filter(Boolean) as string[],
+                  ),
+                );
+                const techs = techIds
+                  .map((tid) => techNameMap.get(tid))
+                  .filter(Boolean) as string[];
+                const time = new Date(o.scheduled_at).toLocaleTimeString(
+                  "zh-TW",
+                  { hour: "2-digit", minute: "2-digit", hour12: false },
+                );
+                return (
+                  <li key={o.id}>
+                    <Link
+                      href={`/orders/${o.id}`}
+                      className="flex items-center gap-3 px-5 py-2.5 text-sm transition-colors hover:bg-zinc-50"
+                    >
+                      <span className="w-14 font-mono text-zinc-900">{time}</span>
+                      <span className="w-32 truncate font-medium text-zinc-900">
+                        {o.customer?.name ?? "—"}
+                      </span>
+                      <span className="hidden w-24 truncate text-xs text-zinc-500 md:inline">
+                        {o.address?.district ?? ""}
+                      </span>
+                      <span className="flex-1 text-xs text-zinc-500 truncate">
+                        {techs.length > 0 ? `師傅：${techs.join("、")}` : "未指派"}
+                      </span>
+                      <span className="text-xs font-medium text-zinc-700">
+                        {o.status === "done" ? "已完成" : "未完成"}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </CardBody>
       </Card>
