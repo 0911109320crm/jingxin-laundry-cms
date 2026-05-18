@@ -1,0 +1,241 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ChevronLeft, Phone, MapPin } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/dal";
+import { redirect } from "next/navigation";
+import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import {
+  StatusBadge,
+  PaymentBadge,
+  SettlementBadge,
+} from "@/components/orders/StatusBadges";
+import { formatDateTime, formatNTD } from "@/lib/utils";
+import type { OrderInput } from "@/lib/validators/order";
+import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
+import { StaffActions } from "./StaffActions";
+
+type Detail = {
+  id: string;
+  order_code: string;
+  status: OrderInput["status"];
+  payment_method: OrderInput["payment_method"];
+  settlement_status: "pending" | "settled" | "not_required";
+  scheduled_at: string | null;
+  service_at: string | null;
+  subtotal: number;
+  adjustments_total: number;
+  total: number;
+  note: string | null;
+  customer: { name: string; phone: string } | null;
+  address: { county: string; district: string; address: string } | null;
+  items: {
+    id: string;
+    quantity: number;
+    unit_price: number;
+    subtotal: number;
+    tag: string | null;
+    note: string | null;
+    technician_id: string | null;
+    service: { code: string; name: string } | null;
+    machine: { type: string; brand: string | null; model: string | null } | null;
+  }[];
+  adjustments: {
+    id: string;
+    name_snapshot: string;
+    type: "addon" | "discount";
+    amount: number;
+  }[];
+};
+
+export default async function StaffOrderPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const me = await getCurrentUser();
+  if (!me) redirect("/login");
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("orders")
+    .select(
+      `id, order_code, status, payment_method, settlement_status,
+       scheduled_at, service_at, subtotal, adjustments_total, total, note,
+       customer:customers(name, phone),
+       address:customer_addresses(county, district, address),
+       items:order_items(id, quantity, unit_price, subtotal, tag, note,
+                         technician_id,
+                         service:service_items(code, name),
+                         machine:machines(type, brand, model)),
+       adjustments:order_adjustments(id, name_snapshot, type, amount)`,
+    )
+    .eq("id", id)
+    .single();
+
+  const o = data as Detail | null;
+  if (!o) notFound();
+
+  const myItems = o.items.filter((it) => it.technician_id === me.id);
+
+  return (
+    <div className="p-4 space-y-3">
+      <Link
+        href="/staff"
+        className="inline-flex items-center gap-1 text-sm text-zinc-500"
+      >
+        <ChevronLeft className="h-4 w-4" /> 回今日案件
+      </Link>
+
+      <header className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-sm text-zinc-500">{o.order_code}</span>
+          <StatusBadge value={o.status} />
+          <PaymentBadge value={o.payment_method} />
+          {o.settlement_status !== "not_required" && (
+            <SettlementBadge value={o.settlement_status} />
+          )}
+        </div>
+        <p className="text-xs text-zinc-500">
+          預約：{formatDateTime(o.scheduled_at)}
+        </p>
+      </header>
+
+      {o.customer && (
+        <Card>
+          <CardBody className="space-y-2">
+            <p className="text-base font-bold text-zinc-900">
+              {o.customer.name}
+            </p>
+            <a
+              href={`tel:${o.customer.phone}`}
+              className="inline-flex items-center gap-2 text-sm text-brand-700"
+            >
+              <Phone className="h-4 w-4" /> {o.customer.phone}
+            </a>
+            {o.address && (
+              <p className="flex items-start gap-2 text-sm text-zinc-700">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    `${o.address.county}${o.address.district}${o.address.address}`,
+                  )}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="text-brand-700 underline"
+                >
+                  {o.address.county} {o.address.district} {o.address.address}
+                </a>
+              </p>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>我的服務項目（{myItems.length}）</CardTitle>
+        </CardHeader>
+        <CardBody className="p-0">
+          {myItems.length === 0 ? (
+            <p className="p-4 text-sm text-zinc-500">
+              這筆訂單沒有分配給你的項目
+            </p>
+          ) : (
+            <ul className="divide-y divide-zinc-200">
+              {myItems.map((it) => (
+                <li
+                  key={it.id}
+                  className="grid grid-cols-[1fr_auto] gap-2 px-4 py-3 text-sm"
+                >
+                  <div className="space-y-1">
+                    {it.service && (
+                      <p className="font-medium text-zinc-900">
+                        {it.service.name}
+                      </p>
+                    )}
+                    <p className="text-xs text-zinc-500">
+                      {it.machine
+                        ? `${MACHINE_TYPE_LABEL[it.machine.type as keyof typeof MACHINE_TYPE_LABEL] ?? it.machine.type} · ${[it.machine.brand, it.machine.model].filter(Boolean).join(" ") || "未填型號"}`
+                        : "未指定機器"}
+                      {it.tag && ` · ${it.tag}`}
+                    </p>
+                    {it.note && (
+                      <p className="text-xs text-amber-700">⚠ {it.note}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-zinc-400">
+                      {formatNTD(it.unit_price)} × {it.quantity}
+                    </p>
+                    <p className="font-mono font-medium">
+                      {formatNTD(it.subtotal)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardBody>
+      </Card>
+
+      {o.adjustments.length > 0 && (
+        <Card>
+          <CardBody className="p-0">
+            <ul className="divide-y divide-zinc-200">
+              {o.adjustments.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex items-center justify-between px-4 py-2 text-sm"
+                >
+                  <span>
+                    {a.name_snapshot}{" "}
+                    <span
+                      className={
+                        a.type === "addon"
+                          ? "text-orange-600"
+                          : "text-blue-600"
+                      }
+                    >
+                      ({a.type === "addon" ? "加" : "折"})
+                    </span>
+                  </span>
+                  <span className="font-mono">
+                    {a.type === "addon" ? "+" : "-"}
+                    {formatNTD(a.amount)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
+
+      <Card>
+        <CardBody className="flex items-center justify-between">
+          <span className="text-sm text-zinc-600">應收總額</span>
+          <span className="text-2xl font-bold text-brand-700 font-mono">
+            {formatNTD(o.total)}
+          </span>
+        </CardBody>
+      </Card>
+
+      {o.note && (
+        <Card>
+          <CardHeader>
+            <CardTitle>備註</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <p className="whitespace-pre-wrap text-sm text-zinc-700">{o.note}</p>
+          </CardBody>
+        </Card>
+      )}
+
+      <StaffActions
+        orderId={o.id}
+        currentPayment={o.payment_method}
+        isDone={o.status === "done"}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,173 @@
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireRole } from "@/lib/dal";
+import { CalendarView, type CalendarOrder } from "./CalendarView";
+import { PendingPanel, type PendingOrder } from "./PendingPanel";
+import { TechTabs, type TechOption } from "./TechTabs";
+
+type SP = Promise<{ tech?: string }>;
+
+type ScheduledRaw = {
+  id: string;
+  order_code: string;
+  scheduled_at: string;
+  scheduled_end_at: string | null;
+  status: CalendarOrder["status"];
+  total: number;
+  customer: { name: string; phone: string } | null;
+  address: { county: string; district: string; address: string } | null;
+  items: {
+    technician_id: string | null;
+    service: { name: string } | null;
+  }[];
+};
+
+type PendingRaw = {
+  id: string;
+  order_code: string;
+  total: number;
+  customer: { name: string; phone: string } | null;
+  address: {
+    county: string;
+    district: string;
+    address: string;
+  } | null;
+  items: {
+    technician_id: string | null;
+    service: { name: string } | null;
+  }[];
+};
+
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: SP;
+}) {
+  await requireRole(["owner", "manager"]);
+  const sp = await searchParams;
+  const techFilter = sp.tech ?? "all";
+
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  const [
+    { data: techsRaw },
+    { data: scheduledRaw },
+    { data: pendingRaw },
+  ] = await Promise.all([
+    admin
+      .from("user_profiles")
+      .select("id, name")
+      .eq("active", true)
+      .eq("role", "technician")
+      .order("name"),
+    supabase
+      .from("orders")
+      .select(
+        `id, order_code, scheduled_at, scheduled_end_at, status, total,
+         customer:customers(name, phone),
+         address:customer_addresses(county, district, address),
+         items:order_items(technician_id, service:service_items(name))`,
+      )
+      .not("scheduled_at", "is", null)
+      .neq("status", "cancelled")
+      .order("scheduled_at"),
+    supabase
+      .from("orders")
+      .select(
+        `id, order_code, total,
+         customer:customers(name, phone),
+         address:customer_addresses(county, district, address),
+         items:order_items(technician_id, service:service_items(name))`,
+      )
+      .eq("status", "pending")
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const techs = (techsRaw as TechOption[] | null) ?? [];
+  const technicianIds = techs.map((t) => t.id);
+  const nameMap = new Map(techs.map((t) => [t.id, t.name]));
+
+  // Filter scheduled by selected technician (items.some)
+  let scheduledFiltered = (scheduledRaw as ScheduledRaw[] | null) ?? [];
+  if (techFilter !== "all") {
+    scheduledFiltered = scheduledFiltered.filter((o) =>
+      o.items.some((it) => it.technician_id === techFilter),
+    );
+  }
+
+  const orders: CalendarOrder[] = scheduledFiltered.map((o) => {
+    const techId = o.items.find((it) => it.technician_id)?.technician_id ?? null;
+    const services = o.items
+      .map((it) => it.service?.name)
+      .filter(Boolean) as string[];
+    return {
+      id: o.id,
+      order_code: o.order_code,
+      scheduled_at: o.scheduled_at,
+      scheduled_end_at: o.scheduled_end_at,
+      status: o.status,
+      total: Number(o.total),
+      customer_name: o.customer?.name ?? "—",
+      customer_phone: o.customer?.phone ?? null,
+      district: o.address?.district ?? null,
+      full_address: o.address
+        ? `${o.address.county} ${o.address.district} ${o.address.address}`
+        : null,
+      service_summary: services.join("、"),
+      technician_id: techId,
+      technician_name: techId ? nameMap.get(techId) ?? null : null,
+    };
+  });
+
+  const pending: PendingOrder[] = ((pendingRaw as PendingRaw[] | null) ?? []).map(
+    (o) => {
+      const services = o.items
+        .map((it) => it.service?.name)
+        .filter(Boolean) as string[];
+      return {
+        id: o.id,
+        order_code: o.order_code,
+        customer_name: o.customer?.name ?? "—",
+        customer_phone: o.customer?.phone ?? "—",
+        address: o.address
+          ? `${o.address.county} ${o.address.district} ${o.address.address}`
+          : "—",
+        service_summary:
+          services.length > 0
+            ? `${services.length} 項：${services.join("、")}`
+            : "未填服務",
+        total: Number(o.total),
+        has_technician: o.items.some((it) => it.technician_id),
+      };
+    },
+  );
+
+  const subtitle =
+    techFilter === "all"
+      ? "顯示全部師傅的案件"
+      : `只顯示「${nameMap.get(techFilter) ?? "未知"}」的案件`;
+
+  return (
+    <div className="p-6 space-y-4">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900">月曆排案</h1>
+          <p className="text-sm text-zinc-500">{subtitle}</p>
+        </div>
+        <TechTabs current={techFilter} techs={techs} />
+      </header>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
+        <PendingPanel orders={pending} />
+        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <CalendarView
+            orders={orders}
+            technicianIds={technicianIds}
+            techFilter={techFilter}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
