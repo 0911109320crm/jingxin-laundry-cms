@@ -63,10 +63,11 @@ type Props = {
   services: Service[];
   adjustments: Adjustment[];
   mode: "create" | "edit";
+  /** Edit mode: full snapshot with id. Create mode (clone): no id required. */
   initial?: OrderInput & {
-    id: string;
-    addresses: Address[];
-    machines: Machine[];
+    id?: string;
+    addresses?: Address[];
+    machines?: Machine[];
   };
   defaultCustomerId?: string;
   defaultScheduledAt?: string;
@@ -110,18 +111,24 @@ export function OrderForm({
     formState: { errors },
   } = useForm<OrderInput>({
     resolver: zodResolver(OrderSchema),
-    defaultValues: initial ?? {
-      customer_id: defaultCustomerId ?? "",
-      address_id: "",
-      scheduled_at: defaultScheduledAt ?? "",
-      service_at: "",
-      status: "scheduled",
-      payment_method: "unpaid",
-      note: "",
-      source: "",
-      items: [emptyItem],
-      adjustments: [],
-    },
+    defaultValues: initial
+      ? {
+          ...initial,
+          scheduled_at: initial.scheduled_at ?? (defaultScheduledAt ?? ""),
+        }
+      : {
+          customer_id: defaultCustomerId ?? "",
+          address_id: "",
+          scheduled_at: defaultScheduledAt ?? "",
+          scheduled_end_at: "",
+          service_at: "",
+          status: "scheduled",
+          payment_method: "unpaid",
+          note: "",
+          source: "",
+          items: [emptyItem],
+          adjustments: [],
+        },
   });
 
   const itemArr = useFieldArray({ control, name: "items" });
@@ -173,7 +180,7 @@ export function OrderForm({
       const res =
         mode === "create"
           ? await createOrderAction(values)
-          : await updateOrderAction(initial!.id, values);
+          : await updateOrderAction(initial!.id!, values);
       if (!res.ok) {
         setServerError(res.error);
         return;

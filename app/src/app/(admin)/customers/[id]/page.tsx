@@ -344,7 +344,14 @@ export default async function CustomerDetailPage({
                   .map((tid) => techMap.get(tid))
                   .filter(Boolean) as string[];
                 return (
-                  <li key={o.id}>
+                  <li key={o.id} className="group relative">
+                    <Link
+                      href={`/orders/new?clone=${o.id}&from=customer&cid=${customer.id}`}
+                      className="absolute right-2 top-2 z-10 hidden rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-700 hover:bg-brand-100 group-hover:block"
+                      title="複製此單為新訂單"
+                    >
+                      複製此單
+                    </Link>
                     <Link
                       href={`/orders/${o.id}?from=customer&cid=${customer.id}`}
                       className="flex flex-col gap-2 px-5 py-3 transition-colors hover:bg-zinc-50 md:flex-row md:items-center md:justify-between"
