@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>淨新洗衣管理系統 - 功能清單</title>
+<style>
+  :root {
+    --brand: #4f46e5;
+    --brand-dark: #4338ca;
+    --brand-soft: #eef2ff;
+    --green: #16a34a;
+    --green-soft: #f0fdf4;
+    --amber: #f59e0b;
+    --amber-soft: #fffbeb;
+    --gray-50: #fafafa;
+    --gray-100: #f4f4f5;
+    --gray-200: #e4e4e7;
+    --gray-300: #d4d4d8;
+    --gray-500: #71717a;
+    --gray-700: #3f3f46;
+    --gray-900: #18181b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    color: var(--gray-900);
+    background: var(--gray-50);
+    line-height: 1.6;
+  }
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  header.page {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+    color: white;
+    padding: 48px 24px;
+    margin-bottom: 32px;
+  }
+  header.page .inner {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  header.page h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  header.page p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.85;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .meta .chip {
+    background: rgba(255,255,255,0.18);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .stat {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .stat .label {
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .stat .value {
+    margin-top: 4px;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gray-900);
+  }
+  h2 {
+    font-size: 20px;
+    margin: 40px 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .badge {
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  h2.done .badge { background: var(--green-soft); color: var(--green); }
+  h2.todo .badge { background: var(--amber-soft); color: var(--amber); }
+  h3 {
+    font-size: 15px;
+    margin: 20px 0 8px;
+    color: var(--gray-700);
+    font-weight: 700;
+  }
+  .group {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  ul.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  ul.feature-list li {
+    position: relative;
+    padding: 6px 0 6px 28px;
+    font-size: 14px;
+    color: var(--gray-700);
+  }
+  ul.feature-list li:before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 14px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--green);
+    border: 3px solid var(--green-soft);
+  }
+  ul.feature-list.todo li:before {
+    background: var(--amber);
+    border-color: var(--amber-soft);
+  }
+  ul.feature-list.parked li:before {
+    background: var(--gray-300);
+    border-color: var(--gray-100);
+  }
+  .pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .pill.phase1 { background: var(--brand-soft); color: var(--brand-dark); }
+  .pill.phase2 { background: #ecfeff; color: #0891b2; }
+  .pill.phase3 { background: #fdf2f8; color: #be185d; }
+  .pill.v2 { background: var(--gray-100); color: var(--gray-500); }
+  .pill.block { background: #fee2e2; color: #b91c1c; }
+  .footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--gray-200);
+    text-align: center;
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+</style>
+</head>
+<body>
+<header class="page">
+  <div class="inner">
+    <h1>淨新洗衣管理系統 - 功能清單</h1>
+    <p>淨新洗衣機清潔工坊 後台管理系統 - Ren Studio</p>
+    <div class="meta">
+      <span class="chip">Next.js 16 + React 19</span>
+      <span class="chip">Supabase</span>
+      <span class="chip">Tailwind CSS v4</span>
+      <span class="chip">PWA</span>
+      <span class="chip">月費 NT$ 0</span>
+      <span class="chip">產出日期 2026-05-19</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="stats">
+    <div class="stat"><div class="label">資料表</div><div class="value">13</div></div>
+    <div class="stat"><div class="label">Migrations</div><div class="value">4</div></div>
+    <div class="stat"><div class="label">路由</div><div class="value">28</div></div>
+    <div class="stat"><div class="label">已完成功能</div><div class="value">60+</div></div>
+    <div class="stat"><div class="label">夜班 commits</div><div class="value">18</div></div>
+  </div>
+
+  <h2 class="done"><span>已完成功能</span><span class="badge">DONE</span></h2>
+
+  <div class="group">
+    <h3>客戶管理 <span class="pill phase1">Phase 1</span></h3>
+    <ul class="feature-list">
+      <li>客戶 CRUD - 編號 / 姓名 / 電話 / 來源 / 備註 / 加入日期</li>
+      <li>多地址（同一客戶可存多個地址，標籤化）</li>
+      <li>多機型（一客戶多台機器，類型 / 廠牌 / 型號 / 備註）</li>
+      <li>全域模糊搜尋（姓名 / 電話 / 編號 / 備註）</li>
+      <li>縣市 + 鄉鎮二段下拉篩選（台中 / 彰化 / 南投 / 雲林共約 90 個鄉鎮）</li>
+      <li>客戶列表 KPI（總客戶數、本月活躍、即將到期）</li>
+      <li>客戶列表 CSV 匯出（UTF-8 BOM，Excel 直開）</li>
+      <li>客戶詳情 - 累計消費 / 服務次數 / 距上次服務 / 平均週期 / 臨時取消次數</li>
+      <li>服務歷史列表（含取消原因顯示）</li>
+      <li>一鍵新增訂單按鈕（自動帶客戶 ID）</li>
+      <li>服務歷史 hover「複製此單」按鈕</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>訂單管理 <span class="pill phase2">Phase 2</span></h3>
+    <ul class="feature-list">
+      <li>訂單 CRUD - 客戶 / 地址 / 時間 / 狀態 / 收款方式</li>
+      <li>多服務項目（一單可多項，各項可指派不同師傅）</li>
+      <li>多加減項（加大 / 其他加價 / 折扣，可自訂名稱金額）</li>
+      <li>訂單編號自動產生 YYYYMMDD-NNN（每日重置流水號）</li>
+      <li>應收總額即時試算（含加減項）</li>
+      <li>時長輸入（分鐘）取代結束時間 picker - 快選 60 / 90 / 120 / 180 chips</li>
+      <li>選客戶後自動帶出該客戶地址與機器列表</li>
+      <li>服務項目選擇後自動帶出預設價</li>
+      <li>訂單列表 - 廣義搜尋 + 狀態 / 收款 / 回繳三維篩選</li>
+      <li>訂單列表 KPI（筆數 / 總金額 / 已完成金額）</li>
+      <li>訂單詳情 - 完整資訊 + 狀態 badges + 金額分解</li>
+      <li>訂單一鍵複製為新訂單（保留服務內容，清空日期）</li>
+      <li>訂單快速取消（月曆 × 按鈕，prompt 原因記錄）</li>
+      <li>取消原因可見化（訂單詳情 alert + 客戶歷史顯示）</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>收款 / 回繳雙欄位機制 <span class="pill phase2">Phase 2</span></h3>
+    <ul class="feature-list">
+      <li>收款方式 - 未收款 / 已收款-現金 / 匯款 / 刷卡 / LINE Pay</li>
+      <li>回繳狀態 - 待回繳 / 已回繳 / 免回繳</li>
+      <li>DB trigger 自動連動（匯款類別 → 自動免回繳）</li>
+      <li>師傅待回繳總覽頁 - 按師傅分卡顯示待回繳總額 + 訂單明細</li>
+      <li>一鍵「全部標記已回繳」批次核帳</li>
+      <li>師傅 PWA「我收到現金了」一鍵切收款方式</li>
+      <li>師傅 PWA 自己 banner 顯示累計待回繳金額</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>月曆排案 <span class="pill phase2">Phase 2</span></h3>
+    <ul class="feature-list">
+      <li>FullCalendar 月 / 週視圖切換</li>
+      <li>師傅切換 tabs（全部 / 各師傅）+ 左右箭頭循環</li>
+      <li>每位師傅獨立顏色，案件 event 用對應色塊</li>
+      <li>左側待派工面板 - 完整地址 + 服務摘要</li>
+      <li>外部拖拉派工 - 從待派工面板拖到月曆某日，自動排程 + 自動指派該師傅</li>
+      <li>月曆 event 可拖拉改日期</li>
+      <li>Event 顯示時間區段（10:00 - 11:30）</li>
+      <li>Hover tooltip 顯示完整資訊（訂單編號 / 客戶 / 電話 / 地址 / 師傅 / 服務 / 金額）</li>
+      <li>每日總額 badge（日格右上角顯示營業額）</li>
+      <li>快速取消按鈕（hover 顯示 ×）</li>
+      <li>點空白日跳新訂單表單（帶日期）</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>師傅 PWA <span class="pill phase2">Phase 2</span></h3>
+    <ul class="feature-list">
+      <li>師傅獨立帳號 + 手機優化介面</li>
+      <li>RLS 限制只看自己被指派的案件</li>
+      <li>今日案件清單（前後天切換）</li>
+      <li>案件詳情 - 客戶 / 地址 / 電話一鍵撥打 / Google Maps 一鍵導航</li>
+      <li>顯示備註提醒（住二樓 / 養狗等特殊狀況）</li>
+      <li>三大現場按鈕 - 我收到現金了 / 客戶說已匯款 / 完成此案件</li>
+      <li>待回繳金額 banner（自己監控）</li>
+      <li>我的本月薪資頁 - 每日明細 + 加減項 + Excel 匯出</li>
+      <li>底部 tab 導航（今日案件 / 我的薪資）</li>
+      <li>PWA 可加到主畫面（manifest + service worker）</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>儀表板與報表 <span class="pill phase3">Phase 3</span></h3>
+    <ul class="feature-list">
+      <li>儀表板 5 個 KPI - 本月營業額 / 案件數 / 今日待完成 / 即將到期 / 本月取消率</li>
+      <li>營業額月對比（vs 上月 ↑↓ 百分比）</li>
+      <li>取消率 ≥ 20% 紅色警示</li>
+      <li>師傅本月案量直條圖（已完成綠 / 待完成橘）</li>
+      <li>儀表板今日案件清單（時間 / 客戶 / 區域 / 師傅）</li>
+      <li>師傅待回繳一鍵跳轉按鈕</li>
+      <li>營業報表 - 期間切換（今日 / 本週 / 本月 / 本季 / 今年 / 自訂日期）</li>
+      <li>4 個 KPI - 期間營業額 / 完成件數 / 服務客戶 / 平均客單價</li>
+      <li>服務項目 TOP（含金額累計）</li>
+      <li>區域熱區（前 10 縣市鄉鎮）</li>
+      <li>付款方式分佈（百分比 + 金額）</li>
+      <li>師傅營業額排行</li>
+      <li>VIP 客戶 TOP 10（可點擊跳客戶詳情）</li>
+      <li>營業報表 CSV 匯出（UTF-8 BOM）</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>計件薪資 <span class="pill phase3">Phase 3</span></h3>
+    <ul class="feature-list">
+      <li>師傅月報入口（各師傅卡片）</li>
+      <li>月報視圖 - 重現「2026年五月份」Excel 版型</li>
+      <li>每日明細 - 日期 / 當日應收 / 4 台展開 / 加大 / 折扣 / 匯款</li>
+      <li>本月應收（含加減項）+ 件數合計</li>
+      <li>月份前後切換</li>
+      <li>Excel 匯出 .xlsx（SheetJS）</li>
+      <li>師傅自己可在 PWA 查看本月薪資</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>即將到期客戶 <span class="pill phase3">Phase 3</span></h3>
+    <ul class="feature-list">
+      <li>11-13 個月未服務客戶自動偵測（pg_cron 已部署但需手動觸發）</li>
+      <li>狀態 tabs - 待通知 / 已通知 / 已跳過</li>
+      <li>逾期天數 badge（逾期 N 天 / 本週到期 / N 天後到期）</li>
+      <li>客戶詳情 + 上次服務日期</li>
+      <li>一鍵複製 LINE 提醒文案（正體中文範本）</li>
+      <li>「已通知」記錄誰何時通知</li>
+      <li>「重新掃描」立即觸發 RPC 更新名單</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>系統設定 <span class="pill phase1">Phase 1</span></h3>
+    <ul class="feature-list">
+      <li>帳號管理（僅 owner）- 新增 / 編輯 / 重設密碼 / 停用 / 刪除</li>
+      <li>三種角色 - 老闆 / 管理員 / 師傅</li>
+      <li>服務項目 CRUD（代碼 / 名稱 / 預設價 / 分類 / 排序）</li>
+      <li>折扣 / 加價項目 CRUD</li>
+      <li>客戶來源 CRUD</li>
+      <li>操作稽核 /settings/audit - 最近 300 筆敏感操作（僅 owner）</li>
+      <li>稽核覆蓋 - 取消訂單 / 刪除訂單 / 刪除客戶 / 批次回繳 / 帳號操作</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>導航 / UX <span class="pill phase2">Phase 2</span></h3>
+    <ul class="feature-list">
+      <li>?from 智能返回（月曆來 → 回月曆 / 客戶來 → 回客戶詳情）</li>
+      <li>表單存檔後跳回來源頁，不再固定跳訂單列表</li>
+      <li>Sidebar 手機版漢堡選單 + 全螢幕 drawer</li>
+      <li>桌面 sidebar 固定 240px + 高亮當前路徑</li>
+      <li>Status / Payment / Settlement 三種 badge 統一色彩</li>
+      <li>師傅 PWA 底部 tab navigation</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>部署 / 開發工具</h3>
+    <ul class="feature-list">
+      <li>start-all.bat 一鍵啟動腳本（純 ASCII，自動裝依賴 / 開瀏覽器）</li>
+      <li>Supabase 4 個 migrations（含 0001 schema、0002 settlement、0003 duration、0004 cancellation）</li>
+      <li>Demo seed script - 19 客戶 / 28 訂單 / 4 reminders / 7 待回繳</li>
+      <li>seed:demo:reset 一鍵重置 demo 資料</li>
+      <li>PWA manifest + service worker（可加到手機桌面）</li>
+      <li>Mobile RWD - 從手機到桌機通用</li>
+      <li>Demo 帳號 - 1 owner + 1 manager + 4 technicians</li>
+      <li>DEMO_FLOW.md 演示腳本（完整 15 分鐘 + 精簡 6 分鐘）</li>
+      <li>GitHub private repo + 18 commits 完整歷史</li>
+    </ul>
+  </div>
+
+  <h2 class="todo"><span>待製作功能</span><span class="badge">TODO</span></h2>
+
+  <div class="group">
+    <h3>第二期保留（v2）<span class="pill v2">V2</span></h3>
+    <ul class="feature-list todo">
+      <li>SMS 簡訊自動發送 - 接客戶現有簡訊服務商 API</li>
+      <li>案件照片儲存 - 接 Cloudflare R2（拆機前 / 髒污 / 完工照）</li>
+      <li>客戶自助頁面 - 查歷史紀錄 / 線上預約</li>
+      <li>LINE Bot 自動回覆預約</li>
+      <li>客戶端「滿意度回饋」連結</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>需要客戶配合才能做 <span class="pill block">BLOCKED</span></h3>
+    <ul class="feature-list todo">
+      <li>舊 Excel 一次性匯入腳本 - 等客戶提供原檔（預估拿到後 3.5-4 個工作天）</li>
+      <li>pg_cron 每日自動掃即將到期 - 需登入 Supabase Dashboard 啟用 pg_cron 擴充功能</li>
+      <li>正式 GA 環境部署 - 等簽約後決定使用 Netlify 預設網址 / 自訂網域</li>
+      <li>4 位師傅真實姓名與帳號 - 目前 demo 用 王 / 林 / 陳 / 黃 假名</li>
+      <li>客戶 LOGO（替換 icon.svg）- 影響 PWA icon 跟視覺識別</li>
+    </ul>
+  </div>
+
+  <div class="group">
+    <h3>可選強化（沒做但已評估）</h3>
+    <ul class="feature-list parked">
+      <li>報表 multi-sheet xlsx export - 訂單明細 + VIP 客戶 + 師傅明細 分頁</li>
+      <li>全域搜尋 modal - Cmd+K 快捷鍵啟動，跨客戶 / 訂單搜尋</li>
+      <li>顧客詳情頁 inline 快速新增地址 / 新增機器 modal</li>
+      <li>機器維修歷史視圖 - 每台機器歷年清洗次數時間軸</li>
+      <li>訂單表單客戶 datalist autocomplete - 客戶量大時用</li>
+      <li>訂單詳情頁列印友善版型 - @media print CSS</li>
+      <li>師傅 PWA 加搜尋今日案件（目前 1 天 ≤ 5 單未必需要）</li>
+      <li>顧客列表 sort options - 按消費金額 / 上次服務日 / 加入日期</li>
+      <li>儀表板「警示區」合併（取消 / 待回繳 / 即將到期 集中通知）</li>
+      <li>師傅 KPI 對比（上月 vs 本月 趨勢分析）</li>
+      <li>力導向「重要客戶」標記（VIP 名單 + 標籤）</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    Ren Studio 仁格數位科技工坊 - 統一編號 61138241 - renstudio.tw<br>
+    本清單依 2026-05-19 main branch 狀態產出
+  </div>
+</div>
+</body>
+</html>
