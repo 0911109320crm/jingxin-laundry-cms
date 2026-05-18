@@ -20,6 +20,7 @@ type RawOrder = {
   scheduled_at: string | null;
   payment_method: string;
   customer_id: string;
+  customer: { name: string; code: string } | null;
   address: { county: string; district: string } | null;
   items: {
     technician_id: string | null;
@@ -112,6 +113,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
     .from("orders")
     .select(
       `id, status, total, service_at, scheduled_at, payment_method, customer_id,
+       customer:customers(name, code),
        address:customer_addresses(county, district),
        items:order_items(technician_id, service_item_id, subtotal,
                          service:service_items(code, name))`,
@@ -208,6 +210,30 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
     }))
     .sort((a, b) => b.revenue - a.revenue);
   const maxTechRevenue = Math.max(1, ...techRows.map((t) => t.revenue));
+
+  // TOP Customers
+  const customerMap = new Map<
+    string,
+    { id: string; name: string; code: string; count: number; revenue: number }
+  >();
+  for (const o of doneOrders) {
+    if (!customerMap.has(o.customer_id)) {
+      customerMap.set(o.customer_id, {
+        id: o.customer_id,
+        name: o.customer?.name ?? "未知",
+        code: o.customer?.code ?? "",
+        count: 0,
+        revenue: 0,
+      });
+    }
+    const c = customerMap.get(o.customer_id)!;
+    c.count += 1;
+    c.revenue += Number(o.total);
+  }
+  const topCustomers = Array.from(customerMap.values())
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
+  const maxCustomerRevenue = Math.max(1, ...topCustomers.map((c) => c.revenue));
 
   // CSV download URL
   const csvParams = new URLSearchParams({ range });
@@ -395,6 +421,44 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>VIP 客戶 TOP 10（期間消費排行）</CardTitle>
+        </CardHeader>
+        <CardBody className="space-y-2">
+          {topCustomers.length === 0 ? (
+            <p className="text-sm text-zinc-500">期間內無已完成案件</p>
+          ) : (
+            topCustomers.map((c, idx) => (
+              <Link
+                key={c.id}
+                href={`/customers/${c.id}`}
+                className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-zinc-50"
+              >
+                <span className="w-6 shrink-0 text-center text-sm font-bold text-zinc-400">
+                  {idx + 1}
+                </span>
+                <span className="w-28 shrink-0 truncate text-sm font-medium text-zinc-900">
+                  {c.name}
+                </span>
+                <span className="hidden w-20 shrink-0 truncate text-xs text-zinc-400 sm:inline">
+                  {c.code}
+                </span>
+                <div className="flex h-5 flex-1 overflow-hidden rounded bg-zinc-100">
+                  <div
+                    className="bg-rose-500"
+                    style={{ width: `${(c.revenue / maxCustomerRevenue) * 100}%` }}
+                  />
+                </div>
+                <span className="w-32 shrink-0 text-right text-xs text-zinc-600">
+                  {c.count} 次 · {formatNTD(c.revenue)}
+                </span>
+              </Link>
+            ))
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }
