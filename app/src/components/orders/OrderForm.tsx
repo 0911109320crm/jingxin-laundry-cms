@@ -136,6 +136,32 @@ export function OrderForm({
   const customerId = useWatch({ control, name: "customer_id" });
   const watchedItems = useWatch({ control, name: "items" });
   const watchedAdjustments = useWatch({ control, name: "adjustments" });
+  const scheduledAt = useWatch({ control, name: "scheduled_at" });
+
+  // Duration in minutes; default 90, or derived from existing end_at on edit/clone.
+  const initialDuration = (() => {
+    if (initial?.scheduled_at && initial?.scheduled_end_at) {
+      const s = new Date(initial.scheduled_at).getTime();
+      const e = new Date(initial.scheduled_end_at).getTime();
+      if (!Number.isNaN(s) && !Number.isNaN(e) && e > s) {
+        return Math.round((e - s) / 60000);
+      }
+    }
+    return 90;
+  })();
+  const [duration, setDuration] = useState<number>(initialDuration);
+
+  // Auto-derive scheduled_end_at from scheduled_at + duration
+  useEffect(() => {
+    if (!scheduledAt) return;
+    const start = new Date(scheduledAt);
+    if (Number.isNaN(start.getTime())) return;
+    const end = new Date(start);
+    end.setMinutes(end.getMinutes() + (duration || 0));
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const value = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
+    setValue("scheduled_end_at", value);
+  }, [scheduledAt, duration, setValue]);
 
   // Auto-fetch addresses/machines when customer changes
   useEffect(() => {
@@ -231,11 +257,34 @@ export function OrderForm({
               {...register("scheduled_at")}
             />
           </Field>
-          <Field label="預約結束時間">
-            <Input
-              type="datetime-local"
-              {...register("scheduled_end_at")}
-            />
+          <Field label="預計時長（分鐘）">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                step={10}
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value) || 0)}
+                className="w-24"
+              />
+              <div className="flex gap-1">
+                {[60, 90, 120, 180].map((m) => (
+                  <button
+                    type="button"
+                    key={m}
+                    onClick={() => setDuration(m)}
+                    className={`rounded border px-2.5 py-1.5 text-xs transition-colors ${
+                      duration === m
+                        ? "border-brand-500 bg-brand-50 text-brand-700"
+                        : "border-zinc-300 bg-white text-zinc-600 hover:bg-zinc-50"
+                    }`}
+                  >
+                    {m} 分
+                  </button>
+                ))}
+              </div>
+            </div>
+            <input type="hidden" {...register("scheduled_end_at")} />
           </Field>
           <Field label="實際清洗日期時間">
             <Input type="datetime-local" {...register("service_at")} />
