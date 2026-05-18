@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/dal";
 import { CustomerSchema, type CustomerInput } from "@/lib/validators/customer";
+import { logAudit } from "@/lib/audit";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -179,6 +180,7 @@ export async function deleteCustomerAction(id: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("customers").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
+  await logAudit({ action: "customer.delete", target_type: "customer", target_id: id });
   revalidatePath("/customers");
   redirect("/customers");
 }

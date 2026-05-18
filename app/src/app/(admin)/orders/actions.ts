@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole, getCurrentUser } from "@/lib/dal";
 import { OrderSchema, type OrderInput } from "@/lib/validators/order";
+import { logAudit } from "@/lib/audit";
 
 export type Res = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -62,6 +63,12 @@ export async function cancelOrderAction(
     })
     .eq("id", orderId);
   if (error) return { ok: false, error: error.message };
+  await logAudit({
+    action: "order.cancel",
+    target_type: "order",
+    target_id: orderId,
+    payload: { reason: trimmed },
+  });
   revalidatePath("/calendar");
   revalidatePath("/orders");
   revalidatePath(`/orders/${orderId}`);
@@ -223,6 +230,7 @@ export async function deleteOrderAction(id: string): Promise<Res> {
   const supabase = await createClient();
   const { error } = await supabase.from("orders").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
+  await logAudit({ action: "order.delete", target_type: "order", target_id: id });
   revalidatePath("/orders");
   revalidatePath("/calendar");
   redirect("/orders");
@@ -351,6 +359,11 @@ export async function settleOrdersAction(orderIds: string[]): Promise<Res> {
     .update({ settlement_status: "settled" })
     .in("id", orderIds);
   if (error) return { ok: false, error: error.message };
+  await logAudit({
+    action: "settlement.bulk_settle",
+    target_type: "order",
+    payload: { ids: orderIds, count: orderIds.length },
+  });
   revalidatePath("/payroll/settlements");
   revalidatePath("/orders");
   return { ok: true };

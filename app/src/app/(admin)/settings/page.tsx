@@ -22,6 +22,11 @@ const sections = [
     title: "客戶來源",
     desc: "LINE / Google / 跟車 / 老客介紹...",
   },
+  {
+    href: "/settings/audit",
+    title: "操作稽核",
+    desc: "查看所有寫入 / 刪除 / 取消等敏感操作（僅老闆）",
+  },
 ];
 
 export default function SettingsPage() {

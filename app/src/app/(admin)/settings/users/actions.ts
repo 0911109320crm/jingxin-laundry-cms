@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logAudit } from "@/lib/audit";
 
 const CreateUserSchema = z.object({
   email: z.string().email("Email 格式錯誤"),
@@ -58,6 +59,13 @@ export async function createUser(fd: FormData): Promise<Res> {
     return { ok: false, error: `Profile 寫入失敗：${profileErr.message}` };
   }
 
+  await logAudit({
+    action: "user.create",
+    target_type: "user",
+    target_id: created.user.id,
+    payload: { email, name, role },
+  });
+
   revalidatePath("/settings/users");
   return { ok: true };
 }
@@ -79,6 +87,13 @@ export async function updateUser(id: string, fd: FormData): Promise<Res> {
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
 
+  await logAudit({
+    action: "user.update",
+    target_type: "user",
+    target_id: id,
+    payload: parsed.data,
+  });
+
   revalidatePath("/settings/users");
   return { ok: true };
 }
@@ -91,6 +106,11 @@ export async function resetPassword(id: string, fd: FormData): Promise<Res> {
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.updateUserById(id, { password });
   if (error) return { ok: false, error: error.message };
+  await logAudit({
+    action: "user.reset_password",
+    target_type: "user",
+    target_id: id,
+  });
   return { ok: true };
 }
 
@@ -110,6 +130,8 @@ export async function deleteUser(id: string): Promise<Res> {
 
   const { error: aErr } = await admin.auth.admin.deleteUser(id);
   if (aErr) return { ok: false, error: aErr.message };
+
+  await logAudit({ action: "user.delete", target_type: "user", target_id: id });
 
   revalidatePath("/settings/users");
   return { ok: true };
