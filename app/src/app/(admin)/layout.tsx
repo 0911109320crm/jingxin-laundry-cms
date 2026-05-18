@@ -12,7 +12,7 @@ export default async function AdminLayout({
   if (user.profile.role === "technician") redirect("/staff");
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex min-h-screen w-full flex-col lg:flex-row">
       <Sidebar userName={user.profile.name} />
       <main className="flex-1 overflow-auto bg-zinc-50">{children}</main>
     </div>
