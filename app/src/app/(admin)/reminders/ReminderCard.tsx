@@ -23,7 +23,13 @@ export type ReminderItem = {
   last_service_at: string | null;
 };
 
-export function ReminderCard({ reminder }: { reminder: ReminderItem }) {
+export function ReminderCard({
+  reminder,
+  readOnly = false,
+}: {
+  reminder: ReminderItem;
+  readOnly?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -100,13 +106,52 @@ export function ReminderCard({ reminder }: { reminder: ReminderItem }) {
           <p className="mb-1 font-medium text-zinc-700">上次服務</p>
           <p>{formatDate(reminder.last_service_at)}</p>
         </div>
-        <div className="flex items-center gap-2">
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onCopy}
+              className="flex-1"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-4 w-4" /> 已複製
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" /> 複製 LINE 文案
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={onSent}
+              disabled={pending}
+            >
+              已通知
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={onSkip}
+              disabled={pending}
+              title="跳過此客戶"
+            >
+              <BellOff className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        {readOnly && (
           <Button
             type="button"
             size="sm"
             variant="outline"
             onClick={onCopy}
-            className="flex-1"
+            className="w-full"
           >
             {copied ? (
               <>
@@ -114,29 +159,11 @@ export function ReminderCard({ reminder }: { reminder: ReminderItem }) {
               </>
             ) : (
               <>
-                <Copy className="h-4 w-4" /> 複製 LINE 文案
+                <Copy className="h-4 w-4" /> 複製 LINE 文案（再發一次）
               </>
             )}
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={onSent}
-            disabled={pending}
-          >
-            已通知
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={onSkip}
-            disabled={pending}
-            title="跳過此客戶"
-          >
-            <BellOff className="h-4 w-4" />
-          </Button>
-        </div>
+        )}
       </CardBody>
     </Card>
   );
