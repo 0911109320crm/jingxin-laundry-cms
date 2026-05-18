@@ -88,12 +88,15 @@ export default async function DashboardPage() {
 
   let monthRevenue = 0;
   let doneCount = 0;
+  let cancelledCount = 0;
   const byTech = new Map<string, { done: number; todo: number }>();
 
   for (const o of orders) {
     if (o.status === "done") {
       monthRevenue += Number(o.total);
       doneCount++;
+    } else if (o.status === "cancelled") {
+      cancelledCount++;
     }
     for (const it of o.items) {
       if (!it.technician_id) continue;
@@ -105,6 +108,10 @@ export default async function DashboardPage() {
       else if (o.status !== "cancelled") s.todo++;
     }
   }
+  const cancelRate =
+    orders.length > 0
+      ? Math.round((cancelledCount / orders.length) * 100)
+      : 0;
 
   const pendingCashTotal =
     ((pendingCashOrders as { total: number }[] | null) ?? []).reduce(
@@ -141,7 +148,7 @@ export default async function DashboardPage() {
         )}
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard
           icon={<TrendingUp className="h-5 w-5 text-emerald-500" />}
           label="本月營業額"
@@ -172,6 +179,21 @@ export default async function DashboardPage() {
             interactive
           />
         </Link>
+        <KpiCard
+          icon={
+            <span
+              className={`flex h-5 w-5 items-center justify-center rounded text-xs font-bold ${
+                cancelRate >= 20 ? "bg-rose-500 text-white" : "bg-zinc-300 text-zinc-700"
+              }`}
+            >
+              ×
+            </span>
+          }
+          label="本月取消率"
+          value={`${cancelRate}%`}
+          sub={`${cancelledCount} / ${orders.length} 取消`}
+          alert={cancelRate >= 20}
+        />
       </div>
 
       <Card>
@@ -249,21 +271,33 @@ function KpiCard({
   value,
   sub,
   interactive,
+  alert,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   sub?: string;
   interactive?: boolean;
+  alert?: boolean;
 }) {
   return (
-    <Card className={interactive ? "transition-shadow hover:shadow-md" : ""}>
+    <Card
+      className={`${interactive ? "transition-shadow hover:shadow-md " : ""}${
+        alert ? "border-rose-300 bg-rose-50" : ""
+      }`}
+    >
       <CardBody>
         <div className="flex items-center gap-2 text-sm text-zinc-500">
           {icon}
           {label}
         </div>
-        <p className="mt-2 text-3xl font-bold text-zinc-900">{value}</p>
+        <p
+          className={`mt-2 text-3xl font-bold ${
+            alert ? "text-rose-700" : "text-zinc-900"
+          }`}
+        >
+          {value}
+        </p>
         {sub && <p className="mt-1 text-xs text-zinc-400">{sub}</p>}
       </CardBody>
     </Card>

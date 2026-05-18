@@ -128,6 +128,34 @@ export default async function CustomerDetailPage({
   const doneCount = orders.filter((o) => o.status === "done").length;
   const cancelCount = orders.filter((o) => o.status === "cancelled").length;
 
+  // 服務頻率分析
+  const doneOrders = orders
+    .filter((o) => o.status === "done" && o.service_at)
+    .sort(
+      (a, b) =>
+        new Date(b.service_at!).getTime() - new Date(a.service_at!).getTime(),
+    );
+  const lastServiceAt = doneOrders[0]?.service_at ?? null;
+  const monthsSinceLast = lastServiceAt
+    ? Math.round(
+        (Date.now() - new Date(lastServiceAt).getTime()) /
+          (1000 * 60 * 60 * 24 * 30.4),
+      )
+    : null;
+  // 平均週期 = 相鄰兩次 service_at 的差距平均
+  let avgCycleMonths: number | null = null;
+  if (doneOrders.length >= 2) {
+    const intervals: number[] = [];
+    for (let i = 0; i < doneOrders.length - 1; i++) {
+      const a = new Date(doneOrders[i].service_at!).getTime();
+      const b = new Date(doneOrders[i + 1].service_at!).getTime();
+      intervals.push((a - b) / (1000 * 60 * 60 * 24 * 30.4));
+    }
+    avgCycleMonths = Math.round(
+      intervals.reduce((s, v) => s + v, 0) / intervals.length,
+    );
+  }
+
   return (
     <div className="p-8 space-y-5">
       <Link
@@ -154,6 +182,25 @@ export default async function CustomerDetailPage({
               {formatNTD(totalSpent)}
             </span>{" "}
             ({doneCount} 次)
+            {monthsSinceLast !== null && (
+              <>
+                {" · 距上次服務 "}
+                <span
+                  className={`font-semibold ${
+                    monthsSinceLast >= 11
+                      ? "text-rose-700"
+                      : monthsSinceLast >= 6
+                        ? "text-amber-700"
+                        : "text-zinc-900"
+                  }`}
+                >
+                  {monthsSinceLast} 個月
+                </span>
+              </>
+            )}
+            {avgCycleMonths !== null && (
+              <> · 平均週期 {avgCycleMonths} 個月</>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
