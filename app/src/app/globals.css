@@ -65,3 +65,9 @@
 .calendar-wrapper .fc-day-today {
   background-color: #eef2ff !important;
 }
+.calendar-wrapper .fc-daygrid-day-top {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 2px 4px;
+}

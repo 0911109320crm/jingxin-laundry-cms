@@ -101,6 +101,13 @@ export function CalendarView({
     };
   });
 
+  // Pre-aggregate daily totals (for day-cell badge)
+  const dailyTotals = new Map<string, number>();
+  for (const o of orders) {
+    const date = o.scheduled_at.slice(0, 10);
+    dailyTotals.set(date, (dailyTotals.get(date) ?? 0) + Number(o.total));
+  }
+
   return (
     <div className="calendar-wrapper">
       <FullCalendar
@@ -115,6 +122,20 @@ export function CalendarView({
           right: "dayGridMonth,dayGridWeek",
         }}
         buttonText={{ today: "本月", month: "月", week: "週" }}
+        dayCellDidMount={(info) => {
+          const dateKey = info.date.toISOString().slice(0, 10);
+          const sum = dailyTotals.get(dateKey);
+          if (!sum) return;
+          const top = info.el.querySelector(".fc-daygrid-day-top");
+          if (!top) return;
+          // Avoid duplicate insertion on re-mount
+          if (top.querySelector(".day-total-badge")) return;
+          const badge = document.createElement("span");
+          badge.className =
+            "day-total-badge ml-auto rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-mono text-zinc-600";
+          badge.textContent = `$${sum.toLocaleString()}`;
+          top.appendChild(badge);
+        }}
         events={events}
         editable
         droppable
