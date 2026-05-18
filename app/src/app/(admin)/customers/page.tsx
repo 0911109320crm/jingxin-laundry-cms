@@ -70,6 +70,37 @@ export default async function CustomersPage({
 
   const districts = county ? DISTRICTS_BY_COUNTY[county] ?? [] : [];
 
+  // KPIs (computed once, independent of filters)
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const elevenMonthsAgo = new Date(now);
+  elevenMonthsAgo.setMonth(elevenMonthsAgo.getMonth() - 11);
+
+  const [
+    { count: totalCount },
+    { data: activeRowsRaw },
+    { count: sleeperCount },
+  ] = await Promise.all([
+    supabase
+      .from("customers")
+      .select("*", { count: "exact", head: true }),
+    supabase
+      .from("orders")
+      .select("customer_id")
+      .eq("status", "done")
+      .gte("service_at", monthStart.toISOString()),
+    supabase
+      .from("reminders")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending"),
+  ]);
+
+  const activeCustomerCount = new Set(
+    ((activeRowsRaw as { customer_id: string }[] | null) ?? []).map(
+      (r) => r.customer_id,
+    ),
+  ).size;
+
   return (
     <div className="p-8 space-y-5">
       <header className="flex items-center justify-between">
@@ -85,6 +116,37 @@ export default async function CustomersPage({
           </Button>
         </Link>
       </header>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card>
+          <CardBody>
+            <p className="text-xs text-zinc-500">總客戶數</p>
+            <p className="mt-1 text-2xl font-bold text-zinc-900">
+              {totalCount ?? 0}
+            </p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody>
+            <p className="text-xs text-zinc-500">本月活躍</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-700">
+              {activeCustomerCount}
+            </p>
+            <p className="text-xs text-zinc-400">本月有完成的服務</p>
+          </CardBody>
+        </Card>
+        <Link href="/reminders">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardBody>
+              <p className="text-xs text-zinc-500">即將到期</p>
+              <p className="mt-1 text-2xl font-bold text-rose-700">
+                {sleeperCount ?? 0}
+              </p>
+              <p className="text-xs text-zinc-400">11-12 個月未服務</p>
+            </CardBody>
+          </Card>
+        </Link>
+      </div>
 
       <Card>
         <CardBody>
