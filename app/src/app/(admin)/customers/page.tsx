@@ -110,11 +110,21 @@ export default async function CustomersPage({
             支援姓名 / 電話 / 編號 / 備註全域搜尋，可按縣市鄉鎮篩選
           </p>
         </div>
-        <Link href="/customers/new">
-          <Button>
-            <Plus className="h-4 w-4" /> 新增顧客
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <a
+            href={`/api/customers/export?q=${encodeURIComponent(q)}&county=${encodeURIComponent(county)}&district=${encodeURIComponent(district)}`}
+            target="_blank"
+          >
+            <Button variant="outline">
+              匯出 CSV
+            </Button>
+          </a>
+          <Link href="/customers/new">
+            <Button>
+              <Plus className="h-4 w-4" /> 新增顧客
+            </Button>
+          </Link>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
