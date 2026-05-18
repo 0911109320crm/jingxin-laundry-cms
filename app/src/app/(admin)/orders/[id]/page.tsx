@@ -52,6 +52,8 @@ type Detail = {
   total: number;
   note: string | null;
   source: string | null;
+  cancellation_reason: string | null;
+  cancelled_at: string | null;
   customer: { id: string; code: string; name: string; phone: string } | null;
   address: { county: string; district: string; address: string } | null;
   items: Item[];
@@ -76,7 +78,7 @@ export default async function OrderDetailPage({
     .select(
       `id, order_code, status, payment_method, settlement_status,
        scheduled_at, service_at, subtotal, adjustments_total, total,
-       note, source,
+       note, source, cancellation_reason, cancelled_at,
        customer:customers(id, code, name, phone),
        address:customer_addresses(county, district, address),
        items:order_items(id, quantity, unit_price, subtotal, tag, note,
@@ -136,6 +138,24 @@ export default async function OrderDetailPage({
           {o.source && ` · 來源：${o.source}`}
         </p>
       </header>
+
+      {o.status === "cancelled" && (
+        <Card className="border-rose-300 bg-rose-50">
+          <CardBody>
+            <p className="text-sm font-medium text-rose-800">
+              ⚠ 此訂單已取消
+            </p>
+            <p className="mt-1 text-sm text-rose-700">
+              {o.cancellation_reason || "（未填原因）"}
+            </p>
+            {o.cancelled_at && (
+              <p className="mt-1 text-xs text-rose-600">
+                取消時間：{formatDateTime(o.cancelled_at)}
+              </p>
+            )}
+          </CardBody>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card>

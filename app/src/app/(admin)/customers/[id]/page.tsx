@@ -59,6 +59,7 @@ type OrderRow = {
   payment_method: OrderInput["payment_method"];
   settlement_status: "pending" | "settled" | "not_required";
   total: number;
+  cancellation_reason: string | null;
   items: {
     technician_id: string | null;
     service: { name: string } | null;
@@ -320,6 +321,11 @@ export default async function CustomerDetailPage({
                         {techNames.length > 0 && (
                           <p className="text-xs text-zinc-500">
                             師傅：{techNames.join("、")}
+                          </p>
+                        )}
+                        {o.status === "cancelled" && o.cancellation_reason && (
+                          <p className="text-xs text-rose-700">
+                            取消原因：{o.cancellation_reason}
                           </p>
                         )}
                       </div>
