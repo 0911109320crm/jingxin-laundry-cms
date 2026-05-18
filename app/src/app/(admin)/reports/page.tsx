@@ -237,6 +237,29 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
               </Link>
             ))}
           </div>
+          <form
+            method="get"
+            action="/reports"
+            className="flex items-center gap-1"
+          >
+            <input type="hidden" name="range" value="custom" />
+            <input
+              type="date"
+              name="from"
+              defaultValue={sp.from ?? ""}
+              className="h-9 rounded-lg border border-zinc-300 bg-white px-2 text-sm"
+            />
+            <span className="text-zinc-400">—</span>
+            <input
+              type="date"
+              name="to"
+              defaultValue={sp.to ?? ""}
+              className="h-9 rounded-lg border border-zinc-300 bg-white px-2 text-sm"
+            />
+            <Button type="submit" size="sm" variant="outline">
+              查詢
+            </Button>
+          </form>
           <a href={`/api/reports/export?${csvParams.toString()}`} target="_blank">
             <Button variant="outline" size="sm">
               <Download className="h-4 w-4" /> 匯出 CSV
