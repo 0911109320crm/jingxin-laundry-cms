@@ -45,18 +45,31 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
 
   const supabase = await createClient();
   // RLS scopes to orders where this user has any order_item
-  const { data } = await supabase
-    .from("orders")
-    .select(
-      `id, order_code, scheduled_at, status, payment_method, settlement_status, total,
-       customer:customers(name, phone),
-       address:customer_addresses(county, district, address)`,
-    )
-    .gte("scheduled_at", startIso)
-    .lt("scheduled_at", endIso)
-    .order("scheduled_at");
+  const [{ data }, { data: pendingCashRows }] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(
+        `id, order_code, scheduled_at, status, payment_method, settlement_status, total,
+         customer:customers(name, phone),
+         address:customer_addresses(county, district, address)`,
+      )
+      .gte("scheduled_at", startIso)
+      .lt("scheduled_at", endIso)
+      .order("scheduled_at"),
+    supabase
+      .from("orders")
+      .select("total")
+      .eq("payment_method", "cash")
+      .eq("settlement_status", "pending"),
+  ]);
 
   const orders = (data as StaffOrder[] | null) ?? [];
+  const pendingCashTotal =
+    ((pendingCashRows as { total: number }[] | null) ?? []).reduce(
+      (s, o) => s + Number(o.total),
+      0,
+    );
+  const pendingCashCount = (pendingCashRows as unknown[] | null)?.length ?? 0;
   const dateLabel = new Intl.DateTimeFormat("zh-TW", {
     year: "numeric",
     month: "long",
@@ -75,6 +88,19 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
 
   return (
     <div className="p-4 space-y-4">
+      {pendingCashCount > 0 && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardBody className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-amber-700">您手上待回繳現金</p>
+              <p className="text-xs text-amber-600">{pendingCashCount} 筆訂單</p>
+            </div>
+            <p className="text-2xl font-bold text-amber-800 font-mono">
+              NT$ {pendingCashTotal.toLocaleString()}
+            </p>
+          </CardBody>
+        </Card>
+      )}
       <header className="flex items-center justify-between">
         <Link
           href={`/staff?date=${prevStr}`}
