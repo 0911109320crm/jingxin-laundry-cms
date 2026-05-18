@@ -70,6 +70,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
   const { data } = await query;
   const rows = (data as Row[] | null) ?? [];
 
+  const totalAmount = rows.reduce((s, r) => s + Number(r.total), 0);
+  const doneAmount = rows
+    .filter((r) => r.status === "done")
+    .reduce((s, r) => s + Number(r.total), 0);
+  const doneCount = rows.filter((r) => r.status === "done").length;
+
   return (
     <div className="p-8 space-y-5">
       <header className="flex items-center justify-between">
@@ -124,6 +130,34 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
           </form>
         </CardBody>
       </Card>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card>
+          <CardBody>
+            <p className="text-xs text-zinc-500">篩選結果</p>
+            <p className="mt-1 text-2xl font-bold text-zinc-900">
+              {rows.length} 筆
+            </p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody>
+            <p className="text-xs text-zinc-500">總金額（含未完成）</p>
+            <p className="mt-1 text-2xl font-bold text-zinc-900 font-mono">
+              {formatNTD(totalAmount)}
+            </p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody>
+            <p className="text-xs text-zinc-500">已完成金額 / 件數</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-700 font-mono">
+              {formatNTD(doneAmount)}
+            </p>
+            <p className="text-xs text-zinc-400">{doneCount} 筆已完成</p>
+          </CardBody>
+        </Card>
+      </div>
 
       <Card>
         <CardBody className="p-0">

@@ -32,6 +32,13 @@ function monthRange() {
   };
 }
 
+function lastMonthRange() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const end = new Date(now.getFullYear(), now.getMonth(), 1);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
 function todayRange() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -45,10 +52,12 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const admin = createAdminClient();
   const { start, end, label } = monthRange();
+  const last = lastMonthRange();
   const today = todayRange();
 
   const [
     { data: monthOrders },
+    { data: lastMonthRevenueData },
     { count: dueCount },
     { data: pendingCashOrders },
     { data: techProfiles },
@@ -61,6 +70,12 @@ export default async function DashboardPage() {
       )
       .gte("scheduled_at", start)
       .lt("scheduled_at", end),
+    supabase
+      .from("orders")
+      .select("total")
+      .eq("status", "done")
+      .gte("scheduled_at", last.start)
+      .lt("scheduled_at", last.end),
     supabase
       .from("reminders")
       .select("*", { count: "exact", head: true })
@@ -119,6 +134,16 @@ export default async function DashboardPage() {
       0,
     );
 
+  const lastMonthRevenue =
+    ((lastMonthRevenueData as { total: number }[] | null) ?? []).reduce(
+      (s, o) => s + Number(o.total),
+      0,
+    );
+  const revenueDiffPct =
+    lastMonthRevenue > 0
+      ? Math.round(((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
+      : null;
+
   const technicianRows =
     ((techProfiles as { id: string; name: string; role: string; active: boolean }[] | null) ?? [])
       .filter((p) => p.role === "technician")
@@ -153,7 +178,13 @@ export default async function DashboardPage() {
           icon={<TrendingUp className="h-5 w-5 text-emerald-500" />}
           label="本月營業額"
           value={formatNTD(monthRevenue)}
-          sub={`${doneCount} 筆已完成`}
+          sub={
+            revenueDiffPct === null
+              ? `${doneCount} 筆已完成`
+              : `${doneCount} 筆完成 · 較上月${
+                  revenueDiffPct >= 0 ? "↑" : "↓"
+                }${Math.abs(revenueDiffPct)}%`
+          }
         />
         <KpiCard
           icon={<ClipboardCheck className="h-5 w-5 text-brand-500" />}
