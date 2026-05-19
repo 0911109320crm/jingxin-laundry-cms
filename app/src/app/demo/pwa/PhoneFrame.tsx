@@ -76,7 +76,8 @@ export function PhoneFrame({ userName }: { userName: string }) {
               ref={iframeRef}
               key={bust}
               src={src}
-              className="absolute inset-0 h-full w-full border-0"
+              className="absolute inset-x-0 bottom-0 w-full border-0"
+              style={{ top: 44, height: "calc(100% - 44px)" }}
               title="師傅 PWA 預覽"
             />
           </div>

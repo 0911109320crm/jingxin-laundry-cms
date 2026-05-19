@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { Download } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/dal";
 import { fetchPayroll } from "@/lib/payroll";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
-import { formatDate, formatNTD } from "@/lib/utils";
+import { formatNTD } from "@/lib/utils";
 
 type SP = Promise<{ month?: string }>;
 
@@ -77,14 +76,6 @@ export default async function StaffPayroll({
               </p>
             </CardBody>
           </Card>
-
-          <a
-            href={`/api/payroll/export?user=${me.id}&month=${month}`}
-            target="_blank"
-            className="block rounded-lg bg-brand-600 px-4 py-3 text-center text-sm font-medium text-white hover:bg-brand-700"
-          >
-            <Download className="mr-1 inline h-4 w-4" /> 匯出 Excel
-          </a>
 
           <Card>
             <CardHeader>
