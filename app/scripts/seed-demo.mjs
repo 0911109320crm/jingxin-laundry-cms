@@ -7,10 +7,10 @@
  *   node scripts/seed-demo.mjs --reset   - wipe existing demo data, then re-insert
  *
  * Demo accounts (all password: admin1234):
- *   borenchang+wang@gmail.com    - 王大哥     (technician)
- *   borenchang+lin@gmail.com     - 林師傅     (technician)
- *   borenchang+chen@gmail.com    - 陳師傅     (technician)
- *   borenchang+huang@gmail.com   - 黃師傅     (technician)
+ *   sf001@jingxin.tw             - 王大哥     (technician)
+ *   sf002@jingxin.tw             - 林師傅     (technician)
+ *   sf003@jingxin.tw             - 陳師傅     (technician)
+ *   sf004@jingxin.tw             - 黃師傅     (technician)
  *   borenchang+manager@gmail.com - 老闆娘助理 (manager)
  */
 
@@ -38,10 +38,10 @@ const RESET = process.argv.includes("--reset");
 
 // ─── Staff ────────────────────────────────────────────────────────────────────
 const STAFF = [
-  { email: "borenchang+wang@gmail.com",    name: "王大哥",     role: "technician" },
-  { email: "borenchang+lin@gmail.com",     name: "林師傅",     role: "technician" },
-  { email: "borenchang+chen@gmail.com",    name: "陳師傅",     role: "technician" },
-  { email: "borenchang+huang@gmail.com",   name: "黃師傅",     role: "technician" },
+  { email: "sf001@jingxin.tw",             name: "王大哥",     role: "technician" },
+  { email: "sf002@jingxin.tw",             name: "林師傅",     role: "technician" },
+  { email: "sf003@jingxin.tw",             name: "陳師傅",     role: "technician" },
+  { email: "sf004@jingxin.tw",             name: "黃師傅",     role: "technician" },
   { email: "borenchang+manager@gmail.com", name: "老闆娘助理", role: "manager"    },
 ];
 
