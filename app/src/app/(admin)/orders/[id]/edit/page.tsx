@@ -33,7 +33,7 @@ export default async function EditOrderPage({
     supabase
       .from("orders")
       .select(
-        `id, customer_id, address_id, scheduled_at, scheduled_end_at,
+        `id, order_code, customer_id, address_id, scheduled_at, scheduled_end_at,
          service_at, status, payment_method, note, source,
          items:order_items(id, machine_id, service_item_id, technician_id,
                            quantity, unit_price, tag, note),
@@ -67,6 +67,7 @@ export default async function EditOrderPage({
   const o = order as
     | {
         id: string;
+        order_code: string;
         customer_id: string;
         address_id: string;
         scheduled_at: string | null;
@@ -173,6 +174,7 @@ export default async function EditOrderPage({
       <OrderForm
         mode="edit"
         initial={initial}
+        orderCode={o?.order_code}
         customers={(customers ?? []) as { id: string; code: string; name: string; phone: string }[]}
         services={(services ?? []) as { id: string; code: string; name: string; default_price: number }[]}
         adjustments={(adjustments ?? []) as { id: string; name: string; type: "addon"|"discount"; default_amount: number }[]}

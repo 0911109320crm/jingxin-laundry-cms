@@ -94,6 +94,7 @@ export function CalendarView({
         customer: o.customer_name,
         district: o.district,
         technician_name: o.technician_name,
+        service_summary: o.service_summary || null,
         start_time: startT,
         end_time: endT,
         tooltip: tooltipLines.join("\n"),
@@ -212,6 +213,7 @@ export function CalendarView({
           const end = arg.event.extendedProps.end_time as string;
           const customer = arg.event.extendedProps.customer as string;
           const district = arg.event.extendedProps.district as string | null;
+          const serviceSummary = arg.event.extendedProps.service_summary as string | null;
           const onCancel = (e: React.MouseEvent) => {
             e.stopPropagation();
             const reason = window.prompt(
@@ -242,6 +244,9 @@ export function CalendarView({
                 {customer}
                 {district ? ` · ${district}` : ""}
               </div>
+              {serviceSummary && (
+                <div className="truncate opacity-75">{serviceSummary}</div>
+              )}
             </div>
           );
         }}

@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   X,
+  Search,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,24 @@ export function Sidebar({ userName }: { userName: string }) {
         );
       })}
     </nav>
+  );
+
+  function openSearch() {
+    window.dispatchEvent(new CustomEvent("open-global-search"));
+  }
+
+  const SearchChip = (
+    <div className="px-3 pb-2">
+      <button
+        type="button"
+        onClick={openSearch}
+        className="flex w-full items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100 transition-colors"
+      >
+        <Search className="h-3.5 w-3.5" />
+        <span className="flex-1 text-left">搜尋</span>
+        <kbd className="rounded border border-zinc-200 bg-white px-1 py-0.5 text-[10px] font-mono">⌘K</kbd>
+      </button>
+    </div>
   );
 
   const Footer = (
@@ -132,6 +151,7 @@ export function Sidebar({ userName }: { userName: string }) {
           <p className="text-xs text-zinc-500">管理系統</p>
         </div>
         {NavList}
+        {SearchChip}
         {Footer}
       </aside>
     </>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>淨新洗衣管理系統 — 錄影演示流程</title>
+<style>
+:root {
+  --brand: #4f46e5; --brand-dark: #3730a3; --brand-soft: #eef2ff;
+  --green: #16a34a; --green-soft: #f0fdf4;
+  --amber: #d97706; --amber-soft: #fffbeb;
+  --red: #dc2626; --red-soft: #fef2f2;
+  --gray-50: #fafafa; --gray-100: #f4f4f5; --gray-200: #e4e4e7;
+  --gray-400: #a1a1aa; --gray-500: #71717a; --gray-700: #3f3f46; --gray-900: #18181b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif; background: var(--gray-50); color: var(--gray-900); line-height: 1.65; }
+
+/* Header */
+header { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); color: #fff; padding: 48px 32px 40px; }
+header h1 { font-size: 28px; font-weight: 800; letter-spacing: -.5px; margin-bottom: 8px; }
+header p  { font-size: 14px; opacity: .8; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.chip { background: rgba(255,255,255,.18); border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 500; }
+
+/* Layout */
+.page { max-width: 1000px; margin: 0 auto; padding: 40px 24px 100px; }
+
+/* Timeline bar */
+.timeline { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 40px; }
+.tl-item { flex: 1; min-width: 100px; background: white; border: 1px solid var(--gray-200); border-radius: 10px; padding: 10px 12px; text-align: center; }
+.tl-item .dur { font-size: 18px; font-weight: 700; color: var(--brand); }
+.tl-item .lbl { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+
+/* Section */
+.section { background: white; border: 1px solid var(--gray-200); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
+.section-head { display: flex; align-items: center; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--gray-100); }
+.section-num { width: 32px; height: 32px; border-radius: 50%; background: var(--brand); color: white; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.section-title { font-size: 16px; font-weight: 700; flex: 1; }
+.section-time { font-size: 12px; color: var(--gray-400); background: var(--gray-100); padding: 3px 10px; border-radius: 999px; }
+.section-body { padding: 20px 24px; }
+
+/* Step table */
+.steps { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 4px; }
+.steps th { text-align: left; font-size: 11px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: .04em; padding: 0 10px 8px 0; }
+.steps td { padding: 7px 10px 7px 0; vertical-align: top; border-top: 1px solid var(--gray-100); }
+.steps td:first-child { width: 220px; color: var(--brand-dark); font-weight: 500; }
+.steps td:last-child { color: var(--gray-700); }
+
+/* Boxes */
+.pain   { background: var(--red-soft);   border-left: 3px solid var(--red);   padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 13px; color: #7f1d1d; margin-bottom: 12px; }
+.tip    { background: var(--brand-soft); border-left: 3px solid var(--brand); padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 13px; color: var(--brand-dark); margin-top: 14px; }
+.quote  { background: var(--amber-soft); border-left: 3px solid var(--amber); padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 13px; color: #78350f; font-style: italic; margin-top: 10px; }
+.new-badge { display: inline-block; background: var(--green); color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+
+/* Checklist */
+.checklist { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 8px; }
+.checklist li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-700); }
+.checklist li::before { content: "☐"; font-size: 16px; color: var(--gray-400); flex-shrink: 0; }
+
+h3 { font-size: 13px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: .05em; margin: 18px 0 8px; }
+
+kbd { background: var(--gray-100); border: 1px solid var(--gray-200); border-radius: 4px; padding: 1px 6px; font-family: monospace; font-size: 12px; }
+
+.footer { text-align: center; font-size: 11px; color: var(--gray-400); margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--gray-200); }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="max-width:1000px;margin:0 auto">
+    <h1>淨新洗衣管理系統 — 錄影演示流程</h1>
+    <p>淨新洗衣機清潔工坊 後台管理系統 Demo Script — Ren Studio</p>
+    <div class="chips">
+      <span class="chip">完整版 約 12 分鐘</span>
+      <span class="chip">精簡版 約 6 分鐘</span>
+      <span class="chip">~300 筆 Demo 資料</span>
+      <span class="chip">橫跨 6 個月</span>
+      <span class="chip">含取消個案</span>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- Timeline -->
+  <div class="timeline">
+    <div class="tl-item"><div class="dur">0:30</div><div class="lbl">開場</div></div>
+    <div class="tl-item"><div class="dur">1:00</div><div class="lbl">儀表板</div></div>
+    <div class="tl-item"><div class="dur">0:30</div><div class="lbl">全域搜尋</div></div>
+    <div class="tl-item"><div class="dur">1:30</div><div class="lbl">顧客管理</div></div>
+    <div class="tl-item"><div class="dur">2:00</div><div class="lbl">月曆排案</div></div>
+    <div class="tl-item"><div class="dur">1:30</div><div class="lbl">訂單管理</div></div>
+    <div class="tl-item"><div class="dur">1:00</div><div class="lbl">收款回繳</div></div>
+    <div class="tl-item"><div class="dur">1:00</div><div class="lbl">師傅 PWA</div></div>
+    <div class="tl-item"><div class="dur">0:45</div><div class="lbl">即將到期</div></div>
+    <div class="tl-item"><div class="dur">1:00</div><div class="lbl">營業報表</div></div>
+    <div class="tl-item"><div class="dur">0:45</div><div class="lbl">師傅薪資</div></div>
+    <div class="tl-item"><div class="dur">0:30</div><div class="lbl">收尾</div></div>
+  </div>
+
+  <!-- 演示前準備 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num" style="background:#059669">✓</div>
+      <div class="section-title">演示前準備（錄影前 5 分鐘）</div>
+    </div>
+    <div class="section-body">
+      <h3>重置 Demo 資料</h3>
+      <ul class="checklist">
+        <li>cd app → <kbd>npm run seed:demo:reset</kbd> 等待完成</li>
+        <li>確認終端顯示「~300 筆訂單 created」</li>
+        <li><kbd>start-all.bat</kbd> 啟動前台（或確認 dev server 運行中）</li>
+        <li>用 owner 帳號 <kbd>borenchang@gmail.com / admin1234</kbd> 登入</li>
+      </ul>
+      <h3>瀏覽器設定</h3>
+      <ul class="checklist">
+        <li>主視窗：後台管理頁面（寬度 1280px）</li>
+        <li>另開無痕視窗：準備登入師傅帳號（稍後用）</li>
+        <li>縮放設為 100%，字型夠大</li>
+        <li>關掉不相關的 tabs</li>
+      </ul>
+      <div class="tip">💡 建議手機同時打開 PWA（borenchang+wang@gmail.com / admin1234），可直接用手機畫面錄師傅端操作</div>
+    </div>
+  </div>
+
+  <!-- 0. 開場 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">0</div>
+      <div class="section-title">開場白</div>
+      <span class="section-time">0:30</span>
+    </div>
+    <div class="section-body">
+      <div class="quote">「老闆娘好，我們今天來看一套專門為洗衣機清潔工坊設計的管理系統。您現在的流程主要靠 Excel 和 Line，
+      我們這套系統把客戶管理、月曆排案、師傅回繳、即將到期提醒全部整合在一起，而且<strong>未來月費零元</strong>。
+      我們用真實的 Demo 資料，大約 300 筆訂單橫跨半年，走一輪您看看。」</div>
+    </div>
+  </div>
+
+  <!-- 1. 儀表板 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">1</div>
+      <div class="section-title">儀表板 Dashboard</div>
+      <span class="section-time">1:00</span>
+    </div>
+    <div class="section-body">
+      <div class="pain">😣 痛點：每天早上不知道今天有幾件、哪幾個師傅要出門、本月業績跑到哪</div>
+      <table class="steps">
+        <tr><th>操作</th><th>說什麼</th></tr>
+        <tr><td>進入 <kbd>/dashboard</kbd></td><td>「一打開就看到今天最重要的資訊」</td></tr>
+        <tr><td>指向 5 個 KPI 數字</td><td>「本月營業額、案件數、今日待完成件數、即將到期客戶、本月取消率」</td></tr>
+        <tr><td>指向「vs 上月 ↑↓」</td><td>「跟上個月比，一眼看出業績趨勢」</td></tr>
+        <tr><td>指向師傅案量直條圖</td><td>「每位師傅本月完成幾件、還有幾件待做，一目瞭然」</td></tr>
+        <tr><td>指向今日案件清單</td><td>「今天 4 件案子，幾點、哪個客戶、哪個區域、哪個師傅，全部在這」</td></tr>
+        <tr><td>指向「師傅待回繳」按鈕</td><td>「這個按鈕直接跳到現金回繳頁，這個稍後講」</td></tr>
+      </table>
+      <div class="tip">💡 精簡版可跳過直條圖，只秀 KPI + 今日清單</div>
+    </div>
+  </div>
+
+  <!-- 2. 全域搜尋 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">2</div>
+      <div class="section-title">全域搜尋 <span class="new-badge">NEW</span></div>
+      <span class="section-time">0:30</span>
+    </div>
+    <div class="section-body">
+      <div class="pain">😣 痛點：想找某個客戶要先點進「顧客」頁再搜尋，不能從任何地方直接找</div>
+      <table class="steps">
+        <tr><th>操作</th><th>說什麼</th></tr>
+        <tr><td>在任意頁面按 <kbd>⌘K</kbd>（Mac）/ <kbd>Ctrl+K</kbd>（Win）</td><td>「這是全域搜尋，不管在哪個頁面都可以用」</td></tr>
+        <tr><td>輸入「陳先生」</td><td>「輸入兩個字以上，馬上搜尋所有客戶」</td></tr>
+        <tr><td>點擊結果跳到客戶詳情</td><td>「點一下直接跳過去，不用逐層點選單」</td></tr>
+        <tr><td>再按 <kbd>⌘K</kbd> 輸入訂單編號</td><td>「也可以搜尋訂單編號」</td></tr>
+        <tr><td>按 <kbd>ESC</kbd> 關閉</td><td>「Escape 關掉，非常快」</td></tr>
+      </table>
+      <div class="tip">💡 也可以點 Sidebar 左下角的「搜尋 ⌘K」按鈕觸發</div>
+    </div>
+  </div>
+
+  <!-- 3. 顧客管理 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">3</div>
+      <div class="section-title">顧客管理</div>
+      <span class="section-time">1:30</span>
+    </div>
+    <div class="section-body">
+      <div class="pain">😣 痛點：客戶資料散在多個 Excel，同一客戶有多台機器、多個地址要分別查</div>
+      <table class="steps">
+        <tr><th>操作</th><th>說什麼</th></tr>
+        <tr><td>進入 <kbd>/customers</kbd></td><td>「這裡有 25 位 demo 客戶，台中彰化南投雲林都有」</td></tr>
+        <tr><td>看 KPI：總客戶 / 本月活躍 / 即將到期</td><td>「上方三個數字讓您掌握客群健康度」</td></tr>
+        <tr><td>搜尋框輸入「陳」</td><td>「姓名、電話、編號、備註全部都可搜，不只是電話」</td></tr>
+        <tr><td>縣市選「彰化縣」→ 鄉鎮選「員林市」</td><td>「區域篩選，您之前說想照地區分配師傅，這就是」</td></tr>
+        <tr><td>點「匯出 CSV」</td><td>「可以匯出 Excel 直接開，UTF-8 BOM 格式」</td></tr>
+        <tr><td>清空篩選，點「陳先生」</td><td>「來看一個有多台機器的客戶」</td></tr>
+        <tr><td>指「地址」區塊</td><td>「員林家裡 + 彰化公司，兩個地址都存著」</td></tr>
+        <tr><td>指「機器」區塊</td><td>「洗衣機、冷氣、沙發，三樣東西一頁全部看到」</td></tr>
+        <tr><td>指「服務歷史」清單</td><td>「幾月幾號清了什麼、哪個師傅做的、金額多少，完整記錄」</td></tr>
+        <tr><td>指「累計消費」統計區</td><td>「這位客戶總共消費多少、服務幾次、上次距今多久」</td></tr>
+        <tr><td>點「一鍵新增訂單」</td><td>「這個按鈕自動帶入這個客戶，不用重新填」（然後返回）</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 4. 月曆排案 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">4</div>
+      <div class="section-title">月曆排案</div>
+      <span class="section-time">2:00</span>
+    </div>
+    <div class="section-body">
+      <div class="pain">😣 痛點：排案要手寫行事曆或 Excel，更改日期要整行刪掉重填</div>
+      <table class="steps">
+        <tr><th>操作</th><th>說什麼</th></tr>
+        <tr><td>進入 <kbd>/calendar</kbd>，月視圖</td><td>「這是全月排案畫面，每個色塊代表一個師傅的案件」</td></tr>
+        <tr><td>指各師傅顏色說明</td><td>「王大哥藍、林師傅綠、陳師傅橘、黃師傅紫，一眼分清楚」</td></tr>
+        <tr><td>切換師傅 tab：只看「林師傅」</td><td>「可以只看單一師傅，今天有幾件一清二楚」</td></tr>
+        <tr><td>切回「全部」，hover 某個 event</td><td>「hover 看完整資訊：訂單編號、客戶、電話、地址、服務、金額」</td></tr>
+        <tr><td>指右上角每日總額 badge</td><td>「每一天的格子右上角顯示當天總營業額」</td></tr>
+        <tr><td>指左側「待派工」面板</td><td>「左邊有 4 件還沒排日期的案件在等待」</td></tr>
+        <tr><td>從待派工拖一張到某一天</td><td>「拖過去就排定了，自動指派這個師傅」</td></tr>
+        <tr><td>再把同一 event 拖到另一天</td><td>「改日期也是直接拖，不用重新開表單」</td></tr>
+        <tr><td>切到週視圖</td><td>「週視圖可以看到每件案子的時間區段」</td></tr>
+        <tr><td>點空白日格</td><td>「點空白格直接開新訂單表單，日期自動帶入」（不送出，返回）</td></tr>
+      </table>
+      <div class="tip">💡 這個功能通常是老闆娘最感興趣的，可以多花時間示範拖拉</div>
+    </div>
+  </div>
+
+  <!-- 5. 訂單管理 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">5</div>
+      <div class="section-title">訂單管理</div>
+      <span class="section-time">1:30</span>
+    </div>
+    <div class="section-body">
+      <div class="pain">😣 痛點：訂單用 LINE 記，收款方式要另外用筆記本對，很容易漏</div>
+      <table class="steps">
+        <tr><th>操作</th><th>說什麼</th></tr>
+        <tr><td>進入 <kbd>/orders</kbd></td><td>「訂單列表，約 300 筆，半年的資料都在這」</td></tr>
+        <tr><td>指 KPI：筆數 / 總金額 / 完成金額</td><td>「這三個數字是目前篩選範圍的統計，會隨篩選條件變動」</td></tr>
+        <tr><td>搜尋框輸入「陳先生」</td><td>「可以搜客戶名稱、訂單編號、備註」</td></tr>
+        <tr><td>狀態下拉選「取消」</td><td>「篩出所有取消的單，還可以看取消原因」</td></tr>
+        <tr><td>清空篩選，點一筆已完成訂單</td><td>「來看訂單詳情」</td></tr>
+        <tr><td>指訂單詳情各欄位</td><td>「服務項目、指派師傅、收款方式、回繳狀態，一頁搞定」</td></tr>
+        <tr><td>點「複製為新訂單」</td><td>「同一客戶下次再來，點這裡複製，服務內容都帶過去，日期清空」（不送出，返回）</td></tr>
+        <tr><td>回列表，點「新增訂單」</td><td>「來示範新增一筆」</td></tr>
+        <tr><td>選客戶「陳先生」</td><td>「選完客戶，地址和機器自動帶出」</td></tr>
+        <tr><td>加一個服務項目，看金額試算</td><td>「選服務後價格自動帶預設值，總金額即時計算」</td></tr>
+        <tr><td>設定時長 chip（如 90 分鐘）</td><td>「選時長，結束時間自動算出，不用自己算」</td></tr>
+        <tr><td>關掉（不送出）</td><td>「這樣一筆訂單幾十秒就建完了」</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 6. 收款回繳 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">6</div>
+      <div class="section-title">收款 & 師傅回繳</div>
+      <span class="section-time">1:00</span>
+    </div>
+    <div class="section-body">
+      <div class="pain">😣 痛點：師傅收了現金，老闆娘不確定有沒有回來，逐筆對帳花很多時間</div>
+      <table class="steps">
+        <tr><th>操作</th><th>說什麼</th></tr>
+        <tr><td>進入 <kbd>/payroll/settlements</kbd>（師傅待回繳）</td><td>「這裡按師傅分組，每個師傅現在手頭還有多少現金沒有回繳」</td></tr>
+        <tr><td>展開其中一位師傅卡片</td><td>「展開可以看每一筆訂單的詳細金額」</td></tr>
+        <tr><td>點「全部標記已回繳」</td><td>「師傅把錢交回來了，點這一個按鈕，所有筆一次核帳完成」</td></tr>
+        <tr><td>指匯款訂單的「免回繳」badge</td><td>「客戶直接匯款的，系統自動設成免回繳，不會混進去」</td></tr>
+      </table>
+      <div class="quote">「以前每個月光對師傅的現金就要花一個晚上，現在一個按鈕三秒鐘。」</div>
+    </div>
+  </div>
+
+  <!-- 7. 師傅 PWA -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">7</div>
+      <div class="section-title">師傅手機 PWA</div>
+      <span class="section-time">1:00</span>
+    </div>
+    <div class="section-body">
+      <div class="pain">😣 痛點：師傅要打電話問老闆娘今天幾點去哪、客戶電話是多少</div>
+      <table class="steps">
+        <tr><th>操作</th><th>說什麼</th></tr>
+        <tr><td>無痕視窗登入 <kbd>borenchang+wang@gmail.com / admin1234</kbd></td><td>「這是師傅的手機介面，跟後台完全分開」</td></tr>
+        <tr><td>指今日案件清單</td><td>「今天幾點要去哪、哪個客戶，師傅只看得到自己的案件」</td></tr>
+        <tr><td>點開一件案子</td><td>「客戶地址、電話、備註（住二樓/養狗）都在這」</td></tr>
+        <tr><td>指「撥打電話」＋「Google Maps 導航」按鈕</td><td>「點電話直接撥，點地圖直接開導航」</td></tr>
+        <tr><td>指三個現場按鈕</td><td>「收到現金點這個、客戶說已匯款點這個、做完點完成，三個按鈕解決現場所有操作」</td></tr>
+        <tr><td>指頂部待回繳金額 banner</td><td>「師傅自己也看得到手頭還有多少現金要回繳，不會忘」</td></tr>
+        <tr><td>切到「我的薪資」tab</td><td>「師傅可以自己查本月計件薪資，每天明細都有」</td></tr>
+      </table>
+      <div class="tip">💡 如果有實體手機，可以直接 demo 手機畫面更有說服力</div>
+    </div>
+  </div>
+
+  <!-- 8. 即將到期 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">8</div>
+      <div class="section-title">即將到期提醒</div>
+      <span class="section-time">0:45</span>
+    </div>
+    <div class="section-body">
+      <div class="pain">😣 痛點：每年要翻 Excel 找哪些客戶快一年沒清了，手動一個個發 LINE</div>
+      <table class="steps">
+        <tr><th>操作</th><th>說什麼</th></tr>
+        <tr><td>進入 <kbd>/reminders</kbd></td><td>「系統自動偵測 11-13 個月沒服務的客戶，列出來讓您通知」</td></tr>
+        <tr><td>指「逾期 N 天」/ 「本週到期」badge</td><td>「逾期多久一眼就知道，不用自己算日期」</td></tr>
+        <tr><td>點「複製 LINE 文案」</td><td>「點這個按鈕複製提醒訊息，直接貼到 LINE 發給客戶」</td></tr>
+        <tr><td>點「已通知」按鈕</td><td>「發完 LINE 後點已通知，記錄是誰什麼時候通知的」</td></tr>
+        <tr><td>切到「已通知」tab</td><td>「通知過的客戶移到這個 tab，不會重複通知」</td></tr>
+        <tr><td>點「重新掃描」</td><td>「隨時可以重新掃描，即時更新名單」</td></tr>
+      </table>
+      <div class="quote">「以前每次要找這些客戶都要翻整份 Excel，現在系統自動幫您整理好，發 LINE 也只要點一下複製。」</div>
+    </div>
+  </div>
+
+  <!-- 9. 營業報表 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">9</div>
+      <div class="section-title">營業報表</div>
+      <span class="section-time">1:00</span>
+    </div>
+    <div class="section-body">
+      <div class="pain">😣 痛點：月底要統計業績、哪些服務賣最好，還是要靠 Excel 手算</div>
+      <table class="steps">
+        <tr><th>操作</th><th>說什麼</th></tr>
+        <tr><td>進入 <kbd>/reports</kbd></td><td>「這是營業報表，預設本月」</td></tr>
+        <tr><td>指 4 個 KPI：營業額 / 完成件 / 服務客戶 / 平均客單</td><td>「這四個數字最重要，本月業績一眼看完」</td></tr>
+        <tr><td>切換到「本季」</td><td>「可以切換時間範圍：今日、本週、本月、本季、今年」</td></tr>
+        <tr><td>切到「自訂日期」選去年 12 月到現在</td><td>「半年的完整資料都在，也可以自訂任意區間」</td></tr>
+        <tr><td>指「服務項目 TOP」</td><td>「看哪個服務最賺錢，滾筒洗衣機還是分離式冷氣？」</td></tr>
+        <tr><td>指「區域熱區」</td><td>「哪個鄉鎮客戶最多，幫您規劃師傅路線」</td></tr>
+        <tr><td>指「付款方式分佈」</td><td>「現金 vs 匯款的比例」</td></tr>
+        <tr><td>指「VIP 客戶 TOP 10」</td><td>「誰是您最重要的客戶，消費金額排名」</td></tr>
+        <tr><td>點「匯出 CSV」</td><td>「一鍵匯出，Excel 直接開」</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 10. 師傅薪資 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num">10</div>
+      <div class="section-title">師傅計件薪資</div>
+      <span class="section-time">0:45</span>
+    </div>
+    <div class="section-body">
+      <div class="pain">😣 痛點：每月底要手算每個師傅做幾件、加大算幾台、折扣扣多少，很容易算錯</div>
+      <table class="steps">
+        <tr><th>操作</th><th>說什麼</th></tr>
+        <tr><td>進入 <kbd>/payroll</kbd></td><td>「師傅薪資頁，四位師傅的月報入口」</td></tr>
+        <tr><td>點「王大哥」進月報</td><td>「這就是之前您用 Excel 做的版型，我們把它搬進來了」</td></tr>
+        <tr><td>指每日明細表格</td><td>「每天去了哪裡、做了什麼、應收多少，完全自動統計」</td></tr>
+        <tr><td>指加大 / 折扣欄</td><td>「加大跟折扣也自動計入，不用再手動加減」</td></tr>
+        <tr><td>點「下載 Excel」</td><td>「點這個直接下載 .xlsx，版型跟您現在用的一樣」</td></tr>
+        <tr><td>切到上個月</td><td>「可以看歷史月份，資料永遠存著」</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 收尾 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num" style="background:#059669">★</div>
+      <div class="section-title">收尾總結</div>
+      <span class="section-time">0:30</span>
+    </div>
+    <div class="section-body">
+      <div class="quote">「我們今天走了一輪，從客戶管理、月曆排案、訂單收款、師傅回繳、即將到期提醒、到月底薪資報表，所有流程都整合在一起。而且因為是 Supabase + Next.js 架構，<strong>每個月不需要額外付費</strong>。
+      <br><br>
+      接下來有兩件事需要您配合：一是確認四位師傅的真實姓名和帳號，二是如果有舊的 Excel 客戶資料，我們可以幫您一次性匯入，大約 3-4 個工作天完成。」</div>
+
+      <h3>待辦事項提醒（需客戶配合）</h3>
+      <ul class="checklist">
+        <li>提供 4 位師傅真實姓名 + 手機號碼</li>
+        <li>提供舊客戶 Excel 原檔（匯入約 3.5 天）</li>
+        <li>決定網域：Netlify 預設 or 自訂網域</li>
+        <li>Supabase Dashboard 啟用 pg_cron（每日自動掃到期）</li>
+        <li>提供公司 LOGO 圖檔（替換 PWA icon）</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 精簡版 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-num" style="background:#9333ea">⚡</div>
+      <div class="section-title">精簡版 6 分鐘（電話簡報或對方時間有限）</div>
+    </div>
+    <div class="section-body">
+      <p style="font-size:13px;color:var(--gray-700);margin-bottom:12px">按照這個順序，每個段落各約 1 分鐘：</p>
+      <table class="steps">
+        <tr><th>順序</th><th>內容重點</th></tr>
+        <tr><td>① 儀表板</td><td>5 個 KPI + 今日案件清單 — 強調「每天開電腦第一眼就看到」</td></tr>
+        <tr><td>② 全域搜尋</td><td>按 Cmd+K 搜尋客戶 — 強調「不用點選單，隨時搜」</td></tr>
+        <tr><td>③ 月曆拖拉排案</td><td>從待派工拖一張到日曆 + 師傅顏色分區 — 這個最有視覺衝擊力</td></tr>
+        <tr><td>④ 師傅 PWA</td><td>手機端：今日案件 + 一鍵撥打 + 三個現場按鈕</td></tr>
+        <tr><td>⑤ 即將到期</td><td>自動找出快一年沒清的客戶 + 一鍵複製 LINE 文案</td></tr>
+        <tr><td>⑥ 師傅薪資</td><td>月報版型 + 下載 Excel — 強調「現在 Excel 做的全部自動化」</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    Ren Studio 仁格數位科技工坊 — 統一編號 61138241 — renstudio.tw<br>
+    本演示流程依 2026-05-19 main branch 狀態產出
+  </div>
+</div>
+</body>
+</html>

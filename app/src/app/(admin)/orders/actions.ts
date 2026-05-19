@@ -75,6 +75,19 @@ export async function cancelOrderAction(
   return { ok: true };
 }
 
+/** Preview the next order code for a given date (for display in the form). */
+export async function previewOrderCodeAction(dateStr?: string): Promise<string> {
+  await requireRole(["owner", "manager"]);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("generate_order_code", dateStr ? { p_date: dateStr } : {});
+  if (error || !data) {
+    const d = dateStr ? new Date(dateStr) : new Date();
+    const prefix = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+    return `${prefix}-001`;
+  }
+  return data as string;
+}
+
 async function nextOrderCode(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data, error } = await supabase.rpc("generate_order_code");
   if (error || !data) {

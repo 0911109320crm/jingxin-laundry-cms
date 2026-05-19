@@ -184,3 +184,43 @@ export async function deleteCustomerAction(id: string): Promise<ActionResult> {
   revalidatePath("/customers");
   redirect("/customers");
 }
+
+export type DuplicateAddressResult = {
+  id: string;
+  code: string;
+  name: string;
+  phone: string;
+} | null;
+
+export async function checkDuplicateAddressAction(
+  county: string,
+  district: string,
+  address: string,
+  excludeCustomerId?: string,
+): Promise<DuplicateAddressResult> {
+  await requireRole(["owner", "manager"]);
+  const trimmed = address.trim();
+  if (!trimmed || trimmed.length < 3) return null;
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("customer_addresses")
+    .select("customer_id, customers(id, code, name, phone)")
+    .eq("county", county)
+    .eq("district", district)
+    .ilike("address", trimmed)
+    .limit(1);
+
+  if (excludeCustomerId) {
+    query = query.neq("customer_id", excludeCustomerId);
+  }
+
+  const { data } = await query;
+  const row = data?.[0];
+  if (!row) return null;
+
+  const c = row.customers as { id: string; code: string; name: string; phone: string } | null;
+  if (!c) return null;
+  return { id: c.id, code: c.code, name: c.name, phone: c.phone };
+}
+

@@ -1,3 +1,4 @@
+import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Download } from "lucide-react";
@@ -110,12 +111,12 @@ export default async function TechnicianPayrollPage({
                   <th className="border border-zinc-200 px-2 py-1"></th>
                   <th className="border border-zinc-200 px-2 py-1"></th>
                   {Array.from({ length: 4 }).map((_, i) => (
-                    <>
-                      <th key={`tag-${i}`} className="border border-zinc-200 px-2 py-1">代號</th>
-                      <th key={`amt-${i}`} className="border border-zinc-200 px-2 py-1">金額</th>
-                      <th key={`name-${i}`} className="border border-zinc-200 px-2 py-1">姓名</th>
-                      <th key={`code-${i}`} className="border border-zinc-200 px-2 py-1">編號</th>
-                    </>
+                    <React.Fragment key={i}>
+                      <th className="border border-zinc-200 px-2 py-1">代號</th>
+                      <th className="border border-zinc-200 px-2 py-1">金額</th>
+                      <th className="border border-zinc-200 px-2 py-1">姓名</th>
+                      <th className="border border-zinc-200 px-2 py-1">編號</th>
+                    </React.Fragment>
                   ))}
                   <th className="border border-zinc-200 px-2 py-1"></th>
                   <th className="border border-zinc-200 px-2 py-1"></th>

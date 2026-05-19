@@ -24,6 +24,7 @@ import {
   createOrderAction,
   updateOrderAction,
   getCustomerContext,
+  previewOrderCodeAction,
 } from "@/app/(admin)/orders/actions";
 import { formatNTD } from "@/lib/utils";
 
@@ -73,6 +74,8 @@ type Props = {
   defaultScheduledAt?: string;
   /** Where to navigate after successful create/update. */
   backHref?: string;
+  /** Edit mode: existing order_code for display. */
+  orderCode?: string;
 };
 
 const emptyItem = {
@@ -95,12 +98,14 @@ export function OrderForm({
   defaultCustomerId,
   defaultScheduledAt,
   backHref,
+  orderCode,
 }: Props) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [addresses, setAddresses] = useState<Address[]>(initial?.addresses ?? []);
   const [machines, setMachines] = useState<Machine[]>(initial?.machines ?? []);
+  const [previewCode, setPreviewCode] = useState<string>("");
 
   const {
     register,
@@ -163,6 +168,17 @@ export function OrderForm({
     setValue("scheduled_end_at", value);
   }, [scheduledAt, duration, setValue]);
 
+  // Preview order code (create mode only)
+  useEffect(() => {
+    if (mode !== "create") return;
+    const dateStr = scheduledAt ? scheduledAt.slice(0, 10) : undefined;
+    let cancelled = false;
+    previewOrderCodeAction(dateStr).then((code) => {
+      if (!cancelled) setPreviewCode(code);
+    });
+    return () => { cancelled = true; };
+  }, [mode, scheduledAt]);
+
   // Auto-fetch addresses/machines when customer changes
   useEffect(() => {
     if (!customerId) {
@@ -224,8 +240,18 @@ export function OrderForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex items-center justify-between">
           <CardTitle>客戶 / 排程</CardTitle>
+          {mode === "create" && previewCode && (
+            <span className="rounded-md bg-zinc-100 px-2.5 py-1 font-mono text-xs text-zinc-500">
+              預計編號：{previewCode}
+            </span>
+          )}
+          {mode === "edit" && orderCode && (
+            <span className="rounded-md bg-zinc-100 px-2.5 py-1 font-mono text-xs text-zinc-500">
+              {orderCode}
+            </span>
+          )}
         </CardHeader>
         <CardBody className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="客戶" error={errors.customer_id?.message}>

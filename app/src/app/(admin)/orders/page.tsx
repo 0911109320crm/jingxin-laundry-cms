@@ -11,12 +11,8 @@ import {
   PaymentBadge,
   SettlementBadge,
 } from "@/components/orders/StatusBadges";
-import { formatDate, formatNTD } from "@/lib/utils";
-import {
-  ORDER_STATUSES,
-  ORDER_STATUS_LABEL,
-  type OrderInput,
-} from "@/lib/validators/order";
+import { formatDate, formatNTD, cn } from "@/lib/utils";
+import { type OrderInput } from "@/lib/validators/order";
 
 type SP = Promise<{
   q?: string;
@@ -30,6 +26,8 @@ type Row = {
   order_code: string;
   scheduled_at: string | null;
   service_at: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
   status: OrderInput["status"];
   payment_method: OrderInput["payment_method"];
   settlement_status: "pending" | "settled" | "not_required";
@@ -38,6 +36,14 @@ type Row = {
   customer: { name: string; phone: string; code: string } | null;
   address: { county: string; district: string } | null;
 };
+
+const TABS = [
+  { label: "全部",   value: "" },
+  { label: "待派工", value: "pending" },
+  { label: "已排案", value: "scheduled" },
+  { label: "已完成", value: "done" },
+  { label: "已取消", value: "cancelled" },
+] as const;
 
 export default async function OrdersPage({ searchParams }: { searchParams: SP }) {
   await requireRole(["owner", "manager"]);
@@ -51,13 +57,13 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
   let query = supabase
     .from("orders")
     .select(
-      `id, order_code, scheduled_at, service_at, status, payment_method,
-       settlement_status, total, note,
+      `id, order_code, scheduled_at, service_at, cancelled_at, cancellation_reason,
+       status, payment_method, settlement_status, total, note,
        customer:customers(name, phone, code),
        address:customer_addresses(county, district)`,
     )
     .order("scheduled_at", { ascending: false, nullsFirst: false })
-    .limit(150);
+    .limit(300);
 
   if (status) query = query.eq("status", status);
   if (payment) query = query.eq("payment_method", payment);
@@ -76,6 +82,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
     .reduce((s, r) => s + Number(r.total), 0);
   const doneCount = rows.filter((r) => r.status === "done").length;
 
+  const isCancelledTab = status === "cancelled";
+
   return (
     <div className="p-8 space-y-5">
       <header className="flex items-center justify-between">
@@ -92,9 +100,38 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
         </Link>
       </header>
 
+      {/* Status tabs */}
+      <div className="flex gap-1 border-b border-zinc-200">
+        {TABS.map((tab) => {
+          const active = status === tab.value;
+          const href = tab.value
+            ? `/orders?status=${tab.value}${q ? `&q=${encodeURIComponent(q)}` : ""}`
+            : `/orders${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+          return (
+            <Link
+              key={tab.value}
+              href={href}
+              className={cn(
+                "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                active
+                  ? "border-brand-600 text-brand-700"
+                  : "border-transparent text-zinc-500 hover:text-zinc-700",
+              )}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </div>
+
       <Card>
         <CardBody>
-          <form className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_160px_180px_160px_auto]">
+          <form className={cn(
+            "grid grid-cols-1 gap-3",
+            isCancelledTab
+              ? "md:grid-cols-[1fr_auto]"
+              : "md:grid-cols-[1fr_160px_180px_160px_auto]",
+          )}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
               <Input
@@ -104,28 +141,26 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                 className="pl-9"
               />
             </div>
-            <Select name="status" defaultValue={status}>
-              <option value="">— 全部狀態 —</option>
-              {ORDER_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {ORDER_STATUS_LABEL[s]}
-                </option>
-              ))}
-            </Select>
-            <Select name="payment" defaultValue={payment}>
-              <option value="">— 全部收款 —</option>
-              <option value="unpaid">未收款</option>
-              <option value="cash">已收款-現金</option>
-              <option value="transfer">已收款-匯款</option>
-              <option value="card">已收款-刷卡</option>
-              <option value="line_pay">已收款-LINE Pay</option>
-            </Select>
-            <Select name="settlement" defaultValue={settlement}>
-              <option value="">— 全部回繳 —</option>
-              <option value="pending">待回繳</option>
-              <option value="settled">已回繳</option>
-              <option value="not_required">免回繳</option>
-            </Select>
+            {/* Keep hidden status so tab selection survives form submit */}
+            {status && <input type="hidden" name="status" value={status} />}
+            {!isCancelledTab && (
+              <>
+                <Select name="payment" defaultValue={payment}>
+                  <option value="">— 全部收款 —</option>
+                  <option value="unpaid">未收款</option>
+                  <option value="cash">已收款-現金</option>
+                  <option value="transfer">已收款-匯款</option>
+                  <option value="card">已收款-刷卡</option>
+                  <option value="line_pay">已收款-LINE Pay</option>
+                </Select>
+                <Select name="settlement" defaultValue={settlement}>
+                  <option value="">— 全部回繳 —</option>
+                  <option value="pending">待回繳</option>
+                  <option value="settled">已回繳</option>
+                  <option value="not_required">免回繳</option>
+                </Select>
+              </>
+            )}
             <Button type="submit">套用</Button>
           </form>
         </CardBody>
@@ -177,8 +212,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                           {o.order_code}
                         </span>
                         <StatusBadge value={o.status} />
-                        <PaymentBadge value={o.payment_method} />
-                        <SettlementBadge value={o.settlement_status} />
+                        {!isCancelledTab && (
+                          <>
+                            <PaymentBadge value={o.payment_method} />
+                            <SettlementBadge value={o.settlement_status} />
+                          </>
+                        )}
                       </div>
                       <p className="text-sm">
                         <span className="font-medium text-zinc-900">
@@ -187,24 +226,35 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                         <span className="text-zinc-500"> · {o.customer?.phone}</span>
                         {o.address && (
                           <span className="text-zinc-500">
-                            {" "}
-                            · {o.address.county} {o.address.district}
+                            {" "}· {o.address.county} {o.address.district}
                           </span>
                         )}
                       </p>
+                      {isCancelledTab && o.cancellation_reason && (
+                        <p className="text-xs text-red-600 bg-red-50 rounded px-2 py-0.5 inline-block">
+                          取消原因：{o.cancellation_reason}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 text-right">
                       <div>
                         <p className="text-xs text-zinc-400">
                           預約：{formatDate(o.scheduled_at)}
                         </p>
-                        {o.service_at && (
+                        {isCancelledTab && o.cancelled_at ? (
+                          <p className="text-xs text-red-400">
+                            取消：{formatDate(o.cancelled_at)}
+                          </p>
+                        ) : o.service_at ? (
                           <p className="text-xs text-zinc-400">
                             完工：{formatDate(o.service_at)}
                           </p>
-                        )}
+                        ) : null}
                       </div>
-                      <p className="text-base font-semibold text-zinc-900 font-mono">
+                      <p className={cn(
+                        "text-base font-semibold font-mono",
+                        isCancelledTab ? "text-zinc-400 line-through" : "text-zinc-900",
+                      )}>
                         {formatNTD(o.total)}
                       </p>
                     </div>

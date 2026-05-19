@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, AlertTriangle } from "lucide-react";
 import {
   CustomerSchema,
   type CustomerInput,
@@ -25,7 +25,9 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   createCustomerAction,
   updateCustomerAction,
+  checkDuplicateAddressAction,
   type ActionResult,
+  type DuplicateAddressResult,
 } from "@/app/(admin)/customers/actions";
 
 type Source = { id: string; name: string };
@@ -34,6 +36,7 @@ type Props = {
   sources: Source[];
   initial?: CustomerInput & { id?: string };
   mode: "create" | "edit";
+  customerId?: string;
 };
 
 const emptyAddress = {
@@ -52,10 +55,17 @@ const emptyMachine = {
   note: "",
 };
 
-export function CustomerForm({ sources, initial, mode }: Props) {
+export function CustomerForm({ sources, initial, mode, customerId }: Props) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [dupWarnings, setDupWarnings] = useState<Record<number, DuplicateAddressResult>>({});
+
+  const checkAddress = useCallback(async (idx: number, county: string, district: string, address: string) => {
+    if (!address.trim() || !county || !district) return;
+    const result = await checkDuplicateAddressAction(county, district, address, customerId ?? initial?.id);
+    setDupWarnings((prev) => ({ ...prev, [idx]: result }));
+  }, [customerId, initial?.id]);
 
   const {
     register,
@@ -210,8 +220,30 @@ export function CustomerForm({ sources, initial, mode }: Props) {
                   <Input
                     {...register(`addresses.${idx}.address`)}
                     placeholder="光復路一段146巷40號"
+                    onBlur={(e) => {
+                      const county = watchedAddresses?.[idx]?.county ?? "";
+                      const district = watchedAddresses?.[idx]?.district ?? "";
+                      checkAddress(idx, county, district, e.target.value);
+                    }}
                   />
                 </Field>
+                {dupWarnings[idx] && (
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <div className="text-sm">
+                      <span className="font-medium text-amber-800">此地址已有舊客戶：</span>
+                      <a
+                        href={`/customers/${dupWarnings[idx]!.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ml-1 font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"
+                      >
+                        {dupWarnings[idx]!.name}（{dupWarnings[idx]!.code}）
+                      </a>
+                      <span className="ml-2 text-amber-700">{dupWarnings[idx]!.phone}</span>
+                    </div>
+                  </div>
+                )}
                 <Controller
                   control={control}
                   name={`addresses.${idx}.is_default`}
