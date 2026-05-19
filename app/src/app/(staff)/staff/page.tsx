@@ -24,6 +24,7 @@ type StaffOrder = {
   total: number;
   customer: { name: string; phone: string } | null;
   address: { county: string; district: string; address: string } | null;
+  items: { quantity: number; service: { name: string } | null }[];
 };
 
 function dateRange(dateStr?: string) {
@@ -51,7 +52,8 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
       .select(
         `id, order_code, scheduled_at, status, payment_method, settlement_status, total,
          customer:customers(name, phone),
-         address:customer_addresses(county, district, address)`,
+         address:customer_addresses(county, district, address),
+         items:order_items(quantity, service:service_items(name))`,
       )
       .gte("scheduled_at", startIso)
       .lt("scheduled_at", endIso)
@@ -163,6 +165,18 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
                           {o.customer?.phone}
                         </p>
                       </div>
+                      {o.items.length > 0 && (
+                        <p className="text-sm text-zinc-700">
+                          {o.items
+                            .map((it) =>
+                              it.service?.name
+                                ? `${it.service.name}${it.quantity > 1 ? `×${it.quantity}` : ""}`
+                                : null,
+                            )
+                            .filter(Boolean)
+                            .join("、")}
+                        </p>
+                      )}
                       {o.address && (
                         <p className="flex items-start gap-1 text-sm text-zinc-600">
                           <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />

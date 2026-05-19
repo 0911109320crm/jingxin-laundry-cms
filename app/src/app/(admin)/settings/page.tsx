@@ -23,6 +23,11 @@ const sections = [
     desc: "LINE / Google / 跟車 / 老客介紹...",
   },
   {
+    href: "/settings/service-tags",
+    title: "師傅快速備註標籤",
+    desc: "管理師傅完成案件時可勾選的快速備註（洗衣粉、無電梯、有廢水…）",
+  },
+  {
     href: "/settings/audit",
     title: "操作稽核",
     desc: "查看所有寫入 / 刪除 / 取消等敏感操作（僅老闆）",

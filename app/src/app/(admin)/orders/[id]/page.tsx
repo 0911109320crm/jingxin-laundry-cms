@@ -54,6 +54,8 @@ type Detail = {
   source: string | null;
   cancellation_reason: string | null;
   cancelled_at: string | null;
+  service_tags: string[] | null;
+  service_notes: string | null;
   customer: { id: string; code: string; name: string; phone: string } | null;
   address: { county: string; district: string; address: string } | null;
   items: Item[];
@@ -79,6 +81,7 @@ export default async function OrderDetailPage({
       `id, order_code, status, payment_method, settlement_status,
        scheduled_at, service_at, subtotal, adjustments_total, total,
        note, source, cancellation_reason, cancelled_at,
+       service_tags, service_notes,
        customer:customers(id, code, name, phone),
        address:customer_addresses(county, district, address),
        items:order_items(id, quantity, unit_price, subtotal, tag, note,
@@ -312,10 +315,37 @@ export default async function OrderDetailPage({
       {o.note && (
         <Card>
           <CardHeader>
-            <CardTitle>備註</CardTitle>
+            <CardTitle>備註（建單時填寫）</CardTitle>
           </CardHeader>
           <CardBody>
             <p className="whitespace-pre-wrap text-sm text-zinc-700">{o.note}</p>
+          </CardBody>
+        </Card>
+      )}
+
+      {((o.service_tags && o.service_tags.length > 0) || o.service_notes) && (
+        <Card className="border-brand-200 bg-brand-50/30">
+          <CardHeader>
+            <CardTitle>師傅現場備註</CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-2">
+            {o.service_tags && o.service_tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {o.service_tags.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full bg-brand-100 px-2.5 py-1 text-xs font-medium text-brand-800"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+            {o.service_notes && (
+              <p className="whitespace-pre-wrap rounded-md bg-white p-3 text-sm text-zinc-700">
+                {o.service_notes}
+              </p>
+            )}
           </CardBody>
         </Card>
       )}

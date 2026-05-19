@@ -59,10 +59,36 @@ type OrderRow = {
   payment_method: OrderInput["payment_method"];
   settlement_status: "pending" | "settled" | "not_required";
   total: number;
+  note: string | null;
   cancellation_reason: string | null;
+  service_tags: string[] | null;
+  service_notes: string | null;
+  address: {
+    county: string;
+    district: string;
+    address: string;
+    label: string | null;
+  } | null;
   items: {
+    id: string;
     technician_id: string | null;
+    quantity: number;
+    unit_price: number;
+    tag: string | null;
+    note: string | null;
     service: { name: string } | null;
+    machine: {
+      type: MachineType;
+      brand: string | null;
+      model: string | null;
+    } | null;
+  }[];
+  adjustments: {
+    id: string;
+    name_snapshot: string;
+    type: "addon" | "discount";
+    amount: number;
+    note: string | null;
   }[];
 };
 
@@ -91,8 +117,15 @@ export default async function CustomerDetailPage({
       .from("orders")
       .select(
         `id, order_code, scheduled_at, service_at, status, payment_method,
-         settlement_status, total,
-         items:order_items(technician_id, service:service_items(name))`,
+         settlement_status, total, note, cancellation_reason,
+         service_tags, service_notes,
+         address:customer_addresses(county, district, address, label),
+         items:order_items(
+           id, technician_id, quantity, unit_price, tag, note,
+           service:service_items(name),
+           machine:machines(type, brand, model)
+         ),
+         adjustments:order_adjustments(id, name_snapshot, type, amount, note)`,
       )
       .eq("customer_id", id)
       .order("scheduled_at", { ascending: false, nullsFirst: false }),
@@ -330,72 +363,215 @@ export default async function CustomerDetailPage({
           {orders.length === 0 ? (
             <p className="p-5 text-sm text-zinc-500">尚無服務紀錄</p>
           ) : (
-            <ul className="divide-y divide-zinc-200">
+            <div className="divide-y divide-zinc-200">
               {orders.map((o) => {
-                const services = o.items
-                  .map((it) => it.service?.name)
-                  .filter(Boolean) as string[];
-                const techIds = Array.from(
-                  new Set(
-                    o.items.map((it) => it.technician_id).filter(Boolean),
-                  ),
-                ) as string[];
-                const techNames = techIds
-                  .map((tid) => techMap.get(tid))
-                  .filter(Boolean) as string[];
+                const subtotal = o.items.reduce(
+                  (s, it) => s + Number(it.quantity) * Number(it.unit_price),
+                  0,
+                );
+                const adjTotal = o.adjustments.reduce(
+                  (s, a) =>
+                    s + (a.type === "addon" ? Number(a.amount) : -Number(a.amount)),
+                  0,
+                );
                 return (
-                  <li key={o.id} className="group relative">
-                    <Link
-                      href={`/orders/new?clone=${o.id}&from=customer&cid=${customer.id}`}
-                      className="absolute right-2 top-2 z-10 hidden rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-700 hover:bg-brand-100 group-hover:block"
-                      title="複製此單為新訂單"
-                    >
-                      複製此單
-                    </Link>
-                    <Link
-                      href={`/orders/${o.id}?from=customer&cid=${customer.id}`}
-                      className="flex flex-col gap-2 px-5 py-3 transition-colors hover:bg-zinc-50 md:flex-row md:items-center md:justify-between"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-xs text-zinc-500">
-                            {o.order_code}
-                          </span>
-                          <StatusBadge value={o.status} />
-                          <PaymentBadge value={o.payment_method} />
-                          {o.settlement_status !== "not_required" && (
-                            <SettlementBadge value={o.settlement_status} />
-                          )}
-                        </div>
-                        <p className="text-sm text-zinc-700">
-                          {services.length > 0
-                            ? services.join("、")
-                            : "未填服務"}
-                        </p>
-                        {techNames.length > 0 && (
-                          <p className="text-xs text-zinc-500">
-                            師傅：{techNames.join("、")}
-                          </p>
-                        )}
-                        {o.status === "cancelled" && o.cancellation_reason && (
-                          <p className="text-xs text-rose-700">
-                            取消原因：{o.cancellation_reason}
-                          </p>
+                  <div key={o.id} className="group relative px-5 py-4 hover:bg-zinc-50/60">
+                    {/* Header */}
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/orders/${o.id}?from=customer&cid=${customer.id}`}
+                          className="font-mono text-xs font-medium text-brand-700 hover:underline"
+                        >
+                          {o.order_code}
+                        </Link>
+                        <StatusBadge value={o.status} />
+                        <PaymentBadge value={o.payment_method} />
+                        {o.settlement_status !== "not_required" && (
+                          <SettlementBadge value={o.settlement_status} />
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-zinc-400">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-zinc-500">
                           {formatDate(o.service_at ?? o.scheduled_at)}
-                        </p>
-                        <p className="font-mono font-semibold text-zinc-900">
-                          {formatNTD(o.total)}
-                        </p>
+                        </span>
+                        <Link
+                          href={`/orders/new?clone=${o.id}&from=customer&cid=${customer.id}`}
+                          className="rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-700 hover:bg-brand-100"
+                          title="複製此單為新訂單"
+                        >
+                          複製此單
+                        </Link>
                       </div>
-                    </Link>
-                  </li>
+                    </div>
+
+                    {/* Address */}
+                    {o.address && (
+                      <p className="mt-2 flex items-center gap-1 text-xs text-zinc-600">
+                        <MapPin className="h-3 w-3 text-zinc-400" />
+                        {o.address.county}
+                        {o.address.district} {o.address.address}
+                        {o.address.label && (
+                          <span className="ml-1 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-600">
+                            {o.address.label}
+                          </span>
+                        )}
+                      </p>
+                    )}
+
+                    {/* Items table */}
+                    {o.items.length > 0 && (
+                      <div className="mt-3 overflow-hidden rounded-md border border-zinc-200">
+                        <table className="w-full text-xs">
+                          <thead className="bg-zinc-50 text-zinc-500">
+                            <tr>
+                              <th className="px-2 py-1.5 text-left font-medium">服務項目</th>
+                              <th className="px-2 py-1.5 text-left font-medium">機器</th>
+                              <th className="px-2 py-1.5 text-left font-medium">師傅</th>
+                              <th className="px-2 py-1.5 text-right font-medium">數量</th>
+                              <th className="px-2 py-1.5 text-right font-medium">單價</th>
+                              <th className="px-2 py-1.5 text-right font-medium">金額</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-100">
+                            {o.items.map((it) => {
+                              const machineLabel = it.machine
+                                ? [
+                                    MACHINE_TYPE_LABEL[it.machine.type] ?? it.machine.type,
+                                    [it.machine.brand, it.machine.model]
+                                      .filter(Boolean)
+                                      .join(" "),
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")
+                                : "—";
+                              const tech = it.technician_id
+                                ? techMap.get(it.technician_id) ?? "—"
+                                : "—";
+                              const lineAmt =
+                                Number(it.quantity) * Number(it.unit_price);
+                              return (
+                                <tr key={it.id} className="text-zinc-700">
+                                  <td className="px-2 py-1.5">
+                                    <span>{it.service?.name ?? "—"}</span>
+                                    {it.tag && (
+                                      <span className="ml-1 rounded bg-zinc-100 px-1 py-0.5 text-[10px] text-zinc-600">
+                                        {it.tag}
+                                      </span>
+                                    )}
+                                    {it.note && (
+                                      <p className="mt-0.5 text-[11px] text-zinc-500">
+                                        {it.note}
+                                      </p>
+                                    )}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-zinc-600">{machineLabel}</td>
+                                  <td className="px-2 py-1.5 text-zinc-600">{tech}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono">{it.quantity}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono">
+                                    {formatNTD(Number(it.unit_price))}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right font-mono">
+                                    {formatNTD(lineAmt)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Adjustments */}
+                    {o.adjustments.length > 0 && (
+                      <ul className="mt-2 space-y-0.5 text-xs">
+                        {o.adjustments.map((a) => (
+                          <li key={a.id} className="flex items-center gap-2 text-zinc-600">
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-[10px] ${
+                                a.type === "addon"
+                                  ? "bg-orange-50 text-orange-700"
+                                  : "bg-emerald-50 text-emerald-700"
+                              }`}
+                            >
+                              {a.type === "addon" ? "加價" : "折扣"}
+                            </span>
+                            <span>{a.name_snapshot}</span>
+                            <span
+                              className={`ml-auto font-mono ${
+                                a.type === "addon" ? "text-orange-700" : "text-emerald-700"
+                              }`}
+                            >
+                              {a.type === "addon" ? "+" : "-"}
+                              {formatNTD(Number(a.amount))}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {/* Totals */}
+                    <div className="mt-2 flex items-center justify-end gap-4 text-xs text-zinc-600">
+                      <span>
+                        小計 <span className="font-mono">{formatNTD(subtotal)}</span>
+                      </span>
+                      {o.adjustments.length > 0 && (
+                        <span>
+                          加減{" "}
+                          <span className="font-mono">
+                            {adjTotal >= 0 ? "+" : ""}
+                            {formatNTD(adjTotal)}
+                          </span>
+                        </span>
+                      )}
+                      <span className="text-sm">
+                        應收{" "}
+                        <span className="font-mono font-bold text-zinc-900">
+                          {formatNTD(Number(o.total))}
+                        </span>
+                      </span>
+                    </div>
+
+                    {/* Note + cancellation reason */}
+                    {o.note && (
+                      <p className="mt-2 rounded bg-zinc-50 px-2 py-1 text-xs text-zinc-700">
+                        建單備註：{o.note}
+                      </p>
+                    )}
+                    {((o.service_tags && o.service_tags.length > 0) ||
+                      o.service_notes) && (
+                      <div className="mt-2 space-y-1 rounded border border-brand-200 bg-brand-50/40 px-2 py-1.5">
+                        <p className="text-[10px] font-medium text-brand-800">
+                          師傅現場備註
+                        </p>
+                        {o.service_tags && o.service_tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {o.service_tags.map((t) => (
+                              <span
+                                key={t}
+                                className="rounded bg-brand-100 px-1.5 py-0.5 text-[10px] text-brand-800"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {o.service_notes && (
+                          <p className="whitespace-pre-wrap text-xs text-zinc-700">
+                            {o.service_notes}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {o.status === "cancelled" && o.cancellation_reason && (
+                      <p className="mt-1 text-xs text-rose-700">
+                        取消原因：{o.cancellation_reason}
+                      </p>
+                    )}
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           )}
         </CardBody>
       </Card>

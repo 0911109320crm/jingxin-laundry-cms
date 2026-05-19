@@ -27,6 +27,9 @@ type Detail = {
   adjustments_total: number;
   total: number;
   note: string | null;
+  service_tags: string[] | null;
+  service_notes: string | null;
+  customer_id: string;
   customer: { name: string; phone: string } | null;
   address: { county: string; district: string; address: string } | null;
   items: {
@@ -48,6 +51,14 @@ type Detail = {
   }[];
 };
 
+type PriorNote = {
+  id: string;
+  order_code: string;
+  service_at: string | null;
+  service_tags: string[] | null;
+  service_notes: string | null;
+};
+
 export default async function StaffOrderPage({
   params,
 }: {
@@ -62,6 +73,7 @@ export default async function StaffOrderPage({
     .select(
       `id, order_code, status, payment_method, settlement_status,
        scheduled_at, service_at, subtotal, adjustments_total, total, note,
+       service_tags, service_notes, customer_id,
        customer:customers(name, phone),
        address:customer_addresses(county, district, address),
        items:order_items(id, quantity, unit_price, subtotal, tag, note,
@@ -77,6 +89,29 @@ export default async function StaffOrderPage({
   if (!o) notFound();
 
   const myItems = o.items.filter((it) => it.technician_id === me.id);
+
+  // Load active tag presets for the complete dialog
+  const { data: presetsData } = await supabase
+    .from("service_tag_presets")
+    .select("id, label, sort_order")
+    .eq("active", true)
+    .order("sort_order");
+  const presets =
+    (presetsData as { id: string; label: string; sort_order: number }[] | null) ??
+    [];
+
+  // Load same customer's prior orders with tags/notes (so 接續師傅 knows quirks)
+  const { data: priorData } = await supabase
+    .from("orders")
+    .select("id, order_code, service_at, service_tags, service_notes")
+    .eq("customer_id", o.customer_id)
+    .neq("id", o.id)
+    .or("service_tags.neq.{},service_notes.not.is.null")
+    .order("service_at", { ascending: false, nullsFirst: false })
+    .limit(5);
+  const priorNotes = ((priorData as PriorNote[] | null) ?? []).filter(
+    (p) => (p.service_tags && p.service_tags.length > 0) || p.service_notes,
+  );
 
   return (
     <div className="p-4 space-y-3">
@@ -223,10 +258,78 @@ export default async function StaffOrderPage({
       {o.note && (
         <Card>
           <CardHeader>
-            <CardTitle>備註</CardTitle>
+            <CardTitle>老闆娘交辦</CardTitle>
           </CardHeader>
           <CardBody>
             <p className="whitespace-pre-wrap text-sm text-zinc-700">{o.note}</p>
+          </CardBody>
+        </Card>
+      )}
+
+      {priorNotes.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/30">
+          <CardHeader>
+            <CardTitle className="text-amber-900">
+              ⚠ 此客戶過往師傅備註
+            </CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-2 p-3">
+            {priorNotes.map((p) => (
+              <div
+                key={p.id}
+                className="rounded-md border border-amber-200 bg-white p-2.5 text-sm"
+              >
+                <div className="flex items-center justify-between text-xs text-zinc-500">
+                  <span className="font-mono">{p.order_code}</span>
+                  <span>{p.service_at?.slice(0, 10) ?? ""}</span>
+                </div>
+                {p.service_tags && p.service_tags.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {p.service_tags.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {p.service_notes && (
+                  <p className="mt-1 whitespace-pre-wrap text-zinc-700">
+                    {p.service_notes}
+                  </p>
+                )}
+              </div>
+            ))}
+          </CardBody>
+        </Card>
+      )}
+
+      {/* This order's existing tags/notes (after completion) */}
+      {((o.service_tags && o.service_tags.length > 0) || o.service_notes) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>本案備註</CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-2">
+            {o.service_tags && o.service_tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {o.service_tags.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-700"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+            {o.service_notes && (
+              <p className="whitespace-pre-wrap text-sm text-zinc-700">
+                {o.service_notes}
+              </p>
+            )}
           </CardBody>
         </Card>
       )}
@@ -235,6 +338,13 @@ export default async function StaffOrderPage({
         orderId={o.id}
         currentPayment={o.payment_method}
         isDone={o.status === "done"}
+        presets={presets}
+        initialTags={o.service_tags ?? []}
+        initialNotes={o.service_notes ?? ""}
+        adjustments={o.adjustments}
+        subtotal={o.subtotal}
+        adjustmentsTotal={o.adjustments_total}
+        total={o.total}
       />
     </div>
   );

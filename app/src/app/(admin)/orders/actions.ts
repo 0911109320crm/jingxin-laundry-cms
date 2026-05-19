@@ -342,7 +342,10 @@ export async function setPaymentMethodAction(
 }
 
 /** Mark order as done (technician completes the job). */
-export async function completeOrderAction(orderId: string): Promise<Res> {
+export async function completeOrderAction(
+  orderId: string,
+  extra?: { service_tags?: string[]; service_notes?: string | null },
+): Promise<Res> {
   const me = await requireRole(["owner", "manager", "technician"]);
   if (me.profile.role === "technician") {
     const owns = await technicianOwnsOrder(orderId, me.id);
@@ -350,15 +353,57 @@ export async function completeOrderAction(orderId: string): Promise<Res> {
   }
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
+  const update: {
+    status: "done";
+    service_at: string;
+    service_tags?: string[];
+    service_notes?: string | null;
+  } = {
+    status: "done",
+    service_at: new Date().toISOString(),
+  };
+  if (extra?.service_tags) {
+    update.service_tags = extra.service_tags.slice(0, 30);
+  }
+  if (extra?.service_notes !== undefined) {
+    const trimmed = (extra.service_notes ?? "").trim();
+    update.service_notes = trimmed.length === 0 ? null : trimmed.slice(0, 2000);
+  }
+  const { error } = await admin.from("orders").update(update).eq("id", orderId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/staff");
+  revalidatePath(`/staff/order/${orderId}`);
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/calendar");
+  return { ok: true };
+}
+
+/** Update service tags / notes on an existing order (no status change). */
+export async function updateServiceNotesAction(
+  orderId: string,
+  patch: { service_tags: string[]; service_notes: string | null },
+): Promise<Res> {
+  const me = await requireRole(["owner", "manager", "technician"]);
+  if (me.profile.role === "technician") {
+    const owns = await technicianOwnsOrder(orderId, me.id);
+    if (!owns) return { ok: false, error: "不是你的訂單" };
+  }
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const trimmed = (patch.service_notes ?? "").trim();
   const { error } = await admin
     .from("orders")
-    .update({ status: "done", service_at: new Date().toISOString() })
+    .update({
+      service_tags: patch.service_tags.slice(0, 30),
+      service_notes: trimmed.length === 0 ? null : trimmed.slice(0, 2000),
+    })
     .eq("id", orderId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/staff");
   revalidatePath(`/staff/order/${orderId}`);
   revalidatePath("/orders");
-  revalidatePath("/calendar");
+  revalidatePath(`/orders/${orderId}`);
   return { ok: true };
 }
 

@@ -105,7 +105,7 @@ export function GlobalSearch() {
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜尋顧客或訂單…"
+            placeholder="搜尋姓名、電話、編號、地址、訂單…"
             className="flex-1 bg-transparent text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
           />
           {query && (
@@ -141,9 +141,14 @@ export function GlobalSearch() {
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">
                       {c.name.charAt(0)}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-zinc-900 truncate">{c.name}</p>
-                      <p className="text-xs text-zinc-500">{c.phone} · {c.code}</p>
+                      <p className="text-xs text-zinc-500 truncate">{c.phone} · {c.code}</p>
+                      {c.matched_address && (
+                        <p className="text-xs text-brand-700 truncate">
+                          📍 {c.matched_address}
+                        </p>
+                      )}
                     </div>
                   </button>
                 ))}
@@ -196,7 +201,7 @@ export function GlobalSearch() {
         {/* Hint when no query */}
         {query.trim().length < 2 && !isPending && (
           <div className="px-4 py-5 text-center text-xs text-zinc-400">
-            輸入至少 2 個字開始搜尋顧客或訂單
+            輸入至少 2 個字（姓名 / 電話 / 編號 / 地址 / 訂單）
           </div>
         )}
       </div>

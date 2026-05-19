@@ -8,6 +8,7 @@ export type CustomerResult = {
   code: string;
   name: string;
   phone: string;
+  matched_address?: string;
 };
 
 export type OrderResult = {
@@ -34,7 +35,11 @@ export async function globalSearchAction(query: string): Promise<SearchResults> 
   const supabase = await createClient();
   const like = `%${trimmed}%`;
 
-  const [{ data: customers }, { data: orders }] = await Promise.all([
+  const [
+    { data: customers },
+    { data: orders },
+    { data: addressMatches },
+  ] = await Promise.all([
     supabase
       .from("customers")
       .select("id, code, name, phone")
@@ -45,14 +50,48 @@ export async function globalSearchAction(query: string): Promise<SearchResults> 
       .select("id, order_code, status, scheduled_at, customers(name)")
       .or(`order_code.ilike.${like},note.ilike.${like}`)
       .limit(5),
+    supabase
+      .from("customer_addresses")
+      .select(
+        "address, county, district, label, customers!inner(id, code, name, phone)",
+      )
+      .or(`address.ilike.${like},district.ilike.${like}`)
+      .limit(10),
   ]);
 
-  const customerResults: CustomerResult[] = (customers ?? []).map((c) => ({
-    id: c.id,
-    code: c.code,
-    name: c.name,
-    phone: c.phone,
-  }));
+  const customerMap = new Map<string, CustomerResult>();
+  for (const c of customers ?? []) {
+    customerMap.set(c.id, {
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      phone: c.phone,
+    });
+  }
+  for (const row of (addressMatches ?? []) as unknown as Array<{
+    address: string;
+    county: string;
+    district: string;
+    label: string | null;
+    customers: { id: string; code: string; name: string; phone: string } | null;
+  }>) {
+    const c = row.customers;
+    if (!c) continue;
+    const matched = `${row.county}${row.district} ${row.address}${row.label ? ` (${row.label})` : ""}`;
+    const existing = customerMap.get(c.id);
+    if (existing) {
+      if (!existing.matched_address) existing.matched_address = matched;
+    } else if (customerMap.size < 8) {
+      customerMap.set(c.id, {
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        phone: c.phone,
+        matched_address: matched,
+      });
+    }
+  }
+  const customerResults: CustomerResult[] = Array.from(customerMap.values());
 
   const orderResults: OrderResult[] = (orders ?? []).map((o) => {
     const cust = o.customers as { name: string } | null;
