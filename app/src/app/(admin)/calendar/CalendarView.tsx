@@ -33,7 +33,7 @@ export type CalendarOrder = {
   total: number;
   customer_name: string;
   customer_phone: string | null;
-  district: string | null;
+  area: string | null;
   full_address: string | null;
   service_summary: string;
   technician_id: string | null;
@@ -92,7 +92,7 @@ export function CalendarView({
         total: o.total,
         status: o.status,
         customer: o.customer_name,
-        district: o.district,
+        area: o.area,
         technician_name: o.technician_name,
         service_summary: o.service_summary || null,
         start_time: startT,
@@ -212,7 +212,7 @@ export function CalendarView({
           const start = arg.event.extendedProps.start_time as string;
           const end = arg.event.extendedProps.end_time as string;
           const customer = arg.event.extendedProps.customer as string;
-          const district = arg.event.extendedProps.district as string | null;
+          const area = arg.event.extendedProps.area as string | null;
           const serviceSummary = arg.event.extendedProps.service_summary as string | null;
           const onCancel = (e: React.MouseEvent) => {
             e.stopPropagation();
@@ -242,7 +242,7 @@ export function CalendarView({
               </div>
               <div className="truncate">
                 {customer}
-                {district ? ` · ${district}` : ""}
+                {area ? ` · ${area}` : ""}
               </div>
               {serviceSummary && (
                 <div className="truncate opacity-75">{serviceSummary}</div>

@@ -26,6 +26,8 @@ type PendingRaw = {
   id: string;
   order_code: string;
   total: number;
+  scheduled_at: string | null;
+  scheduled_end_at: string | null;
   customer: { name: string; phone: string } | null;
   address: {
     county: string;
@@ -45,7 +47,6 @@ export default async function CalendarPage({
 }) {
   await requireRole(["owner", "manager"]);
   const sp = await searchParams;
-  const techFilter = sp.tech ?? "all";
 
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -75,12 +76,13 @@ export default async function CalendarPage({
     supabase
       .from("orders")
       .select(
-        `id, order_code, total,
+        `id, order_code, total, scheduled_at, scheduled_end_at,
          customer:customers(name, phone),
          address:customer_addresses(county, district, address),
          items:order_items(technician_id, service:service_items(name))`,
       )
       .eq("status", "pending")
+      .order("scheduled_at", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false }),
   ]);
 
@@ -88,9 +90,15 @@ export default async function CalendarPage({
   const technicianIds = techs.map((t) => t.id);
   const nameMap = new Map(techs.map((t) => [t.id, t.name]));
 
+  // 預設選第一位師傅；移除「全部」分頁後不再有全部模式
+  const techFilter =
+    sp.tech && (techs.some((t) => t.id === sp.tech) || sp.tech === "all")
+      ? sp.tech
+      : techs[0]?.id ?? "";
+
   // Filter scheduled by selected technician (items.some)
   let scheduledFiltered = (scheduledRaw as ScheduledRaw[] | null) ?? [];
-  if (techFilter !== "all") {
+  if (techFilter && techFilter !== "all") {
     scheduledFiltered = scheduledFiltered.filter((o) =>
       o.items.some((it) => it.technician_id === techFilter),
     );
@@ -101,6 +109,9 @@ export default async function CalendarPage({
     const services = o.items
       .map((it) => it.service?.name)
       .filter(Boolean) as string[];
+    const area = o.address
+      ? `${o.address.county}${o.address.district}`
+      : null;
     return {
       id: o.id,
       order_code: o.order_code,
@@ -110,7 +121,7 @@ export default async function CalendarPage({
       total: Number(o.total),
       customer_name: o.customer?.name ?? "—",
       customer_phone: o.customer?.phone ?? null,
-      district: o.address?.district ?? null,
+      area,
       full_address: o.address
         ? `${o.address.county} ${o.address.district} ${o.address.address}`
         : null,
@@ -139,14 +150,15 @@ export default async function CalendarPage({
             : "未填服務",
         total: Number(o.total),
         has_technician: o.items.some((it) => it.technician_id),
+        scheduled_at: o.scheduled_at,
+        scheduled_end_at: o.scheduled_end_at,
       };
     },
   );
 
-  const subtitle =
-    techFilter === "all"
-      ? "顯示全部師傅的案件"
-      : `只顯示「${nameMap.get(techFilter) ?? "未知"}」的案件`;
+  const subtitle = techFilter
+    ? `只顯示「${nameMap.get(techFilter) ?? "未知"}」的案件`
+    : "尚未建立任何師傅";
 
   return (
     <div className="p-6 space-y-4">
