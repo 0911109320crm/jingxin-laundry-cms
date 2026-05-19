@@ -1,34 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { RefreshCw, Home, ClipboardList, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LogOut } from "lucide-react";
 
 export function PhoneFrame({ userName }: { userName: string }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [bust, setBust] = useState(0);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
   }, []);
   const timeLabel = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-  const reload = () => {
-    setBust((b) => b + 1);
-  };
-
-  const navigateIframe = (path: string) => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    try {
-      iframe.contentWindow?.location.assign(path);
-    } catch {
-      // cross-origin shouldn't happen (same-origin), fallback to src
-      iframe.src = path;
-    }
-  };
-
-  const src = `/staff?_=${bust}`;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-start bg-zinc-900 px-4 py-8 text-zinc-100 lg:flex-row lg:items-center lg:justify-center lg:gap-10">
@@ -73,9 +54,7 @@ export function PhoneFrame({ userName }: { userName: string }) {
             <div className="pointer-events-none absolute left-1/2 top-2.5 z-20 h-7 w-32 -translate-x-1/2 rounded-full bg-black" />
 
             <iframe
-              ref={iframeRef}
-              key={bust}
-              src={src}
+              src="/staff"
               className="absolute inset-x-0 bottom-0 w-full border-0"
               style={{ top: 44, height: "calc(100% - 44px)" }}
               title="師傅 PWA 預覽"
@@ -84,53 +63,68 @@ export function PhoneFrame({ userName }: { userName: string }) {
         </div>
       </div>
 
-      {/* Control panel — hidden in print / OBS window-only capture */}
-      <aside className="mt-6 w-full max-w-sm space-y-4 lg:mt-0 print:hidden">
+      {/* Demo script — features to walk through */}
+      <aside className="mt-6 w-full max-w-sm space-y-4 lg:mt-0">
         <div>
-          <h1 className="text-xl font-bold text-white">師傅 PWA 示範</h1>
+          <h1 className="text-xl font-bold text-white">師傅 PWA 示範重點</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            目前以「{userName}」身份顯示。實際師傅看到的會是自己的當日案件。
+            目前以「{userName}」身份顯示
           </p>
         </div>
 
-        <div className="space-y-2 rounded-lg bg-zinc-800/60 p-3 ring-1 ring-zinc-700">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-            快速操作
-          </p>
-          <button
-            type="button"
-            onClick={reload}
-            className="flex w-full items-center gap-2 rounded bg-zinc-700 px-3 py-2 text-sm text-white transition-colors hover:bg-zinc-600"
-          >
-            <RefreshCw className="h-4 w-4" /> 重新載入 iframe（錄影重來）
-          </button>
-          <button
-            type="button"
-            onClick={() => navigateIframe("/staff")}
-            className="flex w-full items-center gap-2 rounded bg-zinc-700 px-3 py-2 text-sm text-white transition-colors hover:bg-zinc-600"
-          >
-            <Home className="h-4 w-4" /> 跳到今日列表
-          </button>
-          <button
-            type="button"
-            onClick={() => navigateIframe("/staff/payroll")}
-            className="flex w-full items-center gap-2 rounded bg-zinc-700 px-3 py-2 text-sm text-white transition-colors hover:bg-zinc-600"
-          >
-            <ClipboardList className="h-4 w-4" /> 跳到我的薪資
-          </button>
-        </div>
-
-        <div className="rounded-lg bg-zinc-800/60 p-3 ring-1 ring-zinc-700">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-            錄影建議
-          </p>
-          <ul className="mt-2 space-y-1 text-xs text-zinc-300">
-            <li>• 用 OBS / Loom 視窗錄製，只框選手機區域</li>
-            <li>• 瀏覽器先按 F11 全螢幕，畫面更乾淨</li>
-            <li>• 操作節奏放慢，每步停 1-2 秒方便看</li>
-            <li>• 完成案件 dialog 是 demo 重點</li>
-          </ul>
-        </div>
+        <ol className="space-y-3 text-sm text-zinc-200">
+          <li className="rounded-lg bg-zinc-800/60 p-3 ring-1 ring-zinc-700">
+            <p className="font-semibold text-white">1. 今日案件一覽</p>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              按時間排序顯示，每張卡片含客戶姓名、電話、地址、服務項目、金額
+            </p>
+          </li>
+          <li className="rounded-lg bg-zinc-800/60 p-3 ring-1 ring-zinc-700">
+            <p className="font-semibold text-white">2. 待回繳現金提示</p>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              頁面頂端橘色橫幅顯示師傅手上未回繳的現金總額
+            </p>
+          </li>
+          <li className="rounded-lg bg-zinc-800/60 p-3 ring-1 ring-zinc-700">
+            <p className="font-semibold text-white">3. 訂單詳情</p>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              點任一案件 → 客戶資訊、地址（一鍵 Google 地圖導航）、服務項目、加價/折扣、應收總額
+            </p>
+          </li>
+          <li className="rounded-lg bg-amber-900/30 p-3 ring-1 ring-amber-700/50">
+            <p className="font-semibold text-amber-200">
+              4. ⚠ 客戶過往師傅備註
+            </p>
+            <p className="mt-0.5 text-xs text-amber-100/70">
+              系統自動帶出此客戶過往師傅留下的標籤與特殊備註，
+              不同師傅接同一客戶也能秒懂前同仁的眉角
+            </p>
+          </li>
+          <li className="rounded-lg bg-zinc-800/60 p-3 ring-1 ring-zinc-700">
+            <p className="font-semibold text-white">5. 收款一鍵切換</p>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              現場按「我收到現金了」或「客戶說已匯款」即可更新狀態
+            </p>
+          </li>
+          <li className="rounded-lg bg-brand-900/40 p-3 ring-1 ring-brand-700/50">
+            <p className="font-semibold text-brand-100">6. 標記完成流程</p>
+            <p className="mt-0.5 text-xs text-brand-100/70">
+              彈出視窗顯示：金額再確認 + 勾選快速備註標籤（洗衣粉、無電梯…）+ 填特殊備註，10 秒搞定
+            </p>
+          </li>
+          <li className="rounded-lg bg-zinc-800/60 p-3 ring-1 ring-zinc-700">
+            <p className="font-semibold text-white">7. 完成後仍可補/改備註</p>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              已完成的案件按「補/修改備註」可重開對話框
+            </p>
+          </li>
+          <li className="rounded-lg bg-zinc-800/60 p-3 ring-1 ring-zinc-700">
+            <p className="font-semibold text-white">8. 我的薪資</p>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              下方 tab → 月度計件明細、加價/折扣明細
+            </p>
+          </li>
+        </ol>
 
         <a
           href="/dashboard"
