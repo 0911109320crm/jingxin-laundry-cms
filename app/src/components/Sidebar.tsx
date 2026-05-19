@@ -16,6 +16,7 @@ import {
   Menu,
   X,
   Search,
+  Star,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ const items: NavItem[] = [
   { href: "/reminders", label: "即將到期", icon: BellRing },
   { href: "/reports", label: "營業報表", icon: BarChart3 },
   { href: "/payroll", label: "師傅薪資", icon: Wallet },
+  { href: "/reviews", label: "好評排行榜", icon: Star },
   { href: "/settings", label: "系統設定", icon: Settings },
 ];
 

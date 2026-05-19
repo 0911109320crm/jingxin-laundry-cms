@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, Wallet } from "lucide-react";
+import { CalendarDays, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
 import { logoutAction } from "@/app/login/actions";
 
@@ -46,11 +46,11 @@ export default async function StaffLayout({
           今日案件
         </Link>
         <Link
-          href="/staff/payroll"
+          href="/staff/reviews"
           className="flex flex-col items-center gap-1 py-2 text-xs text-zinc-600 hover:text-brand-700"
         >
-          <Wallet className="h-5 w-5" />
-          我的薪資
+          <Star className="h-5 w-5" />
+          我的好評
         </Link>
       </nav>
     </div>

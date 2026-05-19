@@ -18,6 +18,7 @@ import {
   type OrderInput,
 } from "@/lib/validators/order";
 import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
+import { ReviewActions } from "./ReviewActions";
 
 type Item = {
   id: string;
@@ -56,6 +57,9 @@ type Detail = {
   cancelled_at: string | null;
   service_tags: string[] | null;
   service_notes: string | null;
+  got_5star_review: boolean;
+  reviewed_at: string | null;
+  review_credited_to: string | null;
   customer: { id: string; code: string; name: string; phone: string } | null;
   address: { county: string; district: string; address: string } | null;
   items: Item[];
@@ -82,6 +86,7 @@ export default async function OrderDetailPage({
        scheduled_at, service_at, subtotal, adjustments_total, total,
        note, source, cancellation_reason, cancelled_at,
        service_tags, service_notes,
+       got_5star_review, reviewed_at, review_credited_to,
        customer:customers(id, code, name, phone),
        address:customer_addresses(county, district, address),
        items:order_items(id, quantity, unit_price, subtotal, tag, note,
@@ -99,8 +104,17 @@ export default async function OrderDetailPage({
   // Resolve technician names via admin client
   const techIds = o.items.map((i) => i.technician_id).filter(Boolean) as string[];
   let techMap = new Map<string, string>();
+  // All active technicians for the review-attribution dropdown
+  const admin = createAdminClient();
+  const { data: allTechs } = await admin
+    .from("user_profiles")
+    .select("id, name")
+    .eq("active", true)
+    .in("role", ["technician", "manager", "owner"])
+    .order("name");
+  const allTechList =
+    ((allTechs ?? []) as { id: string; name: string }[]) ?? [];
   if (techIds.length > 0) {
-    const admin = createAdminClient();
     const { data: techs } = await admin
       .from("user_profiles")
       .select("id, name")
@@ -109,6 +123,13 @@ export default async function OrderDetailPage({
       ((techs ?? []) as { id: string; name: string }[]).map((t) => [t.id, t.name]),
     );
   }
+  // Make sure review_credited_to (could be different from items' techs) is resolvable
+  if (o.review_credited_to && !techMap.has(o.review_credited_to)) {
+    const found = allTechList.find((t) => t.id === o.review_credited_to);
+    if (found) techMap.set(found.id, found.name);
+  }
+  const defaultTechnicianId =
+    (o.items.find((i) => i.technician_id)?.technician_id as string | null) ?? null;
 
   return (
     <div className="p-8 space-y-5">
@@ -349,6 +370,16 @@ export default async function OrderDetailPage({
           </CardBody>
         </Card>
       )}
+
+      <ReviewActions
+        orderId={o.id}
+        isReviewed={o.got_5star_review}
+        reviewedAt={o.reviewed_at}
+        creditedTo={o.review_credited_to}
+        defaultTechnicianId={defaultTechnicianId}
+        technicians={allTechList}
+        techMap={Object.fromEntries(techMap)}
+      />
     </div>
   );
 }

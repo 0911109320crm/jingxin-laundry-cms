@@ -407,6 +407,70 @@ export async function updateServiceNotesAction(
   return { ok: true };
 }
 
+/** 標記訂單獲得 Google 五星好評。預設歸屬訂單第一位師傅，可改。 */
+export async function markOrderReviewedAction(
+  orderId: string,
+  creditedTo: string | null,
+): Promise<Res> {
+  await requireRole(["owner", "manager"]);
+  const supabase = await createClient();
+  // If creditedTo not provided, default to first assigned technician on this order
+  let credit = creditedTo;
+  if (!credit) {
+    const { data: items } = await supabase
+      .from("order_items")
+      .select("technician_id, created_at")
+      .eq("order_id", orderId)
+      .not("technician_id", "is", null)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    credit = (items?.[0] as { technician_id: string } | undefined)?.technician_id ?? null;
+  }
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      got_5star_review: true,
+      reviewed_at: new Date().toISOString(),
+      review_credited_to: credit,
+    })
+    .eq("id", orderId);
+  if (error) return { ok: false, error: error.message };
+  await logAudit({
+    action: "order.mark_reviewed",
+    target_type: "order",
+    target_id: orderId,
+    payload: { credited_to: credit },
+  });
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/staff");
+  revalidatePath("/staff/reviews");
+  return { ok: true };
+}
+
+/** 取消「已獲好評」標記。 */
+export async function unmarkOrderReviewedAction(orderId: string): Promise<Res> {
+  await requireRole(["owner", "manager"]);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      got_5star_review: false,
+      reviewed_at: null,
+      review_credited_to: null,
+    })
+    .eq("id", orderId);
+  if (error) return { ok: false, error: error.message };
+  await logAudit({
+    action: "order.unmark_reviewed",
+    target_type: "order",
+    target_id: orderId,
+  });
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/staff");
+  revalidatePath("/staff/reviews");
+  return { ok: true };
+}
+
 /** Mark a batch of orders as settled (老闆娘 收到師傅回繳現金). */
 export async function settleOrdersAction(orderIds: string[]): Promise<Res> {
   await requireRole(["owner", "manager"]);

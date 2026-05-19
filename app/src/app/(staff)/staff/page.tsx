@@ -79,14 +79,17 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
     weekday: "long",
   }).format(label);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmtLocal = (d: Date) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const todayStr = fmtLocal(new Date());
   const currentStr = sp.date ?? todayStr;
   const prev = new Date(`${currentStr}T00:00:00`);
   prev.setDate(prev.getDate() - 1);
   const next = new Date(`${currentStr}T00:00:00`);
   next.setDate(next.getDate() + 1);
-  const prevStr = prev.toISOString().slice(0, 10);
-  const nextStr = next.toISOString().slice(0, 10);
+  const prevStr = fmtLocal(prev);
+  const nextStr = fmtLocal(next);
 
   return (
     <div className="p-4 space-y-4">

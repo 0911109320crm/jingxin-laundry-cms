@@ -118,10 +118,10 @@ export function PhoneFrame({ userName }: { userName: string }) {
               已完成的案件按「補/修改備註」可重開對話框
             </p>
           </li>
-          <li className="rounded-lg bg-zinc-800/60 p-3 ring-1 ring-zinc-700">
-            <p className="font-semibold text-white">8. 我的薪資</p>
-            <p className="mt-0.5 text-xs text-zinc-400">
-              下方 tab → 月度計件明細、加價/折扣明細
+          <li className="rounded-lg bg-yellow-900/30 p-3 ring-1 ring-yellow-700/50">
+            <p className="font-semibold text-yellow-100">8. ⭐ 我的好評</p>
+            <p className="mt-0.5 text-xs text-yellow-100/70">
+              下方 tab → 本月五星好評數、累計、月排行榜。老闆娘鼓勵師傅請客戶到 Google 留評論換積分
             </p>
           </li>
         </ol>
