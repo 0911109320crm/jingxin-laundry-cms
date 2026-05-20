@@ -4,6 +4,14 @@ title Jingxin Laundry CMS - Dev
 
 cd /d "%~dp0app"
 
+REM ===== Step 0: Pre-flight cleanup (prevent duplicate-instance crash) =====
+REM Next.js 16 exits immediately if another dev server is already running.
+REM This step auto-kills any previous instance so double-clicking start-all
+REM always gives a clean slate. Mirrors stop-all.bat logic.
+echo Checking for previous dev server instances...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "& { $killed = 0; Get-NetTCPConnection -LocalPort 3000,3001,3002,3003,3004,3005 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Write-Host ('  Cleaning previous PID ' + $_.OwningProcess + ' on port ' + $_.LocalPort); try { Stop-Process -Id $_.OwningProcess -Force -ErrorAction Stop; $script:killed++ } catch {} }; Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'node.exe' -and $_.CommandLine -match 'next' } | ForEach-Object { Write-Host ('  Cleaning orphan node PID ' + $_.ProcessId); try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop; $script:killed++ } catch {} }; if ($killed -gt 0) { Write-Host ('  Cleaned ' + $killed + ' previous instance(s). Waiting 2s for ports to free...'); Start-Sleep -Seconds 2 } else { Write-Host '  No previous instance found.' } }"
+echo.
+
 REM ===== Step 1: Verify Node.js is installed =====
 where node >nul 2>&1
 if errorlevel 1 (
