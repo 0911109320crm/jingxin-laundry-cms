@@ -6,8 +6,13 @@ import { createService } from "@/app/(admin)/settings/services/actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { SERVICE_CATEGORIES, type ServiceCategoryKey } from "./categories";
 
-export function NewServiceForm() {
+export function NewServiceForm({
+  defaultCategory,
+}: {
+  defaultCategory?: ServiceCategoryKey;
+}) {
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -23,9 +28,9 @@ export function NewServiceForm() {
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[80px_1fr_100px_140px_80px_70px_auto] items-center gap-2"
+      className="grid grid-cols-[110px_1fr_100px_140px_80px_70px_auto] items-center gap-2"
     >
-      <Input name="code" placeholder="代碼" required />
+      <Input name="code" placeholder="代碼（如 WV-S）" required />
       <Input name="name" placeholder="名稱" required />
       <Input
         name="default_price"
@@ -33,18 +38,18 @@ export function NewServiceForm() {
         defaultValue={0}
         placeholder="預設價"
       />
-      <Select name="category" defaultValue="">
+      <Select name="category" defaultValue={defaultCategory ?? ""}>
         <option value="">— 分類 —</option>
-        <option value="washing_machine">洗衣機</option>
-        <option value="air_conditioner">冷氣</option>
-        <option value="mattress">床墊</option>
-        <option value="sofa">沙發</option>
-        <option value="other">其他</option>
+        {SERVICE_CATEGORIES.map((c) => (
+          <option key={c.key} value={c.key}>
+            {c.label}
+          </option>
+        ))}
       </Select>
       <Input
         name="sort_order"
         type="number"
-        defaultValue={99}
+        defaultValue={999}
         placeholder="排序"
       />
       <label className="flex items-center gap-1 text-sm text-zinc-600">

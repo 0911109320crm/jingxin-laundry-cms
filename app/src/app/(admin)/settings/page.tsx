@@ -10,22 +10,32 @@ const sections = [
   {
     href: "/settings/services",
     title: "服務項目",
-    desc: "管理服務名稱、預設價格、機器貼紙快速辨識碼",
+    desc: "管理 54 個真實價目（直立/滾筒/沙發/床墊/分離冷氣/吊隱冷氣）",
   },
   {
     href: "/settings/adjustments",
     title: "折扣 / 加價項目",
-    desc: "加大、其他加價、折扣等項目",
+    desc: "拆解費、車馬費、液晶+300、疊烘+600、移機費、卡軸+1000、折扣...",
+  },
+  {
+    href: "/settings/machine-brands",
+    title: "機型品牌主檔",
+    desc: "師傅 PWA 用的品牌下拉選單（4 種機型，51 個品牌）",
+  },
+  {
+    href: "/settings/promotion-types",
+    title: "促銷積分",
+    desc: "9 種促銷動作對應分數 + 每月 KPI 目標設定",
   },
   {
     href: "/settings/sources",
     title: "客戶來源",
-    desc: "LINE / Google / 跟車 / 老客介紹...",
+    desc: "LINE / Google / FB / FB地方社團 / 跟車 / 老客介紹...",
   },
   {
     href: "/settings/service-tags",
     title: "師傅快速備註標籤",
-    desc: "管理師傅完成案件時可勾選的快速備註（洗衣粉、無電梯、有廢水…）",
+    desc: "按機型分組（直立/滾筒/冷氣/床墊沙發 共 52 個標籤）",
   },
   {
     href: "/settings/audit",

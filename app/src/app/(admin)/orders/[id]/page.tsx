@@ -18,7 +18,7 @@ import {
   type OrderInput,
 } from "@/lib/validators/order";
 import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
-import { ReviewActions } from "./ReviewActions";
+import { PromotionsPanel, type OrderPromotion, type PromotionType } from "./PromotionsPanel";
 
 type Item = {
   id: string;
@@ -57,9 +57,6 @@ type Detail = {
   cancelled_at: string | null;
   service_tags: string[] | null;
   service_notes: string | null;
-  got_5star_review: boolean;
-  reviewed_at: string | null;
-  review_credited_to: string | null;
   customer: { id: string; code: string; name: string; phone: string } | null;
   address: { county: string; district: string; address: string } | null;
   items: Item[];
@@ -86,7 +83,6 @@ export default async function OrderDetailPage({
        scheduled_at, service_at, subtotal, adjustments_total, total,
        note, source, cancellation_reason, cancelled_at,
        service_tags, service_notes,
-       got_5star_review, reviewed_at, review_credited_to,
        customer:customers(id, code, name, phone),
        address:customer_addresses(county, district, address),
        items:order_items(id, quantity, unit_price, subtotal, tag, note,
@@ -100,6 +96,22 @@ export default async function OrderDetailPage({
 
   const o = data as Detail | null;
   if (!o) notFound();
+
+  // 促銷積分 + 促銷類型主檔（給 PromotionsPanel）
+  const adminForPromos = createAdminClient();
+  const [{ data: promoRows }, { data: typeRows }] = await Promise.all([
+    adminForPromos
+      .from("order_promotions")
+      .select("id, promotion_type_id, credited_to, points_snapshot")
+      .eq("order_id", id),
+    adminForPromos
+      .from("promotion_types")
+      .select("id, code, label, points")
+      .eq("active", true)
+      .order("sort_order"),
+  ]);
+  const orderPromotions = (promoRows as OrderPromotion[] | null) ?? [];
+  const promotionTypes = (typeRows as PromotionType[] | null) ?? [];
 
   // Resolve technician names via admin client
   const techIds = o.items.map((i) => i.technician_id).filter(Boolean) as string[];
@@ -122,11 +134,6 @@ export default async function OrderDetailPage({
     techMap = new Map(
       ((techs ?? []) as { id: string; name: string }[]).map((t) => [t.id, t.name]),
     );
-  }
-  // Make sure review_credited_to (could be different from items' techs) is resolvable
-  if (o.review_credited_to && !techMap.has(o.review_credited_to)) {
-    const found = allTechList.find((t) => t.id === o.review_credited_to);
-    if (found) techMap.set(found.id, found.name);
   }
   const defaultTechnicianId =
     (o.items.find((i) => i.technician_id)?.technician_id as string | null) ?? null;
@@ -371,14 +378,12 @@ export default async function OrderDetailPage({
         </Card>
       )}
 
-      <ReviewActions
+      <PromotionsPanel
         orderId={o.id}
-        isReviewed={o.got_5star_review}
-        reviewedAt={o.reviewed_at}
-        creditedTo={o.review_credited_to}
-        defaultTechnicianId={defaultTechnicianId}
+        promotions={orderPromotions}
+        promotionTypes={promotionTypes}
         technicians={allTechList}
-        techMap={Object.fromEntries(techMap)}
+        defaultTechnicianId={defaultTechnicianId}
       />
     </div>
   );

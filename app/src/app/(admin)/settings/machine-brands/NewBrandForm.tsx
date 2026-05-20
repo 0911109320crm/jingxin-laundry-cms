@@ -2,18 +2,18 @@
 
 import { useRef, useTransition } from "react";
 import { Plus } from "lucide-react";
-import { createServiceTag } from "@/app/(admin)/settings/service-tags/actions";
+import { createBrand } from "@/app/(admin)/settings/machine-brands/actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import type { TagCategoryKey } from "./categories";
+import type { CategoryKey } from "./categories";
 
-export function NewServiceTagForm({ category }: { category: TagCategoryKey }) {
+export function NewBrandForm({ category }: { category: CategoryKey }) {
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
   const onSubmit = (fd: FormData) => {
     startTransition(async () => {
-      const res = await createServiceTag(fd);
+      const res = await createBrand(fd);
       if (!res.ok) alert(res.error);
       else formRef.current?.reset();
     });
@@ -26,7 +26,7 @@ export function NewServiceTagForm({ category }: { category: TagCategoryKey }) {
       className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2"
     >
       <input type="hidden" name="category" value={category} />
-      <Input name="label" placeholder="例如：洗衣粉、無電梯、有廢水" required />
+      <Input name="name" placeholder="例：Panasonic" required />
       <Input
         name="sort_order"
         type="number"

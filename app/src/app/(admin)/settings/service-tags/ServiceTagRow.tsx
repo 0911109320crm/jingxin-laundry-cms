@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/Input";
 
 export type ServiceTag = {
   id: string;
+  category: string | null;
   label: string;
   sort_order: number;
   active: boolean;

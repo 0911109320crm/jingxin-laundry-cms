@@ -2,18 +2,17 @@
 
 import { useRef, useTransition } from "react";
 import { Plus } from "lucide-react";
-import { createServiceTag } from "@/app/(admin)/settings/service-tags/actions";
+import { createPromotionType } from "@/app/(admin)/settings/promotion-types/actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import type { TagCategoryKey } from "./categories";
 
-export function NewServiceTagForm({ category }: { category: TagCategoryKey }) {
+export function NewPromotionTypeForm() {
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
   const onSubmit = (fd: FormData) => {
     startTransition(async () => {
-      const res = await createServiceTag(fd);
+      const res = await createPromotionType(fd);
       if (!res.ok) alert(res.error);
       else formRef.current?.reset();
     });
@@ -23,10 +22,17 @@ export function NewServiceTagForm({ category }: { category: TagCategoryKey }) {
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2"
+      className="grid grid-cols-[160px_1fr_70px_70px_80px_auto] items-center gap-2"
     >
-      <input type="hidden" name="category" value={category} />
-      <Input name="label" placeholder="例如：洗衣粉、無電梯、有廢水" required />
+      <Input name="code" placeholder="代碼（小寫底線）" required />
+      <Input name="label" placeholder="顯示文字（例：FB按讚）" required />
+      <Input
+        name="points"
+        type="number"
+        min={0}
+        defaultValue={1}
+        placeholder="分數"
+      />
       <Input
         name="sort_order"
         type="number"

@@ -46,11 +46,11 @@ export default async function StaffLayout({
           今日案件
         </Link>
         <Link
-          href="/staff/reviews"
+          href="/staff/scores"
           className="flex flex-col items-center gap-1 py-2 text-xs text-zinc-600 hover:text-brand-700"
         >
           <Star className="h-5 w-5" />
-          我的好評
+          我的積分
         </Link>
       </nav>
     </div>

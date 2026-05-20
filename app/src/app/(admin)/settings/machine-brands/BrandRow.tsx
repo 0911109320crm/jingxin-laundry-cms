@@ -3,40 +3,36 @@
 import { useState, useTransition } from "react";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 import {
-  updateService,
-  deleteService,
-} from "@/app/(admin)/settings/services/actions";
+  updateBrand,
+  deleteBrand,
+} from "@/app/(admin)/settings/machine-brands/actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { formatNTD } from "@/lib/utils";
-import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABEL } from "./categories";
 
-export type Service = {
+export type Brand = {
   id: string;
-  code: string;
+  category: string;
   name: string;
-  default_price: number;
-  category: string | null;
   sort_order: number;
   active: boolean;
 };
 
-export function ServiceRow({ service }: { service: Service }) {
+export function BrandRow({ brand }: { brand: Brand }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const onSave = (fd: FormData) => {
     startTransition(async () => {
-      const res = await updateService(service.id, fd);
+      const res = await updateBrand(brand.id, fd);
       if (!res.ok) alert(res.error);
       else setEditing(false);
     });
   };
 
   const onDelete = () => {
-    if (!confirm(`刪除「${service.name}」？`)) return;
+    if (!confirm(`刪除「${brand.name}」？`)) return;
     startTransition(async () => {
-      const res = await deleteService(service.id);
+      const res = await deleteBrand(brand.id);
       if (!res.ok) alert(res.error);
     });
   };
@@ -45,39 +41,22 @@ export function ServiceRow({ service }: { service: Service }) {
     return (
       <form
         action={onSave}
-        className="grid grid-cols-[110px_1fr_100px_140px_80px_70px_auto] items-center gap-2 px-5 py-3"
+        className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2 px-5 py-3"
       >
-        <Input name="code" defaultValue={service.code} required />
-        <Input name="name" defaultValue={service.name} required />
-        <Input
-          name="default_price"
-          type="number"
-          defaultValue={service.default_price}
-        />
-        <select
-          name="category"
-          defaultValue={service.category ?? ""}
-          className="h-10 rounded-lg border border-zinc-300 bg-white px-2 text-sm"
-        >
-          <option value="">— 分類 —</option>
-          {SERVICE_CATEGORIES.map((c) => (
-            <option key={c.key} value={c.key}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+        <Input name="name" defaultValue={brand.name} required />
         <Input
           name="sort_order"
           type="number"
-          defaultValue={service.sort_order}
+          defaultValue={brand.sort_order}
         />
         <label className="flex items-center gap-1 text-sm text-zinc-600">
           <input
             type="checkbox"
             name="active"
-            defaultChecked={service.active}
+            defaultChecked={brand.active}
             className="h-4 w-4"
           />
+          啟用
         </label>
         <div className="flex gap-1">
           <Button type="submit" size="sm" disabled={pending}>
@@ -88,6 +67,7 @@ export function ServiceRow({ service }: { service: Service }) {
             size="sm"
             variant="ghost"
             onClick={() => setEditing(false)}
+            disabled={pending}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -97,20 +77,11 @@ export function ServiceRow({ service }: { service: Service }) {
   }
 
   return (
-    <div className="grid grid-cols-[110px_1fr_100px_140px_80px_70px_auto] items-center gap-2 px-5 py-3 text-sm">
-      <code className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-mono">
-        {service.code}
-      </code>
-      <div className="font-medium text-zinc-900">{service.name}</div>
-      <div className="text-zinc-600">{formatNTD(service.default_price)}</div>
-      <div className="text-zinc-500 text-xs">
-        {service.category
-          ? SERVICE_CATEGORY_LABEL[service.category] ?? service.category
-          : "—"}
-      </div>
-      <div className="text-zinc-400 text-xs">#{service.sort_order}</div>
+    <div className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2 px-5 py-3">
+      <div className="text-sm font-medium text-zinc-900">{brand.name}</div>
+      <div className="text-sm text-zinc-500">排序 {brand.sort_order}</div>
       <div>
-        {service.active ? (
+        {brand.active ? (
           <span className="rounded bg-green-50 px-2 py-0.5 text-xs text-green-700">
             啟用
           </span>

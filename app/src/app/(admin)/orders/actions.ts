@@ -407,14 +407,30 @@ export async function updateServiceNotesAction(
   return { ok: true };
 }
 
-/** 標記訂單獲得 Google 五星好評。預設歸屬訂單第一位師傅，可改。 */
-export async function markOrderReviewedAction(
+/**
+ * 新增訂單促銷積分紀錄。
+ * 預設歸屬訂單第一位師傅，可由 UI 帶 creditedTo 指定。
+ * 取 promotion_types.points 當下值寫入 points_snapshot。
+ */
+export async function addOrderPromotionAction(
   orderId: string,
+  promotionTypeId: string,
   creditedTo: string | null,
 ): Promise<Res> {
   await requireRole(["owner", "manager"]);
   const supabase = await createClient();
-  // If creditedTo not provided, default to first assigned technician on this order
+
+  // 取目前分值
+  const { data: pt } = await supabase
+    .from("promotion_types")
+    .select("points, label, active")
+    .eq("id", promotionTypeId)
+    .single();
+  if (!pt) return { ok: false, error: "找不到該促銷類型" };
+  if (!(pt as { active: boolean }).active)
+    return { ok: false, error: "此促銷類型已停用" };
+
+  // 決定歸屬師傅
   let credit = creditedTo;
   if (!credit) {
     const { data: items } = await supabase
@@ -426,48 +442,90 @@ export async function markOrderReviewedAction(
       .limit(1);
     credit = (items?.[0] as { technician_id: string } | undefined)?.technician_id ?? null;
   }
-  const { error } = await supabase
-    .from("orders")
-    .update({
-      got_5star_review: true,
-      reviewed_at: new Date().toISOString(),
-      review_credited_to: credit,
-    })
-    .eq("id", orderId);
+
+  const { error } = await supabase.from("order_promotions").insert({
+    order_id: orderId,
+    promotion_type_id: promotionTypeId,
+    credited_to: credit,
+    points_snapshot: (pt as { points: number }).points,
+  });
   if (error) return { ok: false, error: error.message };
   await logAudit({
-    action: "order.mark_reviewed",
+    action: "order.add_promotion",
     target_type: "order",
     target_id: orderId,
-    payload: { credited_to: credit },
+    payload: {
+      promotion_type_id: promotionTypeId,
+      label: (pt as { label: string }).label,
+      credited_to: credit,
+    },
   });
   revalidatePath(`/orders/${orderId}`);
+  revalidatePath(`/staff/order/${orderId}`);
   revalidatePath("/staff");
-  revalidatePath("/staff/reviews");
+  revalidatePath("/staff/scores");
+  revalidatePath("/scores");
   return { ok: true };
 }
 
-/** 取消「已獲好評」標記。 */
-export async function unmarkOrderReviewedAction(orderId: string): Promise<Res> {
+/** 移除一筆促銷積分紀錄 */
+export async function removeOrderPromotionAction(
+  orderPromotionId: string,
+): Promise<Res> {
   await requireRole(["owner", "manager"]);
   const supabase = await createClient();
+  // 取 order_id 給 revalidate
+  const { data: row } = await supabase
+    .from("order_promotions")
+    .select("order_id")
+    .eq("id", orderPromotionId)
+    .single();
   const { error } = await supabase
-    .from("orders")
-    .update({
-      got_5star_review: false,
-      reviewed_at: null,
-      review_credited_to: null,
-    })
-    .eq("id", orderId);
+    .from("order_promotions")
+    .delete()
+    .eq("id", orderPromotionId);
   if (error) return { ok: false, error: error.message };
   await logAudit({
-    action: "order.unmark_reviewed",
-    target_type: "order",
-    target_id: orderId,
+    action: "order.remove_promotion",
+    target_type: "order_promotion",
+    target_id: orderPromotionId,
   });
-  revalidatePath(`/orders/${orderId}`);
+  const orderId = (row as { order_id: string } | null)?.order_id;
+  if (orderId) {
+    revalidatePath(`/orders/${orderId}`);
+    revalidatePath(`/staff/order/${orderId}`);
+  }
   revalidatePath("/staff");
-  revalidatePath("/staff/reviews");
+  revalidatePath("/staff/scores");
+  revalidatePath("/scores");
+  return { ok: true };
+}
+
+/** 變更某筆促銷積分的歸屬師傅 */
+export async function updateOrderPromotionCreditAction(
+  orderPromotionId: string,
+  creditedTo: string,
+): Promise<Res> {
+  await requireRole(["owner", "manager"]);
+  if (!creditedTo) return { ok: false, error: "請選擇師傅" };
+  const supabase = await createClient();
+  const { data: row, error } = await supabase
+    .from("order_promotions")
+    .update({ credited_to: creditedTo })
+    .eq("id", orderPromotionId)
+    .select("order_id")
+    .single();
+  if (error) return { ok: false, error: error.message };
+  await logAudit({
+    action: "order.update_promotion_credit",
+    target_type: "order_promotion",
+    target_id: orderPromotionId,
+    payload: { credited_to: creditedTo },
+  });
+  const orderId = (row as { order_id: string } | null)?.order_id;
+  if (orderId) revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/staff/scores");
+  revalidatePath("/scores");
   return { ok: true };
 }
 
