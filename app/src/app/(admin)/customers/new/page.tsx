@@ -7,11 +7,18 @@ import { CustomerForm } from "@/components/customers/CustomerForm";
 export default async function NewCustomerPage() {
   await requireRole(["owner", "manager"]);
   const supabase = await createClient();
-  const { data: sources } = await supabase
-    .from("customer_sources")
-    .select("id, name")
-    .eq("active", true)
-    .order("sort_order");
+  const [{ data: sources }, { data: brands }] = await Promise.all([
+    supabase
+      .from("customer_sources")
+      .select("id, name")
+      .eq("active", true)
+      .order("sort_order"),
+    supabase
+      .from("machine_brands")
+      .select("category, name")
+      .eq("active", true)
+      .order("sort_order"),
+  ]);
 
   return (
     <div className="p-8 space-y-5">
@@ -30,6 +37,7 @@ export default async function NewCustomerPage() {
       <CustomerForm
         mode="create"
         sources={(sources as { id: string; name: string }[] | null) ?? []}
+        machineBrands={(brands as { category: string; name: string }[] | null) ?? []}
       />
     </div>
   );

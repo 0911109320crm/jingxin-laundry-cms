@@ -94,7 +94,7 @@ export async function globalSearchAction(query: string): Promise<SearchResults> 
   const customerResults: CustomerResult[] = Array.from(customerMap.values());
 
   const orderResults: OrderResult[] = (orders ?? []).map((o) => {
-    const cust = o.customers as { name: string } | null;
+    const cust = o.customers as unknown as { name: string } | null;
     return {
       id: o.id,
       order_code: o.order_code,

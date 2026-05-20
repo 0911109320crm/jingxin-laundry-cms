@@ -20,7 +20,20 @@ import { formatNTD } from "@/lib/utils";
 import type { OrderInput } from "@/lib/validators/order";
 
 type Method = OrderInput["payment_method"];
-type Preset = { id: string; label: string; sort_order: number };
+type Preset = {
+  id: string;
+  category: string | null;
+  label: string;
+  sort_order: number;
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  washing_vertical: "直立式洗衣機",
+  washing_drum: "滾筒洗衣機",
+  ac_split: "冷氣",
+  mattress: "床墊 / 沙發",
+};
+const CATEGORY_ORDER = ["washing_vertical", "washing_drum", "ac_split", "mattress"];
 type Adjustment = {
   id: string;
   name_snapshot: string;
@@ -283,24 +296,66 @@ export function StaffActions({
                     老闆娘還沒設定快速備註標籤
                   </p>
                 ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {presets.map((p) => {
-                      const selected = tags.includes(p.label);
+                  <div className="space-y-3">
+                    {CATEGORY_ORDER.map((cat) => {
+                      const group = presets.filter((p) => p.category === cat);
+                      if (group.length === 0) return null;
                       return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => toggleTag(p.label)}
-                          className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                            selected
-                              ? "border-brand-600 bg-brand-600 text-white"
-                              : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
-                          }`}
-                        >
-                          {p.label}
-                        </button>
+                        <div key={cat}>
+                          <p className="mb-1 text-xs font-medium text-zinc-500">
+                            {CATEGORY_LABEL[cat] ?? cat}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {group.map((p) => {
+                              const selected = tags.includes(p.label);
+                              return (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => toggleTag(p.label)}
+                                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                                    selected
+                                      ? "border-brand-600 bg-brand-600 text-white"
+                                      : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                                  }`}
+                                >
+                                  {p.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       );
                     })}
+                    {(() => {
+                      const grouped = new Set(presets.filter((p) => p.category).map((p) => p.label));
+                      const ungrouped = presets.filter((p) => !p.category && !grouped.has(p.label));
+                      if (ungrouped.length === 0) return null;
+                      return (
+                        <div>
+                          <p className="mb-1 text-xs font-medium text-zinc-500">其他</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {ungrouped.map((p) => {
+                              const selected = tags.includes(p.label);
+                              return (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => toggleTag(p.label)}
+                                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                                    selected
+                                      ? "border-brand-600 bg-brand-600 text-white"
+                                      : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                                  }`}
+                                >
+                                  {p.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
                 {extraTags.length > 0 && (

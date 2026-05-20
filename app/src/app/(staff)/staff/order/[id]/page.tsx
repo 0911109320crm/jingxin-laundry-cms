@@ -14,6 +14,7 @@ import { formatDateTime, formatNTD } from "@/lib/utils";
 import type { OrderInput } from "@/lib/validators/order";
 import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
 import { StaffActions } from "./StaffActions";
+import { PromotionsToggle } from "./PromotionsToggle";
 
 type Detail = {
   id: string;
@@ -90,15 +91,37 @@ export default async function StaffOrderPage({
 
   const myItems = o.items.filter((it) => it.technician_id === me.id);
 
-  // Load active tag presets for the complete dialog
+  // Load active tag presets (with category) for the complete dialog
   const { data: presetsData } = await supabase
     .from("service_tag_presets")
-    .select("id, label, sort_order")
+    .select("id, category, label, sort_order")
     .eq("active", true)
     .order("sort_order");
   const presets =
-    (presetsData as { id: string; label: string; sort_order: number }[] | null) ??
-    [];
+    (presetsData as {
+      id: string;
+      category: string | null;
+      label: string;
+      sort_order: number;
+    }[] | null) ?? [];
+
+  // 促銷積分：取 active 類型清單 + 本訂單已歸屬給我的紀錄
+  const [{ data: promoTypesData }, { data: myPromosData }] = await Promise.all([
+    supabase
+      .from("promotion_types")
+      .select("id, code, label, points")
+      .eq("active", true)
+      .order("sort_order"),
+    supabase
+      .from("order_promotions")
+      .select("id, promotion_type_id, points_snapshot")
+      .eq("order_id", id)
+      .eq("credited_to", me.id),
+  ]);
+  const promotionTypes =
+    (promoTypesData as { id: string; code: string; label: string; points: number }[] | null) ?? [];
+  const myPromotions =
+    (myPromosData as { id: string; promotion_type_id: string; points_snapshot: number }[] | null) ?? [];
 
   // Load same customer's prior orders with tags/notes (so 接續師傅 knows quirks)
   const { data: priorData } = await supabase
@@ -332,6 +355,15 @@ export default async function StaffOrderPage({
             )}
           </CardBody>
         </Card>
+      )}
+
+      {myItems.length > 0 && (
+        <PromotionsToggle
+          orderId={o.id}
+          promotionTypes={promotionTypes}
+          myPromotions={myPromotions}
+          myUserId={me.id}
+        />
       )}
 
       <StaffActions

@@ -31,9 +31,12 @@ import {
 } from "@/app/(admin)/customers/actions";
 
 type Source = { id: string; name: string };
+type MachineBrand = { category: string; name: string };
 
 type Props = {
   sources: Source[];
+  /** 全部 active 的機型品牌（用於 datalist 自動完成）。空陣列代表 0007 migration 還沒套用，會退回純 free text。 */
+  machineBrands?: MachineBrand[];
   initial?: CustomerInput & { id?: string };
   mode: "create" | "edit";
   customerId?: string;
@@ -55,7 +58,17 @@ const emptyMachine = {
   note: "",
 };
 
-export function CustomerForm({ sources, initial, mode, customerId }: Props) {
+export function CustomerForm({
+  sources,
+  machineBrands = [],
+  initial,
+  mode,
+  customerId,
+}: Props) {
+  // 去重後給 datalist 用（同名品牌可能跨多個 category，例如 LG 跨直立/滾筒）
+  const uniqueBrandNames = Array.from(
+    new Set(machineBrands.map((b) => b.name)),
+  ).sort();
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -319,6 +332,7 @@ export function CustomerForm({ sources, initial, mode, customerId }: Props) {
                   <Input
                     {...register(`machines.${idx}.brand`)}
                     placeholder="例如 LG / 大同"
+                    list={uniqueBrandNames.length > 0 ? "machine-brands-list" : undefined}
                   />
                 </Field>
                 <Field label="型號">
@@ -344,6 +358,14 @@ export function CustomerForm({ sources, initial, mode, customerId }: Props) {
           ))}
         </CardBody>
       </Card>
+
+      {uniqueBrandNames.length > 0 && (
+        <datalist id="machine-brands-list">
+          {uniqueBrandNames.map((b) => (
+            <option key={b} value={b} />
+          ))}
+        </datalist>
+      )}
 
       {serverError && (
         <Card className="border-red-300 bg-red-50">

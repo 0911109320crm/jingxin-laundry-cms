@@ -32,7 +32,7 @@ export default async function EditCustomerPage({
   await requireRole(["owner", "manager"]);
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: customer }, { data: sources }] = await Promise.all([
+  const [{ data: customer }, { data: sources }, { data: brands }] = await Promise.all([
     supabase
       .from("customers")
       .select(
@@ -45,6 +45,11 @@ export default async function EditCustomerPage({
     supabase
       .from("customer_sources")
       .select("id, name")
+      .eq("active", true)
+      .order("sort_order"),
+    supabase
+      .from("machine_brands")
+      .select("category, name")
       .eq("active", true)
       .order("sort_order"),
   ]);
@@ -97,6 +102,7 @@ export default async function EditCustomerPage({
         mode="edit"
         initial={initial}
         sources={(sources as { id: string; name: string }[] | null) ?? []}
+        machineBrands={(brands as { category: string; name: string }[] | null) ?? []}
       />
     </div>
   );

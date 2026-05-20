@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, ChevronRight } from "lucide-react";
+import { CalendarDays, MapPin, ChevronRight, Star } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/dal";
 import { redirect } from "next/navigation";
@@ -44,9 +44,19 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
   const sp = await searchParams;
   const { startIso, endIso, label } = dateRange(sp.date);
 
+  // 本月積分查詢區間（calendar month）
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+
   const supabase = await createClient();
   // RLS scopes to orders where this user has any order_item
-  const [{ data }, { data: pendingCashRows }] = await Promise.all([
+  const [
+    { data },
+    { data: pendingCashRows },
+    { data: myPromosThisMonth },
+    { data: kpiRow },
+  ] = await Promise.all([
     supabase
       .from("orders")
       .select(
@@ -63,7 +73,24 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
       .select("total")
       .eq("payment_method", "cash")
       .eq("settlement_status", "pending"),
+    supabase
+      .from("order_promotions")
+      .select("points_snapshot")
+      .eq("credited_to", me.id)
+      .gte("created_at", monthStart)
+      .lt("created_at", monthEnd),
+    supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "monthly_promotion_kpi")
+      .maybeSingle(),
   ]);
+
+  const myPoints = ((myPromosThisMonth as { points_snapshot: number }[] | null) ?? [])
+    .reduce((s, r) => s + r.points_snapshot, 0);
+  const kpi = typeof kpiRow?.value === "number" ? kpiRow.value : 3;
+  const kpiPct = Math.min(100, Math.round((myPoints / Math.max(1, kpi)) * 100));
+  const kpiAchieved = myPoints >= kpi;
 
   const orders = (data as StaffOrder[] | null) ?? [];
   const pendingCashTotal =
@@ -106,6 +133,52 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
           </CardBody>
         </Card>
       )}
+
+      <Link href="/staff/scores">
+        <Card
+          className={
+            kpiAchieved
+              ? "border-green-300 bg-gradient-to-r from-green-50 to-emerald-100 transition-shadow active:shadow-md"
+              : "border-zinc-200 bg-white transition-shadow active:shadow-md"
+          }
+        >
+          <CardBody className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Star
+                  className={
+                    kpiAchieved
+                      ? "h-5 w-5 fill-green-500 text-green-500"
+                      : "h-5 w-5 text-amber-500"
+                  }
+                />
+                <span className="text-sm font-medium text-zinc-800">
+                  本月積分 · KPI {kpi} 分
+                </span>
+              </div>
+              <span
+                className={
+                  kpiAchieved
+                    ? "font-mono text-2xl font-bold text-green-700"
+                    : "font-mono text-2xl font-bold text-amber-700"
+                }
+              >
+                {myPoints}
+              </span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+              <div
+                className={kpiAchieved ? "h-full bg-green-500" : "h-full bg-amber-500"}
+                style={{ width: `${kpiPct}%` }}
+              />
+            </div>
+            <p className="text-xs text-zinc-500">
+              {kpiAchieved ? "🎉 本月已達標" : `還差 ${kpi - myPoints} 分達標 · 點擊查看詳情`}
+            </p>
+          </CardBody>
+        </Card>
+      </Link>
+
       <header className="flex items-center justify-between">
         <Link
           href={`/staff?date=${prevStr}`}

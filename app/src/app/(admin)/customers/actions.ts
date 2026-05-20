@@ -219,7 +219,7 @@ export async function checkDuplicateAddressAction(
   const row = data?.[0];
   if (!row) return null;
 
-  const c = row.customers as { id: string; code: string; name: string; phone: string } | null;
+  const c = row.customers as unknown as { id: string; code: string; name: string; phone: string } | null;
   if (!c) return null;
   return { id: c.id, code: c.code, name: c.name, phone: c.phone };
 }

@@ -12,6 +12,7 @@ import { requireRole } from "@/lib/dal";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { formatNTD } from "@/lib/utils";
 import type { OrderInput } from "@/lib/validators/order";
+import { SourceAnalysis } from "./SourceAnalysis";
 
 type MonthOrder = {
   id: string;
@@ -47,8 +48,18 @@ function todayRange() {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; start?: string; end?: string }>;
+}) {
   await requireRole(["owner", "manager"]);
+  const sp = await searchParams;
+  const rangeParam = (["this_month", "last_month", "year", "custom"] as const).includes(
+    sp.range as "this_month" | "last_month" | "year" | "custom",
+  )
+    ? (sp.range as "this_month" | "last_month" | "year" | "custom")
+    : "this_month";
   const supabase = await createClient();
   const admin = createAdminClient();
   const { start, end, label } = monthRange();
@@ -324,6 +335,14 @@ export default async function DashboardPage() {
           )}
         </CardBody>
       </Card>
+
+      <section id="source-analysis" className="space-y-5 border-t border-zinc-200 pt-6">
+        <SourceAnalysis
+          range={rangeParam}
+          customStart={sp.start}
+          customEnd={sp.end}
+        />
+      </section>
 
       <Card>
         <CardHeader>
