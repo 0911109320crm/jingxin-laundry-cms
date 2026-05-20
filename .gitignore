@@ -57,3 +57,6 @@ docx_output.txt
 xlsx_output.txt
 xlsx_detailed.txt
 payroll_template.txt
+
+# LINE 相簿參考圖（系統資料用，純參考不影響執行）
+photo/
