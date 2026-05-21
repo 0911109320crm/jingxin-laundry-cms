@@ -12,6 +12,7 @@ import {
   Calendar,
   Sparkles,
   ArrowRight,
+  ClipboardList,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -165,14 +166,21 @@ export default async function TechnicianPayrollPage({
         >
           <ChevronLeft className="h-4 w-4" /> 回師傅薪資
         </Link>
-        <a
-          href={`/api/payroll/export?user=${user_id}&month=${month}`}
-          target="_blank"
-        >
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4" /> 匯出 Excel
-          </Button>
-        </a>
+        <div className="flex items-center gap-2">
+          <Link href={`/orders?tech=${user_id}`}>
+            <Button variant="outline" size="sm">
+              <ClipboardList className="h-4 w-4" /> 看這位師傅所有訂單
+            </Button>
+          </Link>
+          <a
+            href={`/api/payroll/export?user=${user_id}&month=${month}`}
+            target="_blank"
+          >
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4" /> 匯出 Excel
+            </Button>
+          </a>
+        </div>
       </div>
 
       {/* Hero: 本月實領大字 + 月份切換 */}

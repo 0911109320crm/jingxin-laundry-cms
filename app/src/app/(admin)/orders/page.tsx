@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/dal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -19,7 +20,13 @@ type SP = Promise<{
   status?: string;
   payment?: string;
   settlement?: string;
+  tech?: string;
 }>;
+
+function currentMonthValue() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
 type Row = {
   id: string;
@@ -52,8 +59,40 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
   const status = sp.status ?? "";
   const payment = sp.payment ?? "";
   const settlement = sp.settlement ?? "";
+  const tech = sp.tech ?? "";
 
   const supabase = await createClient();
+  const admin = createAdminClient();
+
+  // 撈所有 active 師傅給篩選下拉用
+  const { data: techData } = await admin
+    .from("user_profiles")
+    .select("id, name")
+    .eq("role", "technician")
+    .eq("active", true)
+    .order("name");
+  const technicians =
+    (techData as { id: string; name: string }[] | null) ?? [];
+  const techName = tech
+    ? technicians.find((t) => t.id === tech)?.name ?? null
+    : null;
+
+  // 若有師傅篩選，先撈該師傅有做過項目的 order_id
+  let techOrderIds: string[] | null = null;
+  if (tech) {
+    const { data: itemRows } = await supabase
+      .from("order_items")
+      .select("order_id")
+      .eq("technician_id", tech);
+    techOrderIds = Array.from(
+      new Set(
+        ((itemRows as { order_id: string }[] | null) ?? []).map(
+          (r) => r.order_id,
+        ),
+      ),
+    );
+  }
+
   let query = supabase
     .from("orders")
     .select(
@@ -68,6 +107,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
   if (status) query = query.eq("status", status);
   if (payment) query = query.eq("payment_method", payment);
   if (settlement) query = query.eq("settlement_status", settlement);
+  if (techOrderIds !== null) {
+    if (techOrderIds.length === 0) {
+      // 該師傅沒有任何訂單，直接限制成空結果
+      query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+    } else {
+      query = query.in("id", techOrderIds);
+    }
+  }
   if (q) {
     const like = `%${q}%`;
     query = query.or(`order_code.ilike.${like},note.ilike.${like}`);
@@ -104,9 +151,12 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
       <div className="flex gap-1 border-b border-zinc-200">
         {TABS.map((tab) => {
           const active = status === tab.value;
-          const href = tab.value
-            ? `/orders?status=${tab.value}${q ? `&q=${encodeURIComponent(q)}` : ""}`
-            : `/orders${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+          const params = new URLSearchParams();
+          if (tab.value) params.set("status", tab.value);
+          if (q) params.set("q", q);
+          if (tech) params.set("tech", tech);
+          const qs = params.toString();
+          const href = qs ? `/orders?${qs}` : "/orders";
           return (
             <Link
               key={tab.value}
@@ -129,8 +179,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
           <form className={cn(
             "grid grid-cols-1 gap-3",
             isCancelledTab
-              ? "md:grid-cols-[1fr_auto]"
-              : "md:grid-cols-[1fr_160px_180px_160px_auto]",
+              ? "md:grid-cols-[1fr_160px_auto]"
+              : "md:grid-cols-[1fr_140px_160px_160px_140px_auto]",
           )}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
@@ -161,10 +211,33 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                 </Select>
               </>
             )}
+            <Select name="tech" defaultValue={tech}>
+              <option value="">— 全部師傅 —</option>
+              {technicians.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
             <Button type="submit">套用</Button>
           </form>
         </CardBody>
       </Card>
+
+      {tech && techName && (
+        <div className="flex items-center justify-between rounded-lg border border-brand-200 bg-brand-50/50 px-4 py-2 text-sm">
+          <span className="text-brand-900">
+            正在篩選 <span className="font-semibold">{techName}</span> 的訂單
+            （操作視角；月度薪資總計請看師傅薪資頁）
+          </span>
+          <Link
+            href={`/payroll/${tech}?month=${currentMonthValue()}`}
+            className="inline-flex items-center gap-1 text-brand-700 hover:underline"
+          >
+            <Wallet className="h-4 w-4" /> 本月薪資 →
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card>

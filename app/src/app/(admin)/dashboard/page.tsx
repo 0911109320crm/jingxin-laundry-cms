@@ -208,125 +208,154 @@ export default async function DashboardPage({
         )}
       </header>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <KpiCard
-          icon={<TrendingUp className="h-5 w-5 text-emerald-500" />}
-          label="本月營業額"
-          value={formatNTD(monthRevenue)}
-          sub={
-            revenueDiffPct === null
-              ? `${doneCount} 筆已完成`
-              : `${doneCount} 筆完成 · 較上月${
-                  revenueDiffPct >= 0 ? "↑" : "↓"
-                }${Math.abs(revenueDiffPct)}%`
-          }
-        />
-        <KpiCard
-          icon={<ClipboardCheck className="h-5 w-5 text-brand-500" />}
-          label="本月案件數"
-          value={`${orders.length}`}
-          sub="本月已排程訂單"
-        />
-        <Link href={`/calendar`}>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* 左：5 個 KPI 卡 */}
+        <div className="grid grid-cols-2 gap-3">
           <KpiCard
-            icon={<CalendarClock className="h-5 w-5 text-amber-500" />}
-            label="今日待完成"
-            value={`${todayRemainingCount ?? 0}`}
-            sub="今天還沒完成的案件"
-            interactive
+            icon={<TrendingUp className="h-5 w-5 text-emerald-500" />}
+            label="本月營業額"
+            value={formatNTD(monthRevenue)}
+            sub={
+              revenueDiffPct === null
+                ? `${doneCount} 筆已完成`
+                : `${doneCount} 筆完成 · 較上月${
+                    revenueDiffPct >= 0 ? "↑" : "↓"
+                  }${Math.abs(revenueDiffPct)}%`
+            }
           />
-        </Link>
-        <Link href="/reminders">
           <KpiCard
-            icon={<BellRing className="h-5 w-5 text-rose-500" />}
-            label="即將到期客戶"
-            value={`${dueCount ?? 0}`}
-            sub="11-12 個月未服務"
-            interactive
+            icon={<ClipboardCheck className="h-5 w-5 text-brand-500" />}
+            label="本月案件數"
+            value={`${orders.length}`}
+            sub="本月已排程訂單"
           />
-        </Link>
-        <KpiCard
-          icon={
-            <span
-              className={`flex h-5 w-5 items-center justify-center rounded text-xs font-bold ${
-                cancelRate >= 20 ? "bg-rose-500 text-white" : "bg-zinc-300 text-zinc-700"
-              }`}
-            >
-              ×
-            </span>
-          }
-          label="本月取消率"
-          value={`${cancelRate}%`}
-          sub={`${cancelledCount} / ${orders.length} 取消`}
-          alert={cancelRate >= 20}
-        />
-      </div>
+          <Link href={`/calendar`}>
+            <KpiCard
+              icon={<CalendarClock className="h-5 w-5 text-amber-500" />}
+              label="今日待完成"
+              value={`${todayRemainingCount ?? 0}`}
+              sub="今天還沒完成的案件"
+              interactive
+            />
+          </Link>
+          <Link href="/reminders">
+            <KpiCard
+              icon={<BellRing className="h-5 w-5 text-rose-500" />}
+              label="即將到期客戶"
+              value={`${dueCount ?? 0}`}
+              sub="11-12 個月未服務"
+              interactive
+            />
+          </Link>
+          <div className="col-span-2">
+            <KpiCard
+              icon={
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded text-xs font-bold ${
+                    cancelRate >= 20 ? "bg-rose-500 text-white" : "bg-zinc-300 text-zinc-700"
+                  }`}
+                >
+                  ×
+                </span>
+              }
+              label="本月取消率"
+              value={`${cancelRate}%`}
+              sub={`${cancelledCount} / ${orders.length} 取消`}
+              alert={cancelRate >= 20}
+            />
+          </div>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>師傅本月案量（用於分派新案）</CardTitle>
-        </CardHeader>
-        <CardBody>
-          {technicianRows.length === 0 ? (
-            <p className="text-sm text-zinc-500">尚無師傅資料</p>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center gap-4 text-xs text-zinc-500">
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-3 w-3 rounded-sm bg-green-500" />
-                  已完成
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-3 w-3 rounded-sm bg-amber-400" />
-                  待完成
-                </span>
-              </div>
-              {technicianRows.map((t) => {
-                const donePct = (t.done / maxTotal) * 100;
-                const todoPct = (t.todo / maxTotal) * 100;
-                return (
-                  <Link
-                    key={t.id}
-                    href={`/calendar?tech=${t.id}`}
-                    className="block rounded-lg px-2 py-1.5 transition-colors hover:bg-zinc-50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="w-16 shrink-0 text-sm font-medium text-zinc-900">
-                        {t.name}
-                      </span>
-                      <div className="flex h-6 flex-1 overflow-hidden rounded-md bg-zinc-100">
-                        {t.done > 0 && (
-                          <div
-                            className="flex items-center justify-end bg-green-500 px-2 text-xs font-medium text-white"
-                            style={{ width: `${donePct}%` }}
-                            title={`已完成 ${t.done}`}
-                          >
-                            {donePct > 8 ? t.done : ""}
+        {/* 右：師傅本月案量 直條圖 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>師傅本月案量（用於分派新案）</CardTitle>
+          </CardHeader>
+          <CardBody>
+            {technicianRows.length === 0 ? (
+              <p className="text-sm text-zinc-500">尚無師傅資料</p>
+            ) : (
+              <>
+                <div className="mb-2 flex items-center gap-4 text-xs text-zinc-500">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-3 w-3 rounded-sm bg-green-500" />
+                    已完成
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-3 w-3 rounded-sm bg-amber-400" />
+                    待完成
+                  </span>
+                </div>
+                <div
+                  className="flex items-end justify-around gap-3 border-b border-zinc-200"
+                  style={{ height: 200 }}
+                >
+                  {technicianRows.map((t) => {
+                    const barMax = 160;
+                    const doneH = (t.done / maxTotal) * barMax;
+                    const todoH = (t.todo / maxTotal) * barMax;
+                    return (
+                      <Link
+                        key={t.id}
+                        href={`/calendar?tech=${t.id}`}
+                        className="group flex h-full max-w-[80px] flex-1 flex-col items-center"
+                      >
+                        {/* 總數 label 在頂部 */}
+                        <div className="flex flex-1 flex-col items-center justify-end">
+                          <span className="mb-1 text-xs font-semibold text-zinc-700">
+                            {t.total > 0 ? t.total : ""}
+                          </span>
+                          {/* 堆疊條：todo 在上，done 在下 */}
+                          <div className="flex w-full max-w-[40px] flex-col justify-end overflow-hidden rounded-t">
+                            {t.todo > 0 && (
+                              <div
+                                className="flex items-center justify-center bg-amber-400 transition-opacity group-hover:opacity-80"
+                                style={{ height: todoH }}
+                                title={`待完成 ${t.todo}`}
+                              >
+                                {todoH >= 18 && (
+                                  <span className="text-[10px] font-medium text-white">
+                                    {t.todo}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {t.done > 0 && (
+                              <div
+                                className="flex items-center justify-center bg-green-500 transition-opacity group-hover:opacity-80"
+                                style={{ height: doneH }}
+                                title={`已完成 ${t.done}`}
+                              >
+                                {doneH >= 18 && (
+                                  <span className="text-[10px] font-medium text-white">
+                                    {t.done}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {t.todo > 0 && (
-                          <div
-                            className="flex items-center justify-end bg-amber-400 px-2 text-xs font-medium text-white"
-                            style={{ width: `${todoPct}%` }}
-                            title={`待完成 ${t.todo}`}
-                          >
-                            {todoPct > 8 ? t.todo : ""}
-                          </div>
-                        )}
-                      </div>
-                      <span className="w-28 shrink-0 text-right text-xs text-zinc-500">
-                        已 <span className="font-semibold text-green-700">{t.done}</span>
-                        {" / "}
-                        待 <span className="font-semibold text-amber-700">{t.todo}</span>
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </CardBody>
-      </Card>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+                {/* 師傅姓名軸 */}
+                <div className="mt-1 flex justify-around gap-3">
+                  {technicianRows.map((t) => (
+                    <span
+                      key={t.id}
+                      className="max-w-[80px] flex-1 truncate text-center text-xs font-medium text-zinc-700"
+                      title={t.name}
+                    >
+                      {t.name}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardBody>
+        </Card>
+      </div>
 
       <section id="source-analysis" className="space-y-4 border-t border-zinc-200 pt-4">
         <SourceAnalysis

@@ -5,7 +5,6 @@ import {
   Trophy,
   Users,
   TrendingUp,
-  AlertTriangle,
   CheckCircle2,
   Coins,
   Download,
@@ -284,7 +283,6 @@ export default async function PayrollPage({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {rows.map((r) => {
             const pct = Math.min(100, Math.round((r.points / kpi) * 100));
-            const hasWarn = !r.achieved || r.pendingTotal > 0;
             const netAddon = r.addon - r.discount;
             return (
               <Link
@@ -302,11 +300,6 @@ export default async function PayrollPage({
                           {r.achieved && (
                             <span className="inline-flex items-center gap-0.5 rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
                               <CheckCircle2 className="h-3 w-3" /> 已達標
-                            </span>
-                          )}
-                          {hasWarn && (
-                            <span className="inline-flex items-center gap-0.5 rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">
-                              <AlertTriangle className="h-3 w-3" /> 需注意
                             </span>
                           )}
                         </p>
