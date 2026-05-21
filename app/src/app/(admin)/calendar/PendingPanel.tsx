@@ -52,7 +52,7 @@ export function PendingPanel({ orders }: { orders: PendingOrder[] }) {
       },
     });
     return () => draggable.destroy();
-  }, [orders.length]);
+  }, [orders.map((o) => o.id).join(",")]);
 
   return (
     <Card>

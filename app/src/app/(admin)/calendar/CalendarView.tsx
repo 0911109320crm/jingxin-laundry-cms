@@ -188,9 +188,10 @@ export function CalendarView({
             info.event.remove();
             return;
           }
-          if (info.event.allDay) {
-            start.setHours(9, 0, 0, 0);
-          }
+          // Always default to 09:00 when dispatching from pending panel.
+          // dayGridMonth drops set allDay=false with time=midnight, which would
+          // store the previous day in UTC (Taiwan is UTC+8).
+          start.setHours(9, 0, 0, 0);
           const end = new Date(start);
           end.setMinutes(end.getMinutes() + 90);
           info.event.remove();
@@ -209,6 +210,14 @@ export function CalendarView({
           });
         }}
         eventContent={(arg) => {
+          // Ghost event during drag from pending panel — show placeholder
+          if (arg.event.extendedProps.fromPending) {
+            return (
+              <div className="px-1 text-xs opacity-70 truncate">
+                {arg.event.title || "派工中..."}
+              </div>
+            );
+          }
           const start = arg.event.extendedProps.start_time as string;
           const end = arg.event.extendedProps.end_time as string;
           const customer = arg.event.extendedProps.customer as string;
