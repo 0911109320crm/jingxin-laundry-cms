@@ -181,28 +181,29 @@ const CUSTOMERS = [
 ];
 
 // ─── Service map per customer (code → [[svcCode, price], …]) ─────────────────
+// Prices match migration 0010: WV-S=1800, WD-L1=4000, AC-S=2500, BD-DXL=2000, SF-150=2200
 const CUST_SVCS = {
   "C2026-001": [["A", 1800]],
-  "C2026-002": [["A", 1800], ["C", 2500], ["E", 2400]],
-  "C2026-003": [["B", 3800]],
-  "C2026-004": [["B", 3800], ["C", 2500]],
+  "C2026-002": [["A", 1800], ["C", 2500], ["E", 2200]],
+  "C2026-003": [["B", 4000]],
+  "C2026-004": [["B", 4000], ["C", 2500]],
   "C2026-005": [["D", 2000]],
-  "C2026-006": [["C", 2500], ["E", 2400]],
+  "C2026-006": [["C", 2500], ["E", 2200]],
   "C2026-007": [["A", 1800]],
-  "C2026-008": [["B", 3800]],
+  "C2026-008": [["B", 4000]],
   "C2026-009": [["A", 1800], ["D", 2000]],
   "C2026-010": [["A", 1800]],
   "C2026-011": [["C", 2500]],
-  "C2026-012": [["E", 2400]],
+  "C2026-012": [["E", 2200]],
   "C2026-013": [["A", 1800]],
-  "C2026-014": [["B", 3800], ["D", 2000]],
-  "C2026-015": [["B", 3800]],
-  "C2026-020": [["B", 3800], ["C", 2500]],
-  "C2026-021": [["B", 3800], ["D", 2000]],
+  "C2026-014": [["B", 4000], ["D", 2000]],
+  "C2026-015": [["B", 4000]],
+  "C2026-020": [["B", 4000], ["C", 2500]],
+  "C2026-021": [["B", 4000], ["D", 2000]],
   "C2026-022": [["A", 1800]],
   "C2026-023": [["C", 2500]],
-  "C2026-024": [["E", 2400]],
-  "C2026-025": [["B", 3800]],
+  "C2026-024": [["E", 2200]],
+  "C2026-025": [["B", 4000]],
 };
 
 const ACTIVE_CODES = Object.keys(CUST_SVCS);
@@ -216,6 +217,15 @@ const CANCEL_REASONS = [
   "客戶自行處理，不需服務",
   "客戶出差，無法配合時間",
 ];
+
+// Maps service alias → function that picks the right machine from a list
+const SVC_MACHINE_MATCH = {
+  A: (m) => m.type === "washing_machine" && (m.sub_type ?? "").includes("直立"),
+  B: (m) => m.type === "washing_machine" && (m.sub_type ?? "").includes("滾筒"),
+  C: (m) => m.type === "air_conditioner",
+  D: (m) => m.type === "mattress",
+  E: (m) => m.type === "sofa",
+};
 
 // ─── Deterministic PRNG (mulberry32) ─────────────────────────────────────────
 function makePrng(seed) {
@@ -364,37 +374,37 @@ const STATIC_ORDERS = [
   { c: "C2026-002", sched: dayOffset(0, 9),  t: 0, status: "in_progress", pay: "unpaid",
     items: [{ svc: "A", price: 1800 }, { svc: "C", price: 2500 }] },
   { c: "C2026-012", sched: dayOffset(0, 11), t: 1, status: "in_progress", pay: "unpaid",
-    items: [{ svc: "E", price: 2400 }] },
+    items: [{ svc: "E", price: 2200 }] },
   { c: "C2026-006", sched: dayOffset(0, 14), t: 0, status: "scheduled",   pay: "transfer",
-    items: [{ svc: "C", price: 2500 }, { svc: "E", price: 2400 }] },
+    items: [{ svc: "C", price: 2500 }, { svc: "E", price: 2200 }] },
   { c: "C2026-021", sched: dayOffset(0, 15), t: 2, status: "scheduled",   pay: "unpaid",
-    items: [{ svc: "B", price: 3800 }, { svc: "D", price: 2000 }] },
+    items: [{ svc: "B", price: 4000 }, { svc: "D", price: 2000 }] },
 
   // 明天 + 近一週
   { c: "C2026-004", sched: dayOffset(1, 10),  t: 3, status: "scheduled", pay: "unpaid",
-    items: [{ svc: "B", price: 3800 }, { svc: "C", price: 2500 }] },
+    items: [{ svc: "B", price: 4000 }, { svc: "C", price: 2500 }] },
   { c: "C2026-015", sched: dayOffset(1, 14),  t: 1, status: "scheduled", pay: "unpaid",
-    items: [{ svc: "B", price: 3800 }] },
+    items: [{ svc: "B", price: 4000 }] },
   { c: "C2026-009", sched: dayOffset(2, 9),   t: 0, status: "scheduled", pay: "transfer",
     items: [{ svc: "A", price: 1800 }, { svc: "D", price: 2000 }] },
   { c: "C2026-003", sched: dayOffset(2, 14),  t: 2, status: "scheduled", pay: "unpaid",
-    items: [{ svc: "B", price: 3800 }] },
+    items: [{ svc: "B", price: 4000 }] },
   { c: "C2026-020", sched: dayOffset(3, 9),   t: 1, status: "scheduled", pay: "unpaid",
-    items: [{ svc: "B", price: 3800 }, { svc: "C", price: 2500 }] },
+    items: [{ svc: "B", price: 4000 }, { svc: "C", price: 2500 }] },
   { c: "C2026-023", sched: dayOffset(3, 14),  t: 3, status: "scheduled", pay: "line_pay",
     items: [{ svc: "C", price: 2500 }] },
   { c: "C2026-001", sched: dayOffset(4, 10),  t: 0, status: "scheduled", pay: "unpaid",
     items: [{ svc: "A", price: 1800 }] },
   { c: "C2026-008", sched: dayOffset(5, 14),  t: 3, status: "scheduled", pay: "cash",
-    items: [{ svc: "B", price: 3800 }] },
+    items: [{ svc: "B", price: 4000 }] },
   { c: "C2026-005", sched: dayOffset(6, 10),  t: 1, status: "scheduled", pay: "unpaid",
     items: [{ svc: "D", price: 2000 }] },
   { c: "C2026-013", sched: dayOffset(7, 9),   t: 2, status: "scheduled", pay: "unpaid",
     items: [{ svc: "A", price: 1800 }] },
   { c: "C2026-014", sched: dayOffset(8, 14),  t: 0, status: "scheduled", pay: "transfer",
-    items: [{ svc: "B", price: 3800 }, { svc: "D", price: 2000 }] },
+    items: [{ svc: "B", price: 4000 }, { svc: "D", price: 2000 }] },
   { c: "C2026-024", sched: dayOffset(9, 10),  t: 1, status: "scheduled", pay: "unpaid",
-    items: [{ svc: "E", price: 2400 }] },
+    items: [{ svc: "E", price: 2200 }] },
   { c: "C2026-022", sched: dayOffset(10, 14), t: 2, status: "scheduled", pay: "unpaid",
     items: [{ svc: "A", price: 1800 }] },
   { c: "C2026-011", sched: dayOffset(11, 9),  t: 3, status: "scheduled", pay: "unpaid",
@@ -403,7 +413,7 @@ const STATIC_ORDERS = [
     items: [{ svc: "A", price: 1800 }],
     addons: [{ name: "加大", amount: 200 }] },
   { c: "C2026-025", sched: dayOffset(14, 14), t: 1, status: "scheduled", pay: "transfer",
-    items: [{ svc: "B", price: 3800 }] },
+    items: [{ svc: "B", price: 4000 }] },
 
   // 待派工（pending，左側面板 demo 用）
   { c: "C2026-006", sched: null, t: null, status: "pending", pay: "unpaid",
@@ -518,16 +528,16 @@ async function seedCustomers(sourceByName) {
       if (data) addrIds.push(data.id);
     }
     await supabase.from("machines").delete().eq("customer_id", customerId);
-    const machineIds = [];
+    const machines = [];
     for (const m of c.machines) {
       const { data } = await supabase.from("machines").insert({
         customer_id: customerId, address_id: addrIds[0] ?? null,
         type: m.type, brand: m.brand ?? null, model: m.model ?? null,
         sub_type: m.sub_type ?? null, note: m.note ?? null,
       }).select("id").single();
-      if (data) machineIds.push(data.id);
+      if (data) machines.push({ id: data.id, type: m.type, sub_type: m.sub_type ?? "" });
     }
-    ctx.set(c.code, { id: customerId, addressIds: addrIds, machineIds });
+    ctx.set(c.code, { id: customerId, addressIds: addrIds, machines });
   }
   return ctx;
 }
@@ -578,16 +588,20 @@ async function seedOrders(custCtx, techIds, serviceByCode, adjByName) {
     for (const it of o.items) {
       const svc = serviceByCode.get(it.svc);
       if (!svc) continue;
-      const mIds = cust.machineIds;
-      const machineId = mIds.length ? mIds[created % mIds.length] : null;
+      // Find machine matching this service type; fall back to first machine if none match
+      const matchFn = SVC_MACHINE_MATCH[it.svc];
+      const machine = matchFn
+        ? (cust.machines.find(matchFn) ?? cust.machines[0] ?? null)
+        : (cust.machines[0] ?? null);
+      const price = it.price ?? svc.default_price;
       await supabase.from("order_items").insert({
         order_id: orderRow.id,
         service_item_id: svc.id,
-        machine_id: machineId,
+        machine_id: machine?.id ?? null,
         technician_id: (o.t !== null && o.t !== undefined) ? techIds[o.t] : null,
         quantity: 1,
-        unit_price: it.price,
-        subtotal: it.price,
+        unit_price: price,
+        subtotal: price,
       });
     }
 
