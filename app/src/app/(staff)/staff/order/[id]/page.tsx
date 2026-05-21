@@ -12,7 +12,6 @@ import {
 } from "@/components/orders/StatusBadges";
 import { formatDateTime, formatNTD } from "@/lib/utils";
 import type { OrderInput } from "@/lib/validators/order";
-import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
 import { StaffActions } from "./StaffActions";
 import { PromotionsToggle } from "./PromotionsToggle";
 
@@ -88,8 +87,6 @@ export default async function StaffOrderPage({
 
   const o = data as Detail | null;
   if (!o) notFound();
-
-  const myItems = o.items.filter((it) => it.technician_id === me.id);
 
   // Load active tag presets (with category) for the complete dialog
   const { data: presetsData } = await supabase
@@ -204,53 +201,6 @@ export default async function StaffOrderPage({
           </CardBody>
         </Card>
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>我的服務項目（{myItems.length}）</CardTitle>
-        </CardHeader>
-        <CardBody className="p-0">
-          {myItems.length === 0 ? (
-            <p className="p-4 text-sm text-zinc-500">
-              這筆訂單沒有分配給你的項目
-            </p>
-          ) : (
-            <ul className="divide-y divide-zinc-200">
-              {myItems.map((it) => (
-                <li
-                  key={it.id}
-                  className="grid grid-cols-[1fr_auto] gap-2 px-4 py-3 text-sm"
-                >
-                  <div className="space-y-1">
-                    {it.service && (
-                      <p className="font-medium text-zinc-900">
-                        {it.service.name}
-                      </p>
-                    )}
-                    <p className="text-xs text-zinc-500">
-                      {it.machine
-                        ? `${MACHINE_TYPE_LABEL[it.machine.type as keyof typeof MACHINE_TYPE_LABEL] ?? it.machine.type} · ${[it.machine.brand, it.machine.model].filter(Boolean).join(" ") || "未填型號"}`
-                        : "未指定機器"}
-                      {it.tag && ` · ${it.tag}`}
-                    </p>
-                    {it.note && (
-                      <p className="text-xs text-amber-700">⚠ {it.note}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-zinc-400">
-                      {formatNTD(it.unit_price)} × {it.quantity}
-                    </p>
-                    <p className="font-mono font-medium">
-                      {formatNTD(it.subtotal)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardBody>
-      </Card>
 
       {o.adjustments.length > 0 && (
         <Card>
@@ -372,14 +322,12 @@ export default async function StaffOrderPage({
         </Card>
       )}
 
-      {myItems.length > 0 && (
-        <PromotionsToggle
-          orderId={o.id}
-          promotionTypes={promotionTypes}
-          myPromotions={myPromotions}
-          myUserId={me.id}
-        />
-      )}
+      <PromotionsToggle
+        orderId={o.id}
+        promotionTypes={promotionTypes}
+        myPromotions={myPromotions}
+        myUserId={me.id}
+      />
 
       <StaffActions
         orderId={o.id}

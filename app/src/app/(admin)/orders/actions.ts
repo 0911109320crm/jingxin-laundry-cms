@@ -538,7 +538,7 @@ export async function addOrderAdjustmentAction(
     type: "addon" | "discount";
     amount: number;
   },
-): Promise<Res> {
+): Promise<Res & { realId?: string }> {
   const me = await requireRole(["owner", "manager", "technician"]);
   if (me.profile.role === "technician") {
     const owns = await technicianOwnsOrder(orderId, me.id);
@@ -550,17 +550,21 @@ export async function addOrderAdjustmentAction(
 
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
-  const { error } = await admin.from("order_adjustments").insert({
-    order_id: orderId,
-    adjustment_item_id: payload.adjustment_item_id ?? null,
-    name_snapshot: name,
-    type: payload.type,
-    amount: payload.amount,
-  });
+  const { data: inserted, error } = await admin
+    .from("order_adjustments")
+    .insert({
+      order_id: orderId,
+      adjustment_item_id: payload.adjustment_item_id ?? null,
+      name_snapshot: name,
+      type: payload.type,
+      amount: payload.amount,
+    })
+    .select("id")
+    .single();
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/staff/order/${orderId}`);
   revalidatePath(`/orders/${orderId}`);
-  return { ok: true };
+  return { ok: true, realId: (inserted as { id: string }).id };
 }
 
 /** Remove an adjustment — accessible to technicians on their own orders. */

@@ -159,10 +159,9 @@ export function StaffActions({
         alert(`新增失敗：${res.error}`);
         return;
       }
-      const tempId = `tmp-${Date.now()}`;
       setLocalAdj((prev) => [
         ...prev,
-        { id: tempId, name_snapshot: item.name, type: item.type, amount: item.default_amount },
+        { id: res.realId!, name_snapshot: item.name, type: item.type, amount: item.default_amount },
       ]);
     });
   };
@@ -182,10 +181,9 @@ export function StaffActions({
         alert(`新增失敗：${res.error}`);
         return;
       }
-      const tempId = `tmp-${Date.now()}`;
       setLocalAdj((prev) => [
         ...prev,
-        { id: tempId, name_snapshot: name, type: customType, amount },
+        { id: res.realId!, name_snapshot: name, type: customType, amount },
       ]);
       setCustomName("");
       setCustomAmount("");
