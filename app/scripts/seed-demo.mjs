@@ -658,6 +658,13 @@ async function main() {
 
   const { data: services } = await supabase.from("service_items").select("id, code, name, default_price");
   const serviceByCode = new Map((services ?? []).map((s) => [s.code, s]));
+  // Legacy single-letter codes used in seed data → new codes from migration 0010
+  const SVC_ALIAS = { A: "WV-S", B: "WD-L1", C: "AC-S", D: "BD-DXL", E: "SF-150" };
+  for (const [alias, code] of Object.entries(SVC_ALIAS)) {
+    if (serviceByCode.has(code) && !serviceByCode.has(alias)) {
+      serviceByCode.set(alias, serviceByCode.get(code));
+    }
+  }
 
   const { data: adjs } = await supabase.from("adjustment_items").select("id, name, type, default_amount");
   const adjByName = new Map((adjs ?? []).map((a) => [a.name, a]));
