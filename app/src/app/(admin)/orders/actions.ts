@@ -529,6 +529,63 @@ export async function updateOrderPromotionCreditAction(
   return { ok: true };
 }
 
+/** Add an adjustment (addon/discount) to an order — accessible to technicians on their own orders. */
+export async function addOrderAdjustmentAction(
+  orderId: string,
+  payload: {
+    adjustment_item_id?: string | null;
+    name_snapshot: string;
+    type: "addon" | "discount";
+    amount: number;
+  },
+): Promise<Res> {
+  const me = await requireRole(["owner", "manager", "technician"]);
+  if (me.profile.role === "technician") {
+    const owns = await technicianOwnsOrder(orderId, me.id);
+    if (!owns) return { ok: false, error: "不是你的訂單" };
+  }
+  const name = payload.name_snapshot.trim();
+  if (!name) return { ok: false, error: "請填項目名稱" };
+  if (payload.amount < 0) return { ok: false, error: "金額不可為負數" };
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { error } = await admin.from("order_adjustments").insert({
+    order_id: orderId,
+    adjustment_item_id: payload.adjustment_item_id ?? null,
+    name_snapshot: name,
+    type: payload.type,
+    amount: payload.amount,
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/staff/order/${orderId}`);
+  revalidatePath(`/orders/${orderId}`);
+  return { ok: true };
+}
+
+/** Remove an adjustment — accessible to technicians on their own orders. */
+export async function removeOrderAdjustmentAction(
+  adjustmentId: string,
+  orderId: string,
+): Promise<Res> {
+  const me = await requireRole(["owner", "manager", "technician"]);
+  if (me.profile.role === "technician") {
+    const owns = await technicianOwnsOrder(orderId, me.id);
+    if (!owns) return { ok: false, error: "不是你的訂單" };
+  }
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("order_adjustments")
+    .delete()
+    .eq("id", adjustmentId)
+    .eq("order_id", orderId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/staff/order/${orderId}`);
+  revalidatePath(`/orders/${orderId}`);
+  return { ok: true };
+}
+
 /** Mark a batch of orders as settled (老闆娘 收到師傅回繳現金). */
 export async function settleOrdersAction(orderIds: string[]): Promise<Res> {
   await requireRole(["owner", "manager"]);

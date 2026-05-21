@@ -105,6 +105,21 @@ export default async function StaffOrderPage({
       sort_order: number;
     }[] | null) ?? [];
 
+  // 加減項預設清單
+  const { data: adjItemsData } = await supabase
+    .from("adjustment_items")
+    .select("id, name, type, default_amount")
+    .eq("active", true)
+    .order("type")
+    .order("name");
+  const adjustmentItems =
+    (adjItemsData as {
+      id: string;
+      name: string;
+      type: "addon" | "discount";
+      default_amount: number;
+    }[] | null) ?? [];
+
   // 促銷積分：取 active 類型清單 + 本訂單已歸屬給我的紀錄
   const [{ data: promoTypesData }, { data: myPromosData }] = await Promise.all([
     supabase
@@ -374,6 +389,7 @@ export default async function StaffOrderPage({
         initialTags={o.service_tags ?? []}
         initialNotes={o.service_notes ?? ""}
         adjustments={o.adjustments}
+        adjustmentItems={adjustmentItems}
         subtotal={o.subtotal}
         adjustmentsTotal={o.adjustments_total}
         total={o.total}

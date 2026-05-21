@@ -7,11 +7,15 @@ import {
   CheckCircle2,
   X,
   Pencil,
+  PlusCircle,
+  Trash2,
 } from "lucide-react";
 import {
   setPaymentMethodAction,
   completeOrderAction,
   updateServiceNotesAction,
+  addOrderAdjustmentAction,
+  removeOrderAdjustmentAction,
 } from "@/app/(admin)/orders/actions";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -34,11 +38,19 @@ const CATEGORY_LABEL: Record<string, string> = {
   mattress: "床墊 / 沙發",
 };
 const CATEGORY_ORDER = ["washing_vertical", "washing_drum", "ac_split", "mattress"];
+
 type Adjustment = {
   id: string;
   name_snapshot: string;
   type: "addon" | "discount";
   amount: number;
+};
+
+type AdjustmentItem = {
+  id: string;
+  name: string;
+  type: "addon" | "discount";
+  default_amount: number;
 };
 
 export function StaffActions({
@@ -49,6 +61,7 @@ export function StaffActions({
   initialTags,
   initialNotes,
   adjustments,
+  adjustmentItems,
   subtotal,
   adjustmentsTotal,
   total,
@@ -60,16 +73,29 @@ export function StaffActions({
   initialTags: string[];
   initialNotes: string;
   adjustments: Adjustment[];
+  adjustmentItems: AdjustmentItem[];
   subtotal: number;
   adjustmentsTotal: number;
   total: number;
 }) {
   const [pending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
-  // dialogMode: "complete" 完成案件 / "edit" 補/改備註
   const [dialogMode, setDialogMode] = useState<"complete" | "edit">("complete");
   const [tags, setTags] = useState<string[]>(initialTags);
   const [notes, setNotes] = useState<string>(initialNotes);
+
+  // Local adjustments state — updated optimistically
+  const [localAdj, setLocalAdj] = useState<Adjustment[]>(adjustments);
+  const [customName, setCustomName] = useState("");
+  const [customAmount, setCustomAmount] = useState("");
+  const [customType, setCustomType] = useState<"addon" | "discount">("addon");
+  const [adjPending, startAdjTransition] = useTransition();
+
+  const localAdjTotal = localAdj.reduce(
+    (sum, a) => sum + (a.type === "addon" ? a.amount : -a.amount),
+    0,
+  );
+  const localTotal = subtotal + localAdjTotal;
 
   const setMethod = (method: Method, label: string) => {
     if (!confirm(`確認改為「${label}」？`)) return;
@@ -83,6 +109,7 @@ export function StaffActions({
     setDialogMode("complete");
     setTags(initialTags);
     setNotes(initialNotes);
+    setLocalAdj(adjustments);
     setDialogOpen(true);
   };
 
@@ -90,6 +117,7 @@ export function StaffActions({
     setDialogMode("edit");
     setTags(initialTags);
     setNotes(initialNotes);
+    setLocalAdj(adjustments);
     setDialogOpen(true);
   };
 
@@ -119,10 +147,69 @@ export function StaffActions({
     });
   };
 
-  // Show stale-preset tags (selected but no longer in active presets) so
-  // technician sees what was previously recorded.
+  const addPresetAdj = (item: AdjustmentItem) => {
+    startAdjTransition(async () => {
+      const res = await addOrderAdjustmentAction(orderId, {
+        adjustment_item_id: item.id,
+        name_snapshot: item.name,
+        type: item.type,
+        amount: item.default_amount,
+      });
+      if (!res.ok) {
+        alert(`新增失敗：${res.error}`);
+        return;
+      }
+      const tempId = `tmp-${Date.now()}`;
+      setLocalAdj((prev) => [
+        ...prev,
+        { id: tempId, name_snapshot: item.name, type: item.type, amount: item.default_amount },
+      ]);
+    });
+  };
+
+  const addCustomAdj = () => {
+    const name = customName.trim();
+    const amount = parseInt(customAmount, 10);
+    if (!name) { alert("請填項目名稱"); return; }
+    if (isNaN(amount) || amount < 0) { alert("請填正確金額"); return; }
+    startAdjTransition(async () => {
+      const res = await addOrderAdjustmentAction(orderId, {
+        name_snapshot: name,
+        type: customType,
+        amount,
+      });
+      if (!res.ok) {
+        alert(`新增失敗：${res.error}`);
+        return;
+      }
+      const tempId = `tmp-${Date.now()}`;
+      setLocalAdj((prev) => [
+        ...prev,
+        { id: tempId, name_snapshot: name, type: customType, amount },
+      ]);
+      setCustomName("");
+      setCustomAmount("");
+    });
+  };
+
+  const removeAdj = (adj: Adjustment) => {
+    // Optimistic remove immediately
+    setLocalAdj((prev) => prev.filter((a) => a.id !== adj.id));
+    startAdjTransition(async () => {
+      const res = await removeOrderAdjustmentAction(adj.id, orderId);
+      if (!res.ok) {
+        alert(`刪除失敗：${res.error}`);
+        // Restore on failure
+        setLocalAdj((prev) => [...prev, adj]);
+      }
+    });
+  };
+
   const presetLabels = new Set(presets.map((p) => p.label));
   const extraTags = tags.filter((t) => !presetLabels.has(t));
+
+  const addonItems = adjustmentItems.filter((a) => a.type === "addon");
+  const discountItems = adjustmentItems.filter((a) => a.type === "discount");
 
   return (
     <>
@@ -232,16 +319,16 @@ export function StaffActions({
                 </p>
               )}
 
-              {/* Money summary — confirm 加價/折扣 + 應收總額 */}
+              {/* Money summary */}
               <section className="rounded-md bg-zinc-50 p-3">
-                {adjustments.length > 0 && (
+                {localAdj.length > 0 && (
                   <>
                     <div className="flex items-center justify-between text-sm text-zinc-600">
                       <span>項目小計</span>
                       <span className="font-mono">{formatNTD(subtotal)}</span>
                     </div>
                     <ul className="mt-1 space-y-0.5">
-                      {adjustments.map((a) => (
+                      {localAdj.map((a) => (
                         <li
                           key={a.id}
                           className="flex items-center justify-between text-sm"
@@ -258,20 +345,31 @@ export function StaffActions({
                             </span>
                             {a.name_snapshot}
                           </span>
-                          <span
-                            className={`font-mono ${a.type === "addon" ? "text-orange-700" : "text-emerald-700"}`}
-                          >
-                            {a.type === "addon" ? "+" : "-"}
-                            {formatNTD(a.amount)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`font-mono ${a.type === "addon" ? "text-orange-700" : "text-emerald-700"}`}
+                            >
+                              {a.type === "addon" ? "+" : "-"}
+                              {formatNTD(a.amount)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeAdj(a)}
+                              disabled={adjPending}
+                              className="text-zinc-400 hover:text-red-500 disabled:opacity-40"
+                              title="刪除"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>
                     <div className="mt-1 flex items-center justify-between text-xs text-zinc-500">
                       <span>加減項合計</span>
                       <span className="font-mono">
-                        {adjustmentsTotal >= 0 ? "+" : ""}
-                        {formatNTD(adjustmentsTotal)}
+                        {localAdjTotal >= 0 ? "+" : ""}
+                        {formatNTD(localAdjTotal)}
                       </span>
                     </div>
                     <div className="my-2 border-t border-zinc-200" />
@@ -282,8 +380,114 @@ export function StaffActions({
                     應收總額
                   </span>
                   <span className="font-mono text-2xl font-bold text-brand-700">
-                    {formatNTD(total)}
+                    {formatNTD(localTotal)}
                   </span>
+                </div>
+              </section>
+
+              {/* Adjustment adder */}
+              <section className="rounded-md border border-zinc-200 p-3 space-y-3">
+                <p className="text-sm font-medium text-zinc-800">加收 / 折扣項目</p>
+
+                {addonItems.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 text-xs text-zinc-500">加收</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {addonItems.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          disabled={adjPending}
+                          onClick={() => addPresetAdj(item)}
+                          className="inline-flex items-center gap-1 rounded-full border border-orange-300 bg-orange-50 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:opacity-50"
+                        >
+                          <PlusCircle className="h-3.5 w-3.5" />
+                          {item.name}
+                          {item.default_amount > 0 && (
+                            <span className="font-mono text-xs">+{formatNTD(item.default_amount)}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {discountItems.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 text-xs text-zinc-500">折扣</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {discountItems.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          disabled={adjPending}
+                          onClick={() => addPresetAdj(item)}
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                        >
+                          <PlusCircle className="h-3.5 w-3.5" />
+                          {item.name}
+                          {item.default_amount > 0 && (
+                            <span className="font-mono text-xs">-{formatNTD(item.default_amount)}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Custom entry */}
+                <div className="space-y-2">
+                  <p className="text-xs text-zinc-500">自訂項目</p>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setCustomType("addon")}
+                      className={`rounded px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                        customType === "addon"
+                          ? "bg-orange-500 text-white"
+                          : "border border-zinc-300 text-zinc-600 hover:bg-zinc-50"
+                      }`}
+                    >
+                      加收
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustomType("discount")}
+                      className={`rounded px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                        customType === "discount"
+                          ? "bg-emerald-500 text-white"
+                          : "border border-zinc-300 text-zinc-600 hover:bg-zinc-50"
+                      }`}
+                    >
+                      折扣
+                    </button>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      placeholder="項目名稱"
+                      className="min-w-0 flex-1 rounded border border-zinc-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+                      maxLength={80}
+                    />
+                    <input
+                      type="number"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      placeholder="金額"
+                      min={0}
+                      className="w-24 rounded border border-zinc-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={addCustomAdj}
+                      disabled={adjPending || !customName.trim() || !customAmount}
+                      className="rounded bg-zinc-700 px-3 py-1.5 text-sm text-white hover:bg-zinc-900 disabled:opacity-40"
+                    >
+                      加入
+                    </button>
+                  </div>
                 </div>
               </section>
 
