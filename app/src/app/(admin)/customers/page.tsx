@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card, CardBody } from "@/components/ui/Card";
 import { COUNTIES, DISTRICTS_BY_COUNTY } from "@/lib/taiwan-regions";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatNTD } from "@/lib/utils";
 
 type SearchParams = Promise<{
   q?: string;
@@ -80,6 +80,7 @@ export default async function CustomersPage({
     { count: totalCount },
     { data: activeRowsRaw },
     { count: sleeperCount },
+    { data: referredAll },
   ] = await Promise.all([
     supabase
       .from("customers")
@@ -93,7 +94,65 @@ export default async function CustomersPage({
       .from("reminders")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending"),
+    supabase
+      .from("customers")
+      .select("id, referrer_id, orders(status, total)")
+      .not("referrer_id", "is", null),
   ]);
+
+  // 介紹榜：按 referrer_id 分組統計（手動撈介紹人姓名，避開 self-FK embed 歧義）
+  type ReferredRow = {
+    id: string;
+    referrer_id: string | null;
+    orders: { status: string; total: number }[];
+  };
+  const referrerMap = new Map<
+    string,
+    { id: string; name: string; count: number; totalContribution: number }
+  >();
+  const allReferred = (referredAll as ReferredRow[] | null) ?? [];
+
+  // 先收集需要查的 referrer ids
+  const referrerIds = Array.from(
+    new Set(allReferred.map((r) => r.referrer_id).filter(Boolean) as string[]),
+  );
+  let referrerNames = new Map<string, string>();
+  if (referrerIds.length > 0) {
+    const { data: refRows } = await supabase
+      .from("customers")
+      .select("id, name")
+      .in("id", referrerIds);
+    referrerNames = new Map(
+      ((refRows as { id: string; name: string }[] | null) ?? []).map((r) => [
+        r.id,
+        r.name,
+      ]),
+    );
+  }
+
+  for (const row of allReferred) {
+    if (!row.referrer_id) continue;
+    const refName = referrerNames.get(row.referrer_id);
+    if (!refName) continue;
+    const contribution = row.orders
+      .filter((o) => o.status === "done")
+      .reduce((s, o) => s + Number(o.total), 0);
+    const existing = referrerMap.get(row.referrer_id);
+    if (existing) {
+      existing.count += 1;
+      existing.totalContribution += contribution;
+    } else {
+      referrerMap.set(row.referrer_id, {
+        id: row.referrer_id,
+        name: refName,
+        count: 1,
+        totalContribution: contribution,
+      });
+    }
+  }
+  const topReferrers = Array.from(referrerMap.values())
+    .sort((a, b) => b.totalContribution - a.totalContribution)
+    .slice(0, 5);
 
   const activeCustomerCount = new Set(
     ((activeRowsRaw as { customer_id: string }[] | null) ?? []).map(
@@ -102,7 +161,7 @@ export default async function CustomersPage({
   ).size;
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">顧客管理</h1>
@@ -157,6 +216,37 @@ export default async function CustomersPage({
           </Card>
         </Link>
       </div>
+
+      {topReferrers.length > 0 && (
+        <Card>
+          <CardBody className="p-0">
+            <div className="flex items-center justify-between px-5 py-2 text-xs font-medium text-zinc-500">
+              <span>🏆 介紹效益榜（前 {topReferrers.length} 名）</span>
+              <span className="text-zinc-400">合計貢獻 / 介紹人數</span>
+            </div>
+            <ul className="divide-y divide-zinc-200">
+              {topReferrers.map((r) => (
+                <li key={r.id}>
+                  <Link
+                    href={`/customers/${r.id}`}
+                    className="flex items-center justify-between px-5 py-2 text-sm hover:bg-zinc-50"
+                  >
+                    <span className="font-medium text-zinc-900">{r.name}</span>
+                    <span className="text-xs text-zinc-500">
+                      <span className="font-mono font-semibold text-zinc-900">
+                        {formatNTD(r.totalContribution)}
+                      </span>
+                      <span className="ml-2 text-zinc-400">
+                        介紹 {r.count} 位
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
 
       <Card>
         <CardBody>

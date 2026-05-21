@@ -15,6 +15,7 @@ import { requireRole } from "@/lib/dal";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatDate, formatNTD } from "@/lib/utils";
+import { computeCustomerStats } from "@/lib/customer-stats";
 import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
 import {
   StatusBadge,
@@ -31,6 +32,7 @@ type CustomerDetail = {
   phone: string;
   note: string | null;
   joined_at: string | null;
+  referrer_id: string | null;
   source: { name: string } | null;
   addresses: {
     id: string;
@@ -47,7 +49,15 @@ type CustomerDetail = {
     model: string | null;
     sub_type: string | null;
     note: string | null;
+    address_id: string | null;
   }[];
+};
+
+type ReferredCustomer = {
+  id: string;
+  name: string;
+  phone: string;
+  orders: { status: string; total: number }[];
 };
 
 type OrderRow = {
@@ -102,14 +112,14 @@ export default async function CustomerDetailPage({
   const supabase = await createClient();
   const admin = createAdminClient();
 
-  const [{ data }, { data: ordersData }] = await Promise.all([
+  const [{ data }, { data: ordersData }, { data: referredData }] = await Promise.all([
     supabase
       .from("customers")
       .select(
-        `id, code, name, phone, note, joined_at,
+        `id, code, name, phone, note, joined_at, referrer_id,
          source:customer_sources(name),
          addresses:customer_addresses(id, county, district, address, label, is_default),
-         machines(id, type, brand, model, sub_type, note)`,
+         machines(id, type, brand, model, sub_type, note, address_id)`,
       )
       .eq("id", id)
       .single(),
@@ -129,12 +139,36 @@ export default async function CustomerDetailPage({
       )
       .eq("customer_id", id)
       .order("scheduled_at", { ascending: false, nullsFirst: false }),
+    supabase
+      .from("customers")
+      .select("id, name, phone, orders(status, total)")
+      .eq("referrer_id", id),
   ]);
 
   const customer = data as CustomerDetail | null;
   if (!customer) notFound();
 
+  // 介紹人：手動撈一筆（避開 Supabase self-FK embed 的方向歧義）
+  let referrer: { id: string; name: string } | null = null;
+  if (customer.referrer_id) {
+    const { data: refData } = await supabase
+      .from("customers")
+      .select("id, name")
+      .eq("id", customer.referrer_id)
+      .single();
+    referrer = (refData as { id: string; name: string } | null) ?? null;
+  }
+
   const orders = (ordersData as OrderRow[] | null) ?? [];
+  const referredCustomers = (referredData as ReferredCustomer[] | null) ?? [];
+  const referredContribution = referredCustomers.reduce((sum, rc) => {
+    return (
+      sum +
+      rc.orders
+        .filter((o) => o.status === "done")
+        .reduce((s, o) => s + Number(o.total), 0)
+    );
+  }, 0);
 
   // Resolve technician names
   const techIds = Array.from(
@@ -155,42 +189,17 @@ export default async function CustomerDetailPage({
     );
   }
 
-  const totalSpent = orders
-    .filter((o) => o.status === "done")
-    .reduce((s, o) => s + Number(o.total), 0);
-  const doneCount = orders.filter((o) => o.status === "done").length;
-  const cancelCount = orders.filter((o) => o.status === "cancelled").length;
-
-  // 服務頻率分析
-  const doneOrders = orders
-    .filter((o) => o.status === "done" && o.service_at)
-    .sort(
-      (a, b) =>
-        new Date(b.service_at!).getTime() - new Date(a.service_at!).getTime(),
-    );
-  const lastServiceAt = doneOrders[0]?.service_at ?? null;
-  const monthsSinceLast = lastServiceAt
-    ? Math.round(
-        (Date.now() - new Date(lastServiceAt).getTime()) /
-          (1000 * 60 * 60 * 24 * 30.4),
-      )
-    : null;
-  // 平均週期 = 相鄰兩次 service_at 的差距平均
-  let avgCycleMonths: number | null = null;
-  if (doneOrders.length >= 2) {
-    const intervals: number[] = [];
-    for (let i = 0; i < doneOrders.length - 1; i++) {
-      const a = new Date(doneOrders[i].service_at!).getTime();
-      const b = new Date(doneOrders[i + 1].service_at!).getTime();
-      intervals.push((a - b) / (1000 * 60 * 60 * 24 * 30.4));
-    }
-    avgCycleMonths = Math.round(
-      intervals.reduce((s, v) => s + v, 0) / intervals.length,
-    );
-  }
+  const {
+    totalSpent,
+    doneCount,
+    cancelCount,
+    lastServiceAt,
+    monthsSinceLast,
+    avgCycleMonths,
+  } = computeCustomerStats(orders);
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <Link
         href="/customers"
         className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
@@ -198,9 +207,9 @@ export default async function CustomerDetailPage({
         <ChevronLeft className="h-4 w-4" /> 回顧客列表
       </Link>
 
-      <header className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold text-zinc-900">{customer.name}</h1>
             <span className="text-sm text-zinc-400">{customer.code}</span>
             {customer.source?.name && (
@@ -208,35 +217,26 @@ export default async function CustomerDetailPage({
                 {customer.source.name}
               </span>
             )}
+            <a
+              href={`tel:${customer.phone}`}
+              className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-0.5 text-sm font-medium text-zinc-800 hover:bg-zinc-200"
+            >
+              <Phone className="h-3.5 w-3.5" /> {customer.phone}
+            </a>
+            {referrer && (
+              <Link
+                href={`/customers/${referrer.id}`}
+                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100"
+              >
+                由 {referrer.name} 介紹 →
+              </Link>
+            )}
           </div>
-          <p className="mt-1 text-sm text-zinc-500">
-            加入日期：{formatDate(customer.joined_at)} · 累計消費{" "}
-            <span className="font-semibold text-zinc-900">
-              {formatNTD(totalSpent)}
-            </span>{" "}
-            ({doneCount} 次)
-            {monthsSinceLast !== null && (
-              <>
-                {" · 距上次服務 "}
-                <span
-                  className={`font-semibold ${
-                    monthsSinceLast >= 11
-                      ? "text-rose-700"
-                      : monthsSinceLast >= 6
-                        ? "text-amber-700"
-                        : "text-zinc-900"
-                  }`}
-                >
-                  {monthsSinceLast} 個月
-                </span>
-              </>
-            )}
-            {avgCycleMonths !== null && (
-              <> · 平均週期 {avgCycleMonths} 個月</>
-            )}
+          <p className="text-xs text-zinc-500">
+            加入：{formatDate(customer.joined_at)}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <Link
             href={`/orders/new?customer=${customer.id}&from=customer&cid=${customer.id}`}
           >
@@ -252,93 +252,257 @@ export default async function CustomerDetailPage({
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      {/* KPI 條 */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle>聯絡資訊</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-3 text-sm">
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-zinc-400" />
-              <span>{customer.phone}</span>
-            </div>
-            {customer.note && (
-              <div className="rounded-lg bg-zinc-50 p-3 text-zinc-700">
-                <p className="mb-1 text-xs text-zinc-500">備註</p>
-                {customer.note}
-              </div>
-            )}
+          <CardBody className="py-3">
+            <p className="text-xs text-zinc-500">累計消費</p>
+            <p className="font-mono text-xl font-bold text-zinc-900">
+              {formatNTD(totalSpent)}
+            </p>
+            <p className="text-xs text-zinc-400">完工 {doneCount} 次</p>
           </CardBody>
         </Card>
-
         <Card>
-          <CardHeader>
-            <CardTitle>地址（{customer.addresses.length} 筆）</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-3">
-            {customer.addresses.length === 0 && (
-              <p className="text-sm text-zinc-500">尚無地址</p>
-            )}
-            {customer.addresses.map((a) => (
-              <div
-                key={a.id}
-                className="rounded-lg border border-zinc-200 p-3 text-sm"
-              >
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-zinc-400" />
-                  <span className="font-medium">
-                    {a.county} {a.district}
-                  </span>
-                  {a.label && (
-                    <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600">
-                      {a.label}
-                    </span>
-                  )}
-                  {a.is_default && (
-                    <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs text-brand-700">
-                      預設
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-zinc-700">{a.address}</p>
-              </div>
-            ))}
+          <CardBody className="py-3">
+            <p className="text-xs text-zinc-500">距上次服務</p>
+            <p
+              className={`text-xl font-bold ${
+                monthsSinceLast == null
+                  ? "text-zinc-400"
+                  : monthsSinceLast >= 11
+                    ? "text-rose-700"
+                    : monthsSinceLast >= 6
+                      ? "text-amber-700"
+                      : "text-zinc-900"
+              }`}
+            >
+              {monthsSinceLast == null ? "—" : `${monthsSinceLast} 個月`}
+            </p>
+            <p className="text-xs text-zinc-400">
+              {lastServiceAt ? formatDate(lastServiceAt) : "尚無完工紀錄"}
+            </p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="py-3">
+            <p className="text-xs text-zinc-500">平均週期</p>
+            <p className="text-xl font-bold text-zinc-900">
+              {avgCycleMonths == null ? "—" : `${avgCycleMonths} 個月`}
+            </p>
+            <p className="text-xs text-zinc-400">≥2 次完工才計算</p>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="py-3">
+            <p className="text-xs text-zinc-500">臨時取消</p>
+            <p
+              className={`text-xl font-bold ${
+                cancelCount >= 3 ? "text-rose-700" : "text-zinc-900"
+              }`}
+            >
+              {cancelCount} 次
+            </p>
+            <p className="text-xs text-zinc-400">
+              {cancelCount >= 3 ? "客戶常取消，注意" : "—"}
+            </p>
           </CardBody>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>機器 / 服務物品（{customer.machines.length} 筆）</CardTitle>
-        </CardHeader>
-        <CardBody className="space-y-3">
-          {customer.machines.length === 0 && (
-            <p className="text-sm text-zinc-500">尚未登錄機器</p>
-          )}
-          {customer.machines.map((m) => (
-            <div
-              key={m.id}
-              className="rounded-lg border border-zinc-200 p-3 text-sm"
-            >
-              <div className="flex items-center gap-2">
-                <Wrench className="h-4 w-4 text-zinc-400" />
-                <span className="font-medium">
-                  {MACHINE_TYPE_LABEL[m.type] ?? m.type}
-                </span>
-                {m.sub_type && (
-                  <span className="text-xs text-zinc-500">{m.sub_type}</span>
-                )}
-              </div>
-              <p className="mt-1 text-zinc-700">
-                {[m.brand, m.model].filter(Boolean).join(" / ") || "—"}
+      {/* 備註 / 地址 / 機器 並排：有 note 就 3 欄、沒就 2 欄 */}
+      <div
+        className={`grid grid-cols-1 gap-4 ${
+          customer.note ? "lg:grid-cols-3" : "lg:grid-cols-2"
+        }`}
+      >
+        {customer.note && (
+          <Card>
+            <CardHeader>
+              <CardTitle>客戶備註</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <p className="whitespace-pre-wrap text-sm text-zinc-700">
+                {customer.note}
               </p>
-              {m.note && (
-                <p className="mt-1 text-xs text-zinc-500">備註：{m.note}</p>
-              )}
-            </div>
-          ))}
-        </CardBody>
-      </Card>
+            </CardBody>
+          </Card>
+        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>地址（{customer.addresses.length} 筆）</CardTitle>
+          </CardHeader>
+          <CardBody>
+            {customer.addresses.length === 0 ? (
+              <p className="text-sm text-zinc-500">尚無地址</p>
+            ) : (
+              <div
+                className={`grid grid-cols-1 gap-2 ${
+                  customer.note ? "" : "md:grid-cols-2"
+                }`}
+              >
+                {customer.addresses.map((a) => (
+                  <div
+                    key={a.id}
+                    className="rounded-lg border border-zinc-200 p-2.5 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                      <span className="font-medium">
+                        {a.county} {a.district}
+                      </span>
+                      {a.label && (
+                        <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600">
+                          {a.label}
+                        </span>
+                      )}
+                      {a.is_default && (
+                        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs text-brand-700">
+                          預設
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-zinc-700">{a.address}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>機器 / 服務物品（{customer.machines.length} 筆）</CardTitle>
+          </CardHeader>
+          <CardBody>
+            {customer.machines.length === 0 ? (
+              <p className="text-sm text-zinc-500">尚未登錄機器</p>
+            ) : (
+              (() => {
+                // 按 address_id 分組；address_id 為 null 的歸「未指定地址」
+                const groups = new Map<
+                  string | null,
+                  typeof customer.machines
+                >();
+                for (const m of customer.machines) {
+                  const key = m.address_id ?? null;
+                  if (!groups.has(key)) groups.set(key, []);
+                  groups.get(key)!.push(m);
+                }
+                const addressMap = new Map(
+                  customer.addresses.map((a) => [a.id, a]),
+                );
+                // 顯示順序：先按 customer.addresses 順序，最後是未指定
+                const orderedKeys: (string | null)[] = [
+                  ...customer.addresses.map((a) => a.id).filter((aid) => groups.has(aid)),
+                  ...(groups.has(null) ? [null] : []),
+                ];
+                const showHeading = customer.addresses.length >= 2;
+                return (
+                  <div className="space-y-3">
+                    {orderedKeys.map((aid) => {
+                      const machines = groups.get(aid) ?? [];
+                      const addr = aid ? addressMap.get(aid) : null;
+                      return (
+                        <div key={aid ?? "unassigned"}>
+                          {showHeading && (
+                            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                              <MapPin className="h-3.5 w-3.5" />
+                              {addr
+                                ? `${addr.county}${addr.district} ${addr.address}${addr.label ? `（${addr.label}）` : ""}`
+                                : "未指定地址"}
+                            </p>
+                          )}
+                          <div
+                            className={`grid grid-cols-1 gap-2 ${
+                              customer.note ? "" : "md:grid-cols-2"
+                            }`}
+                          >
+                            {machines.map((m) => (
+                              <div
+                                key={m.id}
+                                className="rounded-lg border border-zinc-200 p-2.5 text-sm"
+                              >
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <Wrench className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                                  <span className="font-medium">
+                                    {MACHINE_TYPE_LABEL[m.type] ?? m.type}
+                                  </span>
+                                  {m.sub_type && (
+                                    <span className="text-xs text-zinc-500">
+                                      {m.sub_type}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="mt-0.5 text-zinc-700">
+                                  {[m.brand, m.model].filter(Boolean).join(" / ") || "—"}
+                                </p>
+                                {m.note && (
+                                  <p className="mt-0.5 text-xs text-zinc-500">
+                                    備註：{m.note}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {showHeading && groups.has(null) && (
+                      <Link
+                        href={`/customers/${customer.id}/edit`}
+                        className="inline-block text-xs text-brand-700 hover:underline"
+                      >
+                        → 編輯客戶，幫未指定機器設定地址
+                      </Link>
+                    )}
+                  </div>
+                );
+              })()
+            )}
+          </CardBody>
+        </Card>
+      </div>
+
+      {referredCustomers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between gap-2">
+              <span>介紹過的客戶（{referredCustomers.length} 位）</span>
+              <span className="text-xs font-normal text-zinc-500">
+                合計貢獻：
+                <span className="font-mono font-semibold text-zinc-900">
+                  {formatNTD(referredContribution)}
+                </span>
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardBody className="p-0">
+            <ul className="divide-y divide-zinc-200">
+              {referredCustomers.map((r) => {
+                const total = r.orders
+                  .filter((o) => o.status === "done")
+                  .reduce((s, o) => s + Number(o.total), 0);
+                return (
+                  <li key={r.id}>
+                    <Link
+                      href={`/customers/${r.id}`}
+                      className="flex items-center justify-between px-5 py-2.5 text-sm hover:bg-zinc-50"
+                    >
+                      <span className="font-medium text-zinc-900">
+                        {r.name}
+                      </span>
+                      <span className="text-xs text-zinc-500">
+                        {r.phone} · 累計 {formatNTD(total)}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

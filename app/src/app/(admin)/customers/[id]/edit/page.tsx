@@ -20,8 +20,9 @@ type EditData = {
   note: string | null;
   joined_at: string | null;
   source_id: string | null;
+  referrer_id: string | null;
   addresses: (AddressInput & { id: string })[];
-  machines: (MachineInput & { id: string; type: MachineType })[];
+  machines: (MachineInput & { id: string; type: MachineType; address_id: string | null })[];
 };
 
 export default async function EditCustomerPage({
@@ -36,9 +37,9 @@ export default async function EditCustomerPage({
     supabase
       .from("customers")
       .select(
-        `id, code, name, phone, note, joined_at, source_id,
+        `id, code, name, phone, note, joined_at, source_id, referrer_id,
          addresses:customer_addresses(id, county, district, address, label, is_default),
-         machines(id, type, brand, model, sub_type, note)`,
+         machines(id, type, brand, model, sub_type, note, address_id)`,
       )
       .eq("id", id)
       .single(),
@@ -65,6 +66,7 @@ export default async function EditCustomerPage({
     note: c.note ?? "",
     joined_at: c.joined_at ?? "",
     source_id: c.source_id,
+    referrer_id: c.referrer_id ?? null,
     addresses: c.addresses.map((a) => ({
       id: a.id,
       county: a.county,
@@ -80,11 +82,12 @@ export default async function EditCustomerPage({
       model: m.model ?? "",
       sub_type: m.sub_type ?? "",
       note: m.note ?? "",
+      address_id: m.address_id ?? null,
     })),
   };
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <Link
           href={`/customers/${c.id}`}

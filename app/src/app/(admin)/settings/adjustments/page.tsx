@@ -15,7 +15,7 @@ export default async function AdjustmentsSettingsPage() {
   const items = (data as Adjustment[] | null) ?? [];
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <header>
         <h1 className="text-2xl font-bold text-zinc-900">折扣 / 加價項目</h1>
         <p className="text-sm text-zinc-500">

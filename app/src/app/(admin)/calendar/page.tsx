@@ -71,7 +71,7 @@ export default async function CalendarPage({
          items:order_items(technician_id, service:service_items(name))`,
       )
       .not("scheduled_at", "is", null)
-      .neq("status", "cancelled")
+      .not("status", "in", "(pending,cancelled)")
       .order("scheduled_at"),
     supabase
       .from("orders")

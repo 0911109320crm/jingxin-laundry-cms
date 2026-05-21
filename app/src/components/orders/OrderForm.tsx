@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { DateTimeSelect } from "@/components/ui/DateTimeSelect";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   createOrderAction,
@@ -56,6 +57,7 @@ type Machine = {
   brand: string | null;
   model: string | null;
   sub_type: string | null;
+  address_id?: string | null;
 };
 
 type Props = {
@@ -168,6 +170,18 @@ export function OrderForm({
     setValue("scheduled_end_at", value);
   }, [scheduledAt, duration, setValue]);
 
+  // 機器 → 地址自動連動：選機器後若訂單地址還空著，帶上該機器的歸屬地址
+  const watchedAddressId = useWatch({ control, name: "address_id" });
+  useEffect(() => {
+    if (watchedAddressId) return; // 已選地址就不覆寫
+    const firstWithMachine = watchedItems?.find((it) => it?.machine_id);
+    if (!firstWithMachine?.machine_id) return;
+    const machine = machines.find((m) => m.id === firstWithMachine.machine_id);
+    if (machine?.address_id) {
+      setValue("address_id", machine.address_id);
+    }
+  }, [watchedItems, machines, watchedAddressId, setValue]);
+
   // Preview order code (create mode only)
   useEffect(() => {
     if (mode !== "create") return;
@@ -227,7 +241,13 @@ export function OrderForm({
         setServerError(res.error);
         return;
       }
-      router.push(backHref ?? (res.id ? `/orders/${res.id}` : "/orders"));
+      // 建單成功跳訂單詳細頁時帶 just_created=1，讓詳細頁顯示「同客戶再建一筆」CTA
+      const target =
+        backHref ??
+        (res.id
+          ? `/orders/${res.id}${mode === "create" ? "?just_created=1" : ""}`
+          : "/orders");
+      router.push(target);
       router.refresh();
     });
   };
@@ -253,7 +273,7 @@ export function OrderForm({
             </span>
           )}
         </CardHeader>
-        <CardBody className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <CardBody className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Field label="客戶" error={errors.customer_id?.message}>
             <Select {...register("customer_id")}>
               <option value="">— 選擇客戶 —</option>
@@ -278,9 +298,15 @@ export function OrderForm({
             </Select>
           </Field>
           <Field label="預約開始時間">
-            <Input
-              type="datetime-local"
-              {...register("scheduled_at")}
+            <Controller
+              control={control}
+              name="scheduled_at"
+              render={({ field }) => (
+                <DateTimeSelect
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
             />
           </Field>
           <Field label="預計時長（分鐘）">
@@ -312,9 +338,20 @@ export function OrderForm({
             </div>
             <input type="hidden" {...register("scheduled_end_at")} />
           </Field>
-          <Field label="實際清洗日期時間">
-            <Input type="datetime-local" {...register("service_at")} />
-          </Field>
+          {mode === "edit" && (
+            <Field label="實際清洗日期時間（一般不填，師傅按完成時會自動設）">
+              <Controller
+                control={control}
+                name="service_at"
+                render={({ field }) => (
+                  <DateTimeSelect
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </Field>
+          )}
           <Field label="訂單狀態">
             <Select {...register("status")}>
               {ORDER_STATUSES.map((s) => (
@@ -442,6 +479,37 @@ export function OrderForm({
                       </option>
                     ))}
                   </Select>
+                  {(() => {
+                    const selectedMachineId = watchedItems?.[idx]?.machine_id;
+                    if (!selectedMachineId) return null;
+                    const m = machines.find((mm) => mm.id === selectedMachineId);
+                    if (!m?.address_id) return null;
+                    if (!watchedAddressId || m.address_id === watchedAddressId)
+                      return null;
+                    const machineAddr = addresses.find(
+                      (a) => a.id === m.address_id,
+                    );
+                    if (!machineAddr) return null;
+                    return (
+                      <div className="mt-1 flex items-start gap-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                        <span className="shrink-0">⚠</span>
+                        <span className="min-w-0 flex-1">
+                          此機器在「{machineAddr.county}
+                          {machineAddr.district}
+                          {machineAddr.address}」，但本單地址不同。
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setValue("address_id", m.address_id!)
+                            }
+                            className="ml-1 font-medium underline hover:text-amber-900"
+                          >
+                            切換到此地址
+                          </button>
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </Field>
                 <Field label="代號（遠/母/卡…）">
                   <Input

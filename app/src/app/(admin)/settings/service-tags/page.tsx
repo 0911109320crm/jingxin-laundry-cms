@@ -26,7 +26,7 @@ export default async function ServiceTagsSettingsPage({
   const tags = (data as ServiceTag[] | null) ?? [];
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <header>
         <h1 className="text-2xl font-bold text-zinc-900">師傅快速備註標籤</h1>
         <p className="text-sm text-zinc-500">

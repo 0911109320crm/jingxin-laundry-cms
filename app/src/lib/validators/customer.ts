@@ -32,6 +32,12 @@ export const MachineSchema = z.object({
   model: z.string().optional().nullable(),
   sub_type: z.string().optional().nullable(),
   note: z.string().optional().nullable(),
+  address_id: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => null)),
 });
 
 export const CustomerSchema = z.object({
@@ -44,6 +50,12 @@ export const CustomerSchema = z.object({
   name: z.string().min(1, "請填姓名").max(40),
   phone: z.string().min(1, "請填電話").max(20),
   source_id: z.string().uuid().optional().nullable(),
+  referrer_id: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => null)),
   note: z.string().optional().nullable(),
   joined_at: z.string().optional().nullable(),
   addresses: z.array(AddressSchema).min(1, "至少一個地址"),

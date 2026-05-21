@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Pencil, Phone, MapPin, User } from "lucide-react";
+import { ChevronLeft, Pencil, Phone, MapPin, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/dal";
@@ -13,12 +13,15 @@ import {
   SettlementBadge,
 } from "@/components/orders/StatusBadges";
 import { formatDateTime, formatNTD } from "@/lib/utils";
-import {
-  ORDER_STATUS_LABEL,
-  type OrderInput,
-} from "@/lib/validators/order";
+import { type OrderInput } from "@/lib/validators/order";
 import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
 import { PromotionsPanel, type OrderPromotion, type PromotionType } from "./PromotionsPanel";
+import {
+  CustomerContextPanel,
+  type RecentOrder,
+  type CustomerMachine,
+  type CustomerStatsOrder,
+} from "./CustomerContextPanel";
 
 type Item = {
   id: string;
@@ -57,7 +60,14 @@ type Detail = {
   cancelled_at: string | null;
   service_tags: string[] | null;
   service_notes: string | null;
-  customer: { id: string; code: string; name: string; phone: string } | null;
+  customer: {
+    id: string;
+    code: string;
+    name: string;
+    phone: string;
+    note: string | null;
+    source: { name: string } | null;
+  } | null;
   address: { county: string; district: string; address: string } | null;
   items: Item[];
   adjustments: Adjustment[];
@@ -68,7 +78,7 @@ export default async function OrderDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string; cid?: string }>;
+  searchParams: Promise<{ from?: string; cid?: string; just_created?: string }>;
 }) {
   await requireRole(["owner", "manager"]);
   const { id } = await params;
@@ -83,7 +93,7 @@ export default async function OrderDetailPage({
        scheduled_at, service_at, subtotal, adjustments_total, total,
        note, source, cancellation_reason, cancelled_at,
        service_tags, service_notes,
-       customer:customers(id, code, name, phone),
+       customer:customers(id, code, name, phone, note, source:customer_sources(name)),
        address:customer_addresses(county, district, address),
        items:order_items(id, quantity, unit_price, subtotal, tag, note,
                          technician_id,
@@ -138,8 +148,41 @@ export default async function OrderDetailPage({
   const defaultTechnicianId =
     (o.items.find((i) => i.technician_id)?.technician_id as string | null) ?? null;
 
+  // ---- Customer side-panel data ----
+  let customerStatsOrders: CustomerStatsOrder[] = [];
+  let customerMachines: CustomerMachine[] = [];
+  let recentOrders: RecentOrder[] = [];
+  if (o.customer) {
+    const customerId = o.customer.id;
+    const [
+      { data: statsRows },
+      { data: machineRows },
+      { data: recentRows },
+    ] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("status, service_at, total")
+        .eq("customer_id", customerId),
+      supabase
+        .from("machines")
+        .select("id, type, brand, model, sub_type")
+        .eq("customer_id", customerId),
+      supabase
+        .from("orders")
+        .select("id, order_code, scheduled_at, total, status")
+        .eq("customer_id", customerId)
+        .neq("id", o.id)
+        .neq("status", "cancelled")
+        .order("scheduled_at", { ascending: false, nullsFirst: false })
+        .limit(5),
+    ]);
+    customerStatsOrders = (statsRows as CustomerStatsOrder[] | null) ?? [];
+    customerMachines = (machineRows as CustomerMachine[] | null) ?? [];
+    recentOrders = (recentRows as RecentOrder[] | null) ?? [];
+  }
+
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <Link
           href={back.href}
@@ -155,7 +198,7 @@ export default async function OrderDetailPage({
       </div>
 
       <header className="space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-bold text-zinc-900 font-mono">
             {o.order_code}
           </h1>
@@ -163,7 +206,32 @@ export default async function OrderDetailPage({
           <PaymentBadge value={o.payment_method} />
           <SettlementBadge value={o.settlement_status} />
         </div>
-        <p className="text-sm text-zinc-500">
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-600">
+          {o.customer && (
+            <>
+              <Link
+                href={`/customers/${o.customer.id}`}
+                className="font-medium text-zinc-900 hover:underline"
+              >
+                {o.customer.name}
+              </Link>
+              <a
+                href={`tel:${o.customer.phone}`}
+                className="inline-flex items-center gap-1 text-zinc-600"
+              >
+                <Phone className="h-3.5 w-3.5 text-zinc-400" />
+                {o.customer.phone}
+              </a>
+            </>
+          )}
+          {o.address && (
+            <span className="inline-flex items-start gap-1">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 text-zinc-400" />
+              {o.address.county} {o.address.district} {o.address.address}
+            </span>
+          )}
+        </p>
+        <p className="text-xs text-zinc-500">
           預約：{formatDateTime(o.scheduled_at)}
           {o.service_at && ` · 完工：${formatDateTime(o.service_at)}`}
           {o.source && ` · 來源：${o.source}`}
@@ -188,46 +256,32 @@ export default async function OrderDetailPage({
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>客戶</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-2 text-sm">
-            {o.customer && (
-              <>
-                <Link
-                  href={`/customers/${o.customer.id}`}
-                  className="flex items-center gap-2 hover:underline"
-                >
-                  <User className="h-4 w-4 text-zinc-400" />
-                  <span className="font-medium text-zinc-900">
-                    {o.customer.name}
-                  </span>
-                  <span className="text-xs text-zinc-400">{o.customer.code}</span>
-                </Link>
-                <p className="flex items-center gap-2 text-zinc-600">
-                  <Phone className="h-4 w-4 text-zinc-400" /> {o.customer.phone}
-                </p>
-              </>
-            )}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>服務地址</CardTitle>
-          </CardHeader>
-          <CardBody className="text-sm">
-            {o.address && (
-              <p className="flex items-center gap-2 text-zinc-700">
-                <MapPin className="h-4 w-4 text-zinc-400" />
-                {o.address.county} {o.address.district} {o.address.address}
+      {sp.just_created === "1" && o.customer && o.status !== "cancelled" && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardBody className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-amber-900">
+                ✓ 訂單已建立
               </p>
-            )}
+              <p className="text-xs text-amber-700">
+                {o.customer.name} 還有其他地址要排嗎？
+              </p>
+            </div>
+            <Link
+              href={`/orders/new?customer=${o.customer.id}${
+                o.scheduled_at ? `&date=${encodeURIComponent(o.scheduled_at)}` : ""
+              }&from=order&cid=${o.id}`}
+            >
+              <Button>
+                <Plus className="h-4 w-4" /> 同客戶再建一筆
+              </Button>
+            </Link>
           </CardBody>
         </Card>
-      </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
 
       <Card>
         <CardHeader>
@@ -385,6 +439,29 @@ export default async function OrderDetailPage({
         technicians={allTechList}
         defaultTechnicianId={defaultTechnicianId}
       />
+        </div>
+
+        {o.customer && (
+          <aside className="lg:col-span-1">
+            <div className="lg:sticky lg:top-4">
+              <CustomerContextPanel
+                customer={{
+                  id: o.customer.id,
+                  code: o.customer.code,
+                  name: o.customer.name,
+                  phone: o.customer.phone,
+                  note: o.customer.note,
+                  source: o.customer.source?.name ?? null,
+                }}
+                address={o.address}
+                statsOrders={customerStatsOrders}
+                machines={customerMachines}
+                recentOrders={recentOrders}
+              />
+            </div>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

@@ -191,7 +191,7 @@ export default async function DashboardPage({
     .slice(0, 30);
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-6 space-y-4">
       <header className="flex items-end justify-between">
         <div>
           <h1 className="text-xl font-bold text-zinc-900">儀表板</h1>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -10,6 +10,7 @@ import {
   rescheduleOrderAction,
   quickScheduleAction,
   cancelOrderAction,
+  unscheduleOrderAction,
 } from "@/app/(admin)/orders/actions";
 
 const TECH_COLORS = [
@@ -57,6 +58,8 @@ function timeLabel(iso: string) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+type ActionTarget = { id: string; customer: string };
+
 export function CalendarView({
   orders,
   technicianIds,
@@ -68,6 +71,42 @@ export function CalendarView({
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const [actionTarget, setActionTarget] = useState<ActionTarget | null>(null);
+  const [reasonOpen, setReasonOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  const closeAll = () => {
+    setActionTarget(null);
+    setReasonOpen(false);
+    setReason("");
+  };
+
+  const handleUnschedule = () => {
+    if (!actionTarget) return;
+    const target = actionTarget;
+    startTransition(async () => {
+      const res = await unscheduleOrderAction(target.id);
+      if (!res.ok) alert(`回到待派工失敗：${res.error}`);
+      else router.refresh();
+      closeAll();
+    });
+  };
+
+  const handleSubmitCancel = () => {
+    if (!actionTarget) return;
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      alert("請填取消原因");
+      return;
+    }
+    const target = actionTarget;
+    startTransition(async () => {
+      const res = await cancelOrderAction(target.id, trimmed);
+      if (!res.ok) alert(`取消失敗：${res.error}`);
+      else router.refresh();
+      closeAll();
+    });
+  };
 
   const events: EventInput[] = orders.map((o) => {
     const end = o.scheduled_end_at ?? defaultEnd(o.scheduled_at);
@@ -225,15 +264,7 @@ export function CalendarView({
           const serviceSummary = arg.event.extendedProps.service_summary as string | null;
           const onCancel = (e: React.MouseEvent) => {
             e.stopPropagation();
-            const reason = window.prompt(
-              `取消「${customer}」的這筆訂單，請輸入原因：\n（例：客戶臨時有事 / 客戶不在家 / 機器自行處理）`,
-            );
-            if (!reason || !reason.trim()) return;
-            startTransition(async () => {
-              const res = await cancelOrderAction(arg.event.id, reason);
-              if (!res.ok) alert(`取消失敗：${res.error}`);
-              else router.refresh();
-            });
+            setActionTarget({ id: arg.event.id, customer });
           };
           return (
             <div className="group relative overflow-hidden px-1 text-xs leading-tight space-y-0.5">
@@ -242,7 +273,7 @@ export function CalendarView({
                 onClick={onCancel}
                 onMouseDown={(e) => e.stopPropagation()}
                 className="absolute right-0.5 top-0.5 z-10 hidden h-4 w-4 items-center justify-center rounded bg-black/40 text-[10px] font-bold leading-none text-white hover:bg-red-600 group-hover:flex"
-                title="快速取消此訂單"
+                title="移出此排程"
               >
                 ×
               </button>
@@ -260,6 +291,95 @@ export function CalendarView({
           );
         }}
       />
+
+      {actionTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={closeAll}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {!reasonOpen ? (
+              <>
+                <h2 className="text-base font-semibold text-zinc-900">
+                  「{actionTarget.customer}」這筆排程
+                </h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  要怎麼處理？
+                </p>
+                <div className="mt-4 grid gap-2">
+                  <button
+                    type="button"
+                    onClick={handleUnschedule}
+                    className="w-full rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-left text-sm font-medium text-amber-900 hover:bg-amber-100"
+                  >
+                    <span className="block">↩ 回到待派工</span>
+                    <span className="block text-xs font-normal text-amber-700/80">
+                      移出月曆，等下要重派給其他師傅
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReasonOpen(true)}
+                    className="w-full rounded-lg border border-rose-300 bg-rose-50 px-4 py-2.5 text-left text-sm font-medium text-rose-900 hover:bg-rose-100"
+                  >
+                    <span className="block">✕ 取消此訂單</span>
+                    <span className="block text-xs font-normal text-rose-700/80">
+                      客戶取消、不會再做了
+                    </span>
+                  </button>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={closeAll}
+                    className="rounded-lg px-3 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100"
+                  >
+                    關閉
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-base font-semibold text-zinc-900">
+                  取消「{actionTarget.customer}」的訂單
+                </h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  請填取消原因（例：客戶臨時有事 / 客戶不在家 / 機器自行處理）
+                </p>
+                <textarea
+                  autoFocus
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={3}
+                  className="mt-3 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                />
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReasonOpen(false);
+                      setReason("");
+                    }}
+                    className="rounded-lg px-3 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100"
+                  >
+                    返回
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitCancel}
+                    className="rounded-lg bg-rose-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-rose-700"
+                  >
+                    確定取消
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

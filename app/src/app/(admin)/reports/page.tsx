@@ -241,7 +241,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
   if (sp.to) csvParams.set("to", sp.to);
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-6 space-y-4">
       <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">營業報表</h1>

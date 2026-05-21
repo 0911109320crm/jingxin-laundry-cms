@@ -158,7 +158,7 @@ export default async function EditOrderPage({
   };
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <Link
           href={back.href}

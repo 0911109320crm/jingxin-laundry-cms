@@ -21,7 +21,7 @@ export async function getCustomerContext(customerId: string) {
       .order("is_default", { ascending: false }),
     supabase
       .from("machines")
-      .select("id, type, brand, model, sub_type, note")
+      .select("id, type, brand, model, sub_type, note, address_id")
       .eq("customer_id", customerId),
   ]);
   return {
@@ -40,8 +40,33 @@ export async function getCustomerContext(customerId: string) {
       model: string | null;
       sub_type: string | null;
       note: string | null;
+      address_id: string | null;
     }[] | null) ?? [],
   };
+}
+
+/**
+ * Revert a scheduled order back to "待派工" (pending) status.
+ * Keeps scheduled_at / scheduled_end_at / technician_id intact — they'll be
+ * overwritten next time the order is dragged back onto the calendar.
+ */
+export async function unscheduleOrderAction(orderId: string): Promise<Res> {
+  await requireRole(["owner", "manager"]);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ status: "pending" })
+    .eq("id", orderId);
+  if (error) return { ok: false, error: error.message };
+  await logAudit({
+    action: "order.unschedule",
+    target_type: "order",
+    target_id: orderId,
+  });
+  revalidatePath("/calendar");
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${orderId}`);
+  return { ok: true };
 }
 
 /** Cancel an order with a reason (used by the calendar quick-cancel button). */

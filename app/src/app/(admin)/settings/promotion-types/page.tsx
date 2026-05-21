@@ -26,7 +26,7 @@ export default async function PromotionTypesPage() {
   const kpiValue = typeof kpiRow?.value === "number" ? kpiRow.value : 30;
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <header>
         <h1 className="text-2xl font-bold text-zinc-900">促銷積分管理</h1>
         <p className="text-sm text-zinc-500">

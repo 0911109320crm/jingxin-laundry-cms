@@ -76,7 +76,7 @@ export default async function SettlementsPage() {
     .sort((a, b) => b.total - a.total);
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">師傅待回繳</h1>

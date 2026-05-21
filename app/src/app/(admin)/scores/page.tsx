@@ -123,7 +123,7 @@ export default async function ScoresPage({
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-zinc-900">

@@ -21,7 +21,7 @@ export default async function NewCustomerPage() {
   ]);
 
   return (
-    <div className="p-8 space-y-5">
+    <div className="p-6 space-y-4">
       <Link
         href="/customers"
         className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"

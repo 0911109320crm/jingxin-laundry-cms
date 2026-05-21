@@ -40,7 +40,7 @@ export default async function TechnicianPayrollPage({
   const next = shiftMonth(month, 1);
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <Link
           href="/payroll"

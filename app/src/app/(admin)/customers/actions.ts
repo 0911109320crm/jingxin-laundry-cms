@@ -3,11 +3,53 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/dal";
+import { requireAuth, requireRole } from "@/lib/dal";
 import { CustomerSchema, type CustomerInput } from "@/lib/validators/customer";
 import { logAudit } from "@/lib/audit";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+export type CustomerPickerResult = {
+  id: string;
+  code: string;
+  name: string;
+  phone: string;
+};
+
+/** Search customers for inline picker (referrer field). Excludes a given id. */
+export async function searchCustomersForPickerAction(
+  query: string,
+  excludeId?: string,
+): Promise<CustomerPickerResult[]> {
+  await requireAuth();
+  const trimmed = query.trim();
+  if (trimmed.length < 1) return [];
+
+  const supabase = await createClient();
+  const like = `%${trimmed}%`;
+  let q = supabase
+    .from("customers")
+    .select("id, code, name, phone")
+    .or(`name.ilike.${like},phone.ilike.${like},code.ilike.${like}`)
+    .limit(10);
+  if (excludeId) q = q.neq("id", excludeId);
+  const { data } = await q;
+  return (data as CustomerPickerResult[] | null) ?? [];
+}
+
+/** Resolve a single customer by id (for picker initial display). */
+export async function getCustomerByIdAction(
+  id: string,
+): Promise<CustomerPickerResult | null> {
+  await requireAuth();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("customers")
+    .select("id, code, name, phone")
+    .eq("id", id)
+    .single();
+  return (data as CustomerPickerResult | null) ?? null;
+}
 
 export async function createCustomerAction(
   input: CustomerInput,
@@ -27,6 +69,7 @@ export async function createCustomerAction(
       name: data.name,
       phone: data.phone,
       source_id: data.source_id ?? null,
+      referrer_id: data.referrer_id ?? null,
       note: data.note ?? null,
       joined_at: data.joined_at || null,
     })
@@ -63,6 +106,7 @@ export async function createCustomerAction(
         model: m.model ?? null,
         sub_type: m.sub_type ?? null,
         note: m.note ?? null,
+        address_id: m.address_id ?? null,
       })),
     );
     if (error) return { ok: false, error: `機器寫入失敗：${error.message}` };
@@ -84,6 +128,11 @@ export async function updateCustomerAction(
   const data = parsed.data;
   const supabase = await createClient();
 
+  // 自介紹防呆
+  if (data.referrer_id && data.referrer_id === id) {
+    return { ok: false, error: "介紹人不能是自己" };
+  }
+
   const { error: updateErr } = await supabase
     .from("customers")
     .update({
@@ -91,6 +140,7 @@ export async function updateCustomerAction(
       name: data.name,
       phone: data.phone,
       source_id: data.source_id ?? null,
+      referrer_id: data.referrer_id ?? null,
       note: data.note ?? null,
       joined_at: data.joined_at || null,
     })
@@ -156,6 +206,7 @@ export async function updateCustomerAction(
           model: m.model ?? null,
           sub_type: m.sub_type ?? null,
           note: m.note ?? null,
+          address_id: m.address_id ?? null,
         })
         .eq("id", m.id);
     } else {
@@ -166,6 +217,7 @@ export async function updateCustomerAction(
         model: m.model ?? null,
         sub_type: m.sub_type ?? null,
         note: m.note ?? null,
+        address_id: m.address_id ?? null,
       });
     }
   }

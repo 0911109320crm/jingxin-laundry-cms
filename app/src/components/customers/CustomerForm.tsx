@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { CustomerPicker } from "@/components/customers/CustomerPicker";
 import {
   createCustomerAction,
   updateCustomerAction,
@@ -93,6 +94,7 @@ export function CustomerForm({
       name: "",
       phone: "",
       source_id: null,
+      referrer_id: null,
       note: "",
       joined_at: "",
       addresses: [emptyAddress],
@@ -127,7 +129,7 @@ export function CustomerForm({
         <CardHeader>
           <CardTitle>基本資料</CardTitle>
         </CardHeader>
-        <CardBody className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <CardBody className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Field label="顧客編號" error={errors.code?.message}>
             <Input {...register("code")} placeholder="例如 C0001" />
           </Field>
@@ -149,6 +151,23 @@ export function CustomerForm({
           </Field>
           <Field label="加入日期">
             <Input type="date" {...register("joined_at")} />
+          </Field>
+          <Field label="介紹人" className="md:col-span-2">
+            <Controller
+              control={control}
+              name="referrer_id"
+              render={({ field }) => (
+                <CustomerPicker
+                  value={field.value ?? null}
+                  onChange={(v) => field.onChange(v)}
+                  excludeId={initial?.id}
+                  placeholder="（選填）誰介紹這位客戶？打字搜尋..."
+                />
+              )}
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              方便之後追蹤介紹效益、給回饋禮券
+            </p>
           </Field>
           <Field label="備註" className="md:col-span-2">
             <Textarea {...register("note")} placeholder="特殊狀況、要注意的事項…" />
@@ -175,7 +194,7 @@ export function CustomerForm({
             return (
               <div
                 key={field.id}
-                className="rounded-lg border border-zinc-200 p-4 space-y-3"
+                className="rounded-lg border border-zinc-200 p-3 space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-zinc-700">
@@ -301,61 +320,85 @@ export function CustomerForm({
               尚未登錄機器，可日後在訂單建立時補上。
             </p>
           )}
-          {machineArr.fields.map((field, idx) => (
-            <div
-              key={field.id}
-              className="rounded-lg border border-zinc-200 p-4 space-y-3"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-zinc-700">
-                  機器 #{idx + 1}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => machineArr.remove(idx)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+          {machineArr.fields.map((field, idx) => {
+            const savedAddresses = (watchedAddresses ?? []).filter(
+              (a) => a.id,
+            );
+            const showAddressPicker = savedAddresses.length >= 2;
+            return (
+              <div
+                key={field.id}
+                className="rounded-lg border border-zinc-200 p-3 space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-zinc-700">
+                    機器 #{idx + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => machineArr.remove(idx)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  <Field label="類型">
+                    <Select {...register(`machines.${idx}.type`)}>
+                      {MACHINE_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {MACHINE_TYPE_LABEL[t]}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="廠牌">
+                    <Input
+                      {...register(`machines.${idx}.brand`)}
+                      placeholder="例如 LG / 大同"
+                      list={uniqueBrandNames.length > 0 ? "machine-brands-list" : undefined}
+                    />
+                  </Field>
+                  <Field label="型號">
+                    <Input
+                      {...register(`machines.${idx}.model`)}
+                      placeholder="例如 WT-138RG"
+                    />
+                  </Field>
+                  <Field label="子類型">
+                    <Input
+                      {...register(`machines.${idx}.sub_type`)}
+                      placeholder="例如 直立式 / 滾筒式"
+                    />
+                  </Field>
+                </div>
+                {showAddressPicker && (
+                  <Field label="主要放在哪個地址？">
+                    <Select {...register(`machines.${idx}.address_id`)}>
+                      <option value="">— 不指定 —</option>
+                      {savedAddresses.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.county}
+                          {a.district}
+                          {a.address}
+                          {a.label ? `（${a.label}）` : ""}
+                        </option>
+                      ))}
+                    </Select>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      建單時選此機器，會自動帶這個地址
+                    </p>
+                  </Field>
+                )}
+                <Field label="備註">
+                  <Textarea
+                    {...register(`machines.${idx}.note`)}
+                    placeholder="特殊狀況、需要注意的地方…"
+                  />
+                </Field>
               </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                <Field label="類型">
-                  <Select {...register(`machines.${idx}.type`)}>
-                    {MACHINE_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {MACHINE_TYPE_LABEL[t]}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field label="廠牌">
-                  <Input
-                    {...register(`machines.${idx}.brand`)}
-                    placeholder="例如 LG / 大同"
-                    list={uniqueBrandNames.length > 0 ? "machine-brands-list" : undefined}
-                  />
-                </Field>
-                <Field label="型號">
-                  <Input
-                    {...register(`machines.${idx}.model`)}
-                    placeholder="例如 WT-138RG"
-                  />
-                </Field>
-                <Field label="子類型">
-                  <Input
-                    {...register(`machines.${idx}.sub_type`)}
-                    placeholder="例如 直立式 / 滾筒式"
-                  />
-                </Field>
-              </div>
-              <Field label="備註">
-                <Textarea
-                  {...register(`machines.${idx}.note`)}
-                  placeholder="特殊狀況、需要注意的地方…"
-                />
-              </Field>
-            </div>
-          ))}
+            );
+          })}
         </CardBody>
       </Card>
 
