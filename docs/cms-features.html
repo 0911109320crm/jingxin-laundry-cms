@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>淨新洗衣機清潔工坊 — CMS 系統功能總覽</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC",
+      "Microsoft JhengHei", "Segoe UI", sans-serif;
+    line-height: 1.7;
+    color: #18181b;
+    background: #f4f4f5;
+    padding: 24px;
+  }
+  .container { max-width: 1080px; margin: 0 auto; }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    padding: 32px 40px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: 32px;
+    color: #18181b;
+    margin-bottom: 8px;
+  }
+  h2 {
+    font-size: 22px;
+    color: #18181b;
+    margin: 28px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e4e4e7;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .badge {
+    background: #ddd6fe;
+    color: #5b21b6;
+    font-size: 14px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  h3 {
+    font-size: 17px;
+    color: #27272a;
+    margin: 18px 0 8px;
+  }
+  p { margin-bottom: 12px; color: #3f3f46; }
+  .subtitle { color: #71717a; font-size: 14px; }
+  ul, ol { margin: 12px 0 14px 22px; color: #3f3f46; }
+  li { margin-bottom: 6px; }
+  a { color: #4f46e5; }
+
+  .toc {
+    background: #fafafa;
+    border: 1px solid #e4e4e7;
+    border-radius: 12px;
+    padding: 16px 22px;
+    margin: 16px 0 24px;
+  }
+  .toc ol { columns: 2; gap: 16px; margin-left: 22px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+
+  .screenshot {
+    display: block;
+    max-width: 100%;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    margin: 14px 0;
+    background: #fafafa;
+  }
+
+  .scenario {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 4px solid #f59e0b;
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 16px 0;
+  }
+  .scenario strong { color: #92400e; }
+  .scenario p { color: #78350f; margin: 4px 0; }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .compare-box {
+    padding: 14px 18px;
+    border-radius: 10px;
+  }
+  .compare-before {
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+  }
+  .compare-before strong { color: #991b1b; }
+  .compare-after {
+    background: #d1fae5;
+    border: 1px solid #a7f3d0;
+  }
+  .compare-after strong { color: #065f46; }
+  .compare-box p { color: #3f3f46; font-size: 14px; margin-top: 4px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid #e4e4e7;
+    padding: 10px 14px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #fafafa;
+    font-weight: 600;
+    color: #18181b;
+  }
+  tr:nth-child(even) td { background: #fcfcfc; }
+  td.before { background: #fef2f2; }
+  td.after { background: #ecfdf5; }
+
+  .kbd {
+    display: inline-block;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: "SF Mono", "Cascadia Mono", "Consolas", monospace;
+    font-size: 12px;
+    color: #27272a;
+  }
+  .chip {
+    display: inline-block;
+    background: #ede9fe;
+    color: #5b21b6;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    margin: 0 2px;
+  }
+  .chip.green { background: #d1fae5; color: #065f46; }
+  .chip.amber { background: #fef3c7; color: #92400e; }
+  .chip.rose  { background: #fee2e2; color: #991b1b; }
+  .chip.blue  { background: #dbeafe; color: #1e40af; }
+
+  .hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff;
+    padding: 40px 44px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+  }
+  .hero h1 { color: #fff; font-size: 36px; }
+  .hero p { color: rgba(255,255,255,.9); font-size: 16px; margin-top: 6px; }
+  .hero .tags { margin-top: 14px; }
+  .hero .tag {
+    display: inline-block;
+    background: rgba(255,255,255,.2);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    margin-right: 8px;
+    margin-bottom: 6px;
+  }
+
+  footer {
+    text-align: center;
+    color: #71717a;
+    font-size: 13px;
+    padding: 24px 0;
+  }
+
+  @media (max-width: 768px) {
+    body { padding: 12px; }
+    .card { padding: 22px; }
+    .toc ol { columns: 1; }
+    .comparison { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<section class="hero">
+  <h1>淨新洗衣 — CMS 系統功能總覽</h1>
+  <p>為老闆娘設計的全業務管理工具，從建單、派工、薪資到回繳都一站搞定</p>
+  <div class="tags">
+    <span class="tag">✓ 取代散亂的 Excel</span>
+    <span class="tag">✓ 取代紙本登記</span>
+    <span class="tag">✓ 取代手算薪水</span>
+    <span class="tag">✓ 取代月底翻紀錄找到期客戶</span>
+  </div>
+</section>
+
+<section class="card">
+  <h2>整體痛點對應表 <span class="badge">5 分鐘了解全貌</span></h2>
+  <p>下表把您原本最花時間的事，跟系統現在怎麼處理一條條對應。</p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 24%">日常事務</th>
+        <th style="width: 38%">以前怎麼做</th>
+        <th style="width: 38%">現在系統怎麼做</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>客戶來電查歷史</strong></td>
+        <td class="before">翻 Excel 用 Ctrl+F 找電話、找到了還要再找對應的服務紀錄</td>
+        <td class="after">按 <span class="kbd">Ctrl+K</span> 任何頁面打名字/電話/編號就跳出客戶卡，連最近訂單一起秀</td>
+      </tr>
+      <tr>
+        <td><strong>客戶介紹親友</strong></td>
+        <td class="before">寫在備註欄文字「王大明介紹」，沒辦法回頭算王大明總共介紹幾個人</td>
+        <td class="after">填「介紹人」欄位，自動產生「介紹效益榜」+ 個人頁顯示「介紹過 N 位、貢獻 NT$X」</td>
+      </tr>
+      <tr>
+        <td><strong>多地址多機器</strong></td>
+        <td class="before">同一個王大明三個地方都有機器，紀錄分散、容易搞錯哪台在哪</td>
+        <td class="after">客戶下可建多地址、每台機器指定地址，建單選機器會自動帶地址</td>
+      </tr>
+      <tr>
+        <td><strong>一通電話多地址預約</strong></td>
+        <td class="before">輸入 3 次客戶資料建 3 張單，過程被打斷就出包</td>
+        <td class="after">建好第一筆後出現「同客戶再建一筆」按鈕，客戶+日期自動帶</td>
+      </tr>
+      <tr>
+        <td><strong>派工給師傅</strong></td>
+        <td class="before">老闆娘 LINE 通知或紙條交班，常忘記、撞時間</td>
+        <td class="after">月曆拖曳派工，每位師傅獨立顏色，按 × 可一鍵回到待派工</td>
+      </tr>
+      <tr>
+        <td><strong>計件薪資結算</strong></td>
+        <td class="before">月底拿 Excel 一筆筆加，加大、折扣、轉帳要分欄計</td>
+        <td class="after">系統自動算每位師傅本月應發 + 加減項 + 積分 + 待回繳，一頁看完</td>
+      </tr>
+      <tr>
+        <td><strong>師傅交回現金對帳</strong></td>
+        <td class="before">紙袋裝錢、紙條寫金額，對不上時就要回頭翻訂單</td>
+        <td class="after">待回繳頁逐筆顯示，可勾選確認、單筆標記或全部標記，金額即時加總</td>
+      </tr>
+      <tr>
+        <td><strong>到期 1 年的客戶要主動聯繫</strong></td>
+        <td class="before">月底翻紀錄找出 11-12 個月前服務的客戶，名單常漏</td>
+        <td class="after">「即將到期」頁自動列出名單，一鍵複製 LINE 訊息模板，貼給客戶就好</td>
+      </tr>
+      <tr>
+        <td><strong>追蹤師傅 KPI</strong></td>
+        <td class="before">沒有具體指標，靠主觀判斷</td>
+        <td class="after">促銷積分系統（FB 按讚/Google 5 星等）每月達標可給獎金，進度條一目了然</td>
+      </tr>
+      <tr>
+        <td><strong>看本月營業狀況</strong></td>
+        <td class="before">月底匯總 Excel 做總表</td>
+        <td class="after">儀表板即時顯示本月營業額、案件數、取消率、待回繳、師傅案量</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card toc">
+  <h2 style="border: none; margin: 0 0 8px;">功能目錄</h2>
+  <ol>
+    <li><a href="#login">登入畫面</a></li>
+    <li><a href="#dashboard">儀表板</a></li>
+    <li><a href="#search">全域搜尋（<span class="kbd">Ctrl+K</span>）</a></li>
+    <li><a href="#customers">客戶管理</a></li>
+    <li><a href="#customer-detail">客戶詳細</a></li>
+    <li><a href="#orders">訂單管理</a></li>
+    <li><a href="#orders-filter">依師傅篩選訂單</a></li>
+    <li><a href="#order-detail">訂單詳細 + 客戶 side panel</a></li>
+    <li><a href="#order-new">新增訂單 + 同客戶再建一筆</a></li>
+    <li><a href="#calendar">月曆排案（拖曳派工）</a></li>
+    <li><a href="#payroll">師傅薪資列表</a></li>
+    <li><a href="#payroll-detail">師傅薪資詳細</a></li>
+    <li><a href="#settlements">待回繳對帳（逐筆勾選）</a></li>
+    <li><a href="#reports">營業報表</a></li>
+    <li><a href="#reminders">即將到期客戶</a></li>
+    <li><a href="#scores">促銷積分榜</a></li>
+    <li><a href="#settings">系統設定</a></li>
+    <li><a href="#staff">師傅手機端（PWA）</a></li>
+  </ol>
+</section>
+
+<!-- ====== Login ====== -->
+<section class="card" id="login">
+  <h2>1. 登入畫面</h2>
+  <p>系統要登入才能用，每個人都有自己的帳號跟權限（老闆娘 = owner、管理員 = manager、師傅 = technician）。</p>
+  <ul>
+    <li><strong>老闆娘</strong>：可以看全部、改全部、管帳號</li>
+    <li><strong>管理員</strong>：建單、改單、派工，但不能管帳號</li>
+    <li><strong>師傅</strong>：只看自己今日案件、收費、完成（用手機）</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/01-login.png" alt="登入畫面">
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>新來的師傅小李，您只要在「設定 → 帳號管理」幫他建一個帳號（預設密碼 admin1234），他用手機登入後就能看到您派給他的訂單，不會看到其他師傅的資料。</p>
+  </div>
+</section>
+
+<!-- ====== Dashboard ====== -->
+<section class="card" id="dashboard">
+  <h2>2. 儀表板</h2>
+  <p>登入後首頁，本月關鍵指標一目了然：</p>
+  <ul>
+    <li><strong>本月營業額</strong>（自動比較上月增減 %）</li>
+    <li><strong>本月案件數</strong></li>
+    <li><strong>今日待完成</strong>（連結到月曆）</li>
+    <li><strong>即將到期客戶數</strong>（連結到提醒清單）</li>
+    <li><strong>本月取消率</strong>（≥20% 會變紅警示）</li>
+    <li><strong>師傅本月案量直條圖</strong>（綠 = 已完成、黃 = 待完成，可點跳月曆）</li>
+    <li><strong>歷史消費前 30 名客戶</strong>（VIP 名單）</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/02-dashboard.png" alt="儀表板">
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>每天早上開電腦第一眼，您就知道「今天還有 8 筆要做、本月已收 NT$ 65,200、比上月多 12%、A 師傅 22 件最多、B 師傅 8 件最少」，要不要加派人手、要不要催沒回的客戶一目了然。</p>
+  </div>
+</section>
+
+<!-- ====== Global Search ====== -->
+<section class="card" id="search">
+  <h2>3. 全域搜尋 <span class="badge">Ctrl + K</span></h2>
+  <p>系統任何頁面，按 <span class="kbd">Ctrl</span> + <span class="kbd">K</span>（或左上點搜尋圖示）就跳出搜尋框，打：</p>
+  <ul>
+    <li>客戶姓名、電話、編號</li>
+    <li>地址、縣市鄉鎮</li>
+    <li>訂單編號、訂單備註</li>
+  </ul>
+  <p>都能立即找到並跳到對應頁面。</p>
+  <img class="screenshot" src="./screenshots/23-global-search.png" alt="全域搜尋 Cmd+K">
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>客戶來電：「我上次清的洗衣機是 5 月幾號？」<br>
+    您按 <span class="kbd">Ctrl+K</span>，打對方電話「0911」，1 秒內看到該客戶 + 最近訂單，點進去看完工日期。整個流程不到 10 秒。</p>
+  </div>
+</section>
+
+<!-- ====== Customers list ====== -->
+<section class="card" id="customers">
+  <h2>4. 客戶管理</h2>
+  <p>客戶清單頁面，能：</p>
+  <ul>
+    <li>按姓名/電話/編號/備註模糊搜尋</li>
+    <li>按縣市、鄉鎮篩選</li>
+    <li>看頂部 KPI：總客戶數、本月活躍、即將到期</li>
+    <li>看「🏆 介紹效益榜」前 5 名（誰介紹來的客戶最有貢獻）</li>
+    <li>匯出 CSV</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/03-customers-list.png" alt="客戶管理列表">
+  <div class="scenario">
+    <strong>實例 — 介紹效益榜：</strong>
+    <p>王大明介紹了 3 個朋友來，這 3 個人總共消費 NT$ 12,500。系統自動算出來放在介紹榜，您一眼看到「王大明貢獻最高」，下次他來時可以送個小禮表達感謝，創造更多介紹。</p>
+  </div>
+</section>
+
+<!-- ====== Customer detail ====== -->
+<section class="card" id="customer-detail">
+  <h2>5. 客戶詳細</h2>
+  <p>點任一客戶進去，看到：</p>
+  <ul>
+    <li>姓名、編號、來源 tag、可點撥的電話</li>
+    <li>「由 XXX 介紹 →」chip（如果有介紹人）</li>
+    <li>4 個 KPI 卡：累計消費、距上次服務、平均週期、臨時取消次數（≥3 次變紅警示）</li>
+    <li>客戶備註 + 地址清單 + 機器清單（機器按地址分組）</li>
+    <li>「介紹過的客戶」列表（如果這位客戶介紹過別人）</li>
+    <li>完整服務歷史（每筆可展開看明細）</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/04-customers-detail.png" alt="客戶詳細頁">
+  <div class="scenario">
+    <strong>實例 — 機器分組：</strong>
+    <p>王大明自家 1 台 LG 洗衣機、公司 1 台 Daikin 冷氣、媽媽家 1 台國際洗衣機。系統按地址分組顯示，您不用再問「他公司那台是什麼牌子？」<br>
+    建新訂單時選了「國際洗衣機（媽媽家）」，地址欄會自動跳成媽媽家。</p>
+  </div>
+</section>
+
+<section class="card">
+  <h3>5.1 新增/編輯客戶</h3>
+  <p>表單包含：</p>
+  <ul>
+    <li>基本資料（姓名、電話、編號、來源、加入日期、介紹人、備註）</li>
+    <li>「介紹人」用打字搜尋下拉，不用滾整個客戶清單</li>
+    <li>可加多個地址（每個可標籤如「家」「公司」「媽媽家」）</li>
+    <li>可加多台機器，當客戶有 2 個以上地址時，每台機器可選歸屬地址</li>
+    <li>地址新增當下自動偵測同址重複（如果有人已在同地址登記）</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/05-customer-edit.png" alt="客戶編輯">
+</section>
+
+<!-- ====== Orders list ====== -->
+<section class="card" id="orders">
+  <h2>6. 訂單管理</h2>
+  <p>所有訂單一覽，支援多重篩選：</p>
+  <ul>
+    <li><strong>狀態 tab</strong>：全部 / 待派工 / 已排案 / 已完成 / 已取消</li>
+    <li><strong>關鍵字搜尋</strong>：訂單編號、備註</li>
+    <li><strong>收款方式</strong>：未收、現金、匯款、刷卡、LINE Pay</li>
+    <li><strong>回繳狀態</strong>：待回繳、已回繳、免回繳</li>
+    <li><strong>師傅</strong>：依清洗師傅篩選（新功能）</li>
+  </ul>
+  <p>頂部 3 卡 KPI：篩選結果筆數、總金額、已完成金額/件數</p>
+  <img class="screenshot" src="./screenshots/06-orders-list.png" alt="訂單管理列表">
+</section>
+
+<section class="card" id="orders-filter">
+  <h3>6.1 依師傅篩選 — 操作視角 vs 財務視角</h3>
+  <p>當您選擇某位師傅時，上方出現提示橫條，可直接跳到該師傅本月薪資頁。</p>
+  <p><strong>兩頁分工：</strong></p>
+  <table>
+    <tr>
+      <th>頁面</th>
+      <th>看什麼</th>
+      <th>什麼時候用</th>
+    </tr>
+    <tr>
+      <td><strong>訂單管理 + 師傅篩選</strong></td>
+      <td>該師傅每一筆訂單（客戶、狀態、金額）</td>
+      <td>找特定訂單、改派、檢查還沒做的</td>
+    </tr>
+    <tr>
+      <td><strong>師傅薪資</strong></td>
+      <td>該師傅本月總計、加減項、積分、待回繳</td>
+      <td>月底結算薪水、看 KPI</td>
+    </tr>
+  </table>
+  <img class="screenshot" src="./screenshots/07-orders-tech-filter.png" alt="訂單依師傅篩選">
+</section>
+
+<!-- ====== Order detail ====== -->
+<section class="card" id="order-detail">
+  <h2>7. 訂單詳細 + 客戶 side panel</h2>
+  <p>點任一訂單進去，看到：</p>
+  <ul>
+    <li><strong>左 2/3</strong>：訂單編號、狀態 chip、服務明細、加減項、總計、備註、師傅現場備註、促銷積分</li>
+    <li><strong>右 1/3</strong>（lg+ 寬螢幕）<strong>客戶 side panel</strong>：客戶基本資訊、累計消費/平均週期、機器清單、最近 5 筆訂單（不含本筆）</li>
+  </ul>
+  <p>side panel 在捲動時固定（sticky），您看訂單細節時隨時能對照客戶背景。</p>
+  <img class="screenshot" src="./screenshots/08-order-detail.png" alt="訂單詳細 + 客戶 side panel">
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>師傅完工回報這位客戶機器轉軸異常，您看完場服務備註後，馬上能看到右側 panel「這位客戶平均週期 8 個月、共做 5 次」，當下評估是否要主動建議客戶提早預約下次清洗。</p>
+  </div>
+</section>
+
+<!-- ====== Order new ====== -->
+<section class="card" id="order-new">
+  <h2>8. 新增訂單</h2>
+  <p>建單表單包含：</p>
+  <ul>
+    <li>選客戶（會自動帶出他的地址、機器清單）</li>
+    <li>預約開始時間（日期 + 24h 小時 + 分鐘下拉，告別瀏覽器的「上午/下午」選擇器）</li>
+    <li>預計時長（60/90/120/180 快捷）</li>
+    <li>多項服務明細，每項可：選機器、選師傅、改單價、加代號、加備註</li>
+    <li>多項加減項（加大、折扣、其他自訂）</li>
+    <li>選了機器若機器有歸屬地址，自動帶地址；不一致時跳警示「⚠ 此機器在另一地址」可一鍵切換</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/09-order-new.png" alt="新增訂單">
+  <div class="scenario">
+    <strong>實例 — 同客戶再建一筆：</strong>
+    <p>王大明來電：「禮拜六 9 點員林家、11 點公司、下午 2 點田尾媽媽家都要洗」<br>
+    您建好第一筆（員林家 9 點）後，訂單詳細頁頂部跳出「同客戶再建一筆」按鈕。按下去 → 新建訂單頁的客戶 + 日期已預填，您只要選下個地址、機器、調整時間。3 筆訂單從輸入 3 次客戶資料變成輸入 1 次 + 微調 2 次。</p>
+  </div>
+</section>
+
+<!-- ====== Calendar ====== -->
+<section class="card" id="calendar">
+  <h2>9. 月曆排案</h2>
+  <p>左側「待派工」面板，右側月曆。功能：</p>
+  <ul>
+    <li>拖曳待派工卡片到月曆某天 → 自動派給目前 tab 的師傅、設為已排案</li>
+    <li>每位師傅獨立顏色，可切 tab 看單一師傅的排程</li>
+    <li>每天日期格右下顯示當日營業總額</li>
+    <li>滑鼠移到事件上有 tooltip 顯示完整資訊（訂單編號、客戶、地址、服務、應收）</li>
+    <li>事件右上 × 按鈕：<strong>不直接刪除</strong>，跳出選單可選「↩ 回到待派工」或「✕ 取消訂單（要填原因）」</li>
+    <li>已排案事件可再拖曳改日期</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/10-calendar.png" alt="月曆排案">
+  <div class="scenario">
+    <strong>實例 — X 按鈕雙選項：</strong>
+    <p>排好的 A 師傅週六 10 點的單，發現該客戶比較適合 B 師傅。<br>
+    以前要進去訂單頁編輯。現在直接月曆上點 × → 選「回到待派工」→ 切到 B 師傅 tab → 拖回月曆同一天。3 步搞定，不用進入編輯頁。</p>
+  </div>
+</section>
+
+<!-- ====== Payroll list ====== -->
+<section class="card" id="payroll">
+  <h2>10. 師傅薪資列表</h2>
+  <p>取代您原本 Excel 計件薪資表。本頁顯示：</p>
+  <ul>
+    <li><strong>頂部 4 卡 KPI</strong>：本月總應發、待回繳現金、積分達標師傅數、平均積分</li>
+    <li><strong>每位師傅一張大卡</strong>：本月應發大字、接案件數、加減項說明、積分 KPI 進度條（達標綠/未達黃）、待回繳警示橫條（橙色，金額 + 筆數）</li>
+    <li>「✓ 已達標」chip — 積分達到 KPI 時顯示</li>
+    <li>未達標時：「⚠ 還差 N 點，本月剩 M 天」即時提醒</li>
+    <li>月份切換看歷史</li>
+    <li>獎金預留欄位（待您決定獎金政策）</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/11-payroll-list.png" alt="師傅薪資列表">
+
+  <div class="comparison">
+    <div class="compare-box compare-before">
+      <strong>以前（Excel 月底結算）</strong>
+      <p>每位師傅一張工作表，手動加總每天計件、加大、其他、折扣，再扣轉帳，最後核對現金回繳，每月要花半天到一天時間，常算錯要重來。</p>
+    </div>
+    <div class="compare-box compare-after">
+      <strong>現在（一頁看 4 位師傅）</strong>
+      <p>進系統 5 秒鐘看完所有師傅本月應發 + KPI + 待回繳。月底結算只要按「全部標記已回繳」確認現金到手即可，0 計算錯誤。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====== Payroll detail ====== -->
+<section class="card" id="payroll-detail">
+  <h2>11. 師傅薪資詳細</h2>
+  <p>點任一師傅卡進去，看到：</p>
+  <ul>
+    <li><strong>Hero</strong>：本月實領大字（已含加減項）+ 接案件數</li>
+    <li><strong>4 個 KPI 卡</strong>：基本計件、加減項淨額、積分達標、待回繳</li>
+    <li><strong>積分 KPI 進度區</strong>：進度條 + 達標 chip + 促銷類型分布 + 可展開的本月積分明細（每筆連到對應訂單）</li>
+    <li><strong>獎金預留卡</strong>（dashed border）</li>
+    <li><strong>待回繳訂單區</strong>：未交回現金的訂單清單 + 一鍵跳「待回繳對帳」</li>
+    <li><strong>每日明細</strong>（折疊式）：點某天展開看當天每筆訂單、收款方式、金額</li>
+    <li>右上「看這位師傅所有訂單」連到訂單管理（操作視角）</li>
+    <li>右上「匯出 Excel」可下載對帳用 xlsx</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/12-payroll-detail.png" alt="師傅薪資詳細">
+  <div class="scenario">
+    <strong>實例 — KPI 提醒：</strong>
+    <p>師傅 C 本月積分 25/30，系統顯示「還差 5 點，本月剩 8 天」。您可以提醒師傅 C：「剩一週了，多請客戶幫忙在 FB 留言或打卡，每筆 1 點，達標可以拿獎金。」<br>
+    師傅自己也能在手機端 PWA 看自己的進度。</p>
+  </div>
+</section>
+
+<!-- ====== Settlements ====== -->
+<section class="card" id="settlements">
+  <h2>12. 待回繳對帳</h2>
+  <p>師傅收現金後要交回給您。這頁列出所有「已收現金、未交回」的訂單，按師傅分組。</p>
+  <ul>
+    <li>右上總額大字顯示，焦慮感降低</li>
+    <li>每組（每位師傅）一張卡，顯示總額 + 筆數</li>
+    <li><strong>每筆訂單前面有 checkbox</strong></li>
+    <li><strong>逐筆「✓ 已回繳」按鈕</strong>，現場一筆一筆確認</li>
+    <li><strong>「標記選取為已回繳」</strong>批次處理</li>
+    <li><strong>「全部標記已回繳」</strong>一次清空</li>
+    <li>每筆可點「查看」進訂單頁，左上「回上頁」自動回到此頁</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/13-payroll-settlements.png" alt="待回繳對帳">
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>師傅 A 帶 6 筆現金回來。對到第 5 筆發現金額對不上，您點該筆「查看」進訂單頁確認金額，發現是有加減項漏記，回來這頁勾選其他 5 筆按「標記選取為已回繳」，先把對得起來的清掉，第 6 筆暫不勾，等師傅明天說明後再處理。</p>
+  </div>
+</section>
+
+<!-- ====== Reports ====== -->
+<section class="card" id="reports">
+  <h2>13. 營業報表</h2>
+  <p>本月/上月/全年/自訂日期區間，看：</p>
+  <ul>
+    <li>總營業額、平均單價、案件數</li>
+    <li>狀態分布（待派工 / 已排案 / 已完成 / 已取消）</li>
+    <li>收款方式分布</li>
+    <li>客戶來源分析（LINE / Google / Facebook / 跟車 / 老客介紹⋯）</li>
+    <li>匯出 CSV 用於記帳或報稅</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/14-reports.png" alt="營業報表">
+</section>
+
+<!-- ====== Reminders ====== -->
+<section class="card" id="reminders">
+  <h2>14. 即將到期客戶</h2>
+  <p>系統自動找出上次服務在 11-13 個月前、之後沒再聯絡的客戶（洗衣機通常 1 年清一次）。</p>
+  <ul>
+    <li>每張卡顯示客戶名、電話、上次服務日、機器型號</li>
+    <li>一鍵複製 LINE 訊息模板（含問候 + 客戶姓名 + 上次服務日）</li>
+    <li>標記為「已聯絡」，下個月不再出現</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/15-reminders.png" alt="即將到期客戶">
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>4 月底打開系統，看到 12 位客戶在去年 5 月前後做過、現在快滿一年。您點「複製訊息」貼到 LINE 群發或單發。預估接回 5-6 單，多接 NT$ 10,000+。<br>
+    以前這 12 位客戶可能就被遺忘，他們也就找別家了。</p>
+  </div>
+</section>
+
+<!-- ====== Scores ====== -->
+<section class="card" id="scores">
+  <h2>15. 促銷積分榜（師傅 KPI）</h2>
+  <p>師傅請客戶在每筆訂單做的促銷動作（FB 按讚/留言/打卡/Google 5 星/在地社團發文⋯）會累積積分。</p>
+  <ul>
+    <li>9 種促銷類型，每種 1-2 點</li>
+    <li>月 KPI 預設 30 點（可在設定調整）</li>
+    <li>排行榜 + 進度條 + 達標 chip</li>
+    <li>各類型本月次數統計</li>
+    <li>達標可給獎金（待您決定政策）</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/16-scores.png" alt="促銷積分榜">
+</section>
+
+<!-- ====== Settings ====== -->
+<section class="card" id="settings">
+  <h2>16. 系統設定</h2>
+  <p>主檔資料維護，全部由您決定，不必每次都麻煩工程師。</p>
+  <img class="screenshot" src="./screenshots/17-settings.png" alt="設定首頁">
+
+  <h3>16.1 服務項目主檔</h3>
+  <p>所有可賣的服務（直立洗衣機 3-17kg、滾筒洗衣機 各容量、冷氣、床墊、沙發、加大、車馬費⋯⋯約 54 項），可改名、改價、新增、停用。</p>
+  <img class="screenshot" src="./screenshots/18-settings-services.png" alt="服務項目">
+
+  <h3>16.2 機器品牌主檔</h3>
+  <p>建單時客戶機器的品牌下拉選項（LG、大同、Daikin、國際⋯⋯），可自由維護。</p>
+  <img class="screenshot" src="./screenshots/19-settings-machine-brands.png" alt="機器品牌">
+
+  <h3>16.3 促銷積分類型</h3>
+  <p>9 種促銷動作 + 每種點數，可改點數、停用、調整月 KPI 門檻。</p>
+  <img class="screenshot" src="./screenshots/20-settings-promotion-types.png" alt="促銷積分類型">
+
+  <h3>16.4 帳號管理</h3>
+  <p>新建師傅/管理員帳號，預設密碼 admin1234，請告知對方登入後自行更改。也可停用離職師傅帳號（不刪除歷史資料）。</p>
+  <img class="screenshot" src="./screenshots/21-settings-users.png" alt="帳號管理">
+
+  <h3>16.5 操作稽核紀錄</h3>
+  <p>記錄系統內所有寫入/刪除/取消等敏感操作，避免有爭議時無法回溯。</p>
+  <img class="screenshot" src="./screenshots/22-settings-audit.png" alt="操作稽核">
+</section>
+
+<!-- ====== Staff PWA ====== -->
+<section class="card" id="staff">
+  <h2>17. 師傅手機端（PWA）</h2>
+  <p>師傅用手機開系統，可加到主畫面當 App 用（不用裝原生 App，省成本）。</p>
+  <ul>
+    <li>只看自己今日案件，依時段排列</li>
+    <li>到場後點開訂單可看客戶資訊（電話可直撥）、地址、機器</li>
+    <li>現場可加減項（加大、其他加價、折扣）</li>
+    <li>完工按「標記完成」自動勾選促銷類型 + 寫現場備註</li>
+    <li>選收款方式（現金/匯款/刷卡/LINE Pay）</li>
+    <li>個人薪資頁可看自己本月積分、待回繳</li>
+  </ul>
+  <img class="screenshot" src="./screenshots/24-staff-pwa.png" alt="師傅 PWA" style="max-width: 360px;">
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>師傅小李上門前在車上開手機看訂單頁，看到客戶今天有 1 台直立洗衣機。完工後現場按「標記完成」+ 勾選「請客戶 Google 5 星 + 照片」+ 收 NT$ 1,800 現金。<br>
+    回到家手機按一下，今日 4 單全部結案，下班。<br>
+    您在電腦端立即看到 4 單已完成、4 筆現金待回繳，明天他來時收錢按「全部標記」結案。</p>
+  </div>
+</section>
+
+<!-- ====== Closing ====== -->
+<section class="card">
+  <h2>結語：這個系統替您省了什麼</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>每月省下的時間</th>
+        <th>原本花在哪</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>~ 4 小時</td><td>計件薪資手算 + 對帳</td></tr>
+      <tr><td>~ 2 小時</td><td>找客戶歷史紀錄</td></tr>
+      <tr><td>~ 2 小時</td><td>整理到期客戶名單</td></tr>
+      <tr><td>~ 3 小時</td><td>排班、改派、撞時間協調</td></tr>
+      <tr><td>~ 1 小時</td><td>本月營業統計報表</td></tr>
+      <tr style="background: #fef3c7;"><td><strong>合計 ~ 12 小時 / 月</strong></td><td><strong>= 多 1.5 個工作天可以做更有價值的事</strong></td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top: 16px; color: #71717a; font-size: 14px;">
+    系統未來可加：客戶自助查歷史頁、LINE Bot 自動回覆預約、自動發 SMS 到期提醒、案件照片紀錄、舊 Excel 匯入清洗腳本等（接客戶現有服務商）。
+  </p>
+</section>
+
+<footer>
+  系統由 仁格數位科技工坊 開發維護 · 文件產生於 2026 年 5 月
+</footer>
+
+</div>
+</body>
+</html>

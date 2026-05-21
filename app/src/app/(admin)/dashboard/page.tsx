@@ -287,7 +287,7 @@ export default async function DashboardPage({
                   </span>
                 </div>
                 <div
-                  className="flex items-end justify-around gap-3 border-b border-zinc-200"
+                  className="flex items-end justify-around gap-2 border-b border-zinc-200"
                   style={{ height: 200 }}
                 >
                   {technicianRows.map((t) => {
@@ -298,15 +298,15 @@ export default async function DashboardPage({
                       <Link
                         key={t.id}
                         href={`/calendar?tech=${t.id}`}
-                        className="group flex h-full max-w-[80px] flex-1 flex-col items-center"
+                        className="group flex h-full flex-1 flex-col items-center"
                       >
                         {/* 總數 label 在頂部 */}
-                        <div className="flex flex-1 flex-col items-center justify-end">
-                          <span className="mb-1 text-xs font-semibold text-zinc-700">
+                        <div className="flex w-full flex-1 flex-col items-center justify-end">
+                          <span className="mb-1 text-sm font-semibold text-zinc-700">
                             {t.total > 0 ? t.total : ""}
                           </span>
-                          {/* 堆疊條：todo 在上，done 在下 */}
-                          <div className="flex w-full max-w-[40px] flex-col justify-end overflow-hidden rounded-t">
+                          {/* 堆疊條：todo 在上，done 在下；柱子加寬 */}
+                          <div className="flex w-full flex-col justify-end overflow-hidden rounded-t">
                             {t.todo > 0 && (
                               <div
                                 className="flex items-center justify-center bg-amber-400 transition-opacity group-hover:opacity-80"
@@ -340,11 +340,11 @@ export default async function DashboardPage({
                   })}
                 </div>
                 {/* 師傅姓名軸 */}
-                <div className="mt-1 flex justify-around gap-3">
+                <div className="mt-1 flex justify-around gap-2">
                   {technicianRows.map((t) => (
                     <span
                       key={t.id}
-                      className="max-w-[80px] flex-1 truncate text-center text-xs font-medium text-zinc-700"
+                      className="flex-1 truncate text-center text-sm font-medium text-zinc-700"
                       title={t.name}
                     >
                       {t.name}
