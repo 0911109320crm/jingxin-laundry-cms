@@ -117,32 +117,6 @@ export default async function DashboardPage({
       .not("customer_id", "is", null),
   ]);
 
-  // Today's full schedule for the bottom panel
-  const { data: todayOrdersRaw } = await supabase
-    .from("orders")
-    .select(
-      `id, order_code, scheduled_at, status, total,
-       customer:customers(name),
-       address:customer_addresses(district),
-       items:order_items(technician_id)`,
-    )
-    .gte("scheduled_at", today.start)
-    .lt("scheduled_at", today.end)
-    .neq("status", "cancelled")
-    .order("scheduled_at");
-
-  type TodayRow = {
-    id: string;
-    order_code: string;
-    scheduled_at: string;
-    status: string;
-    total: number;
-    customer: { name: string } | null;
-    address: { district: string } | null;
-    items: { technician_id: string | null }[];
-  };
-  const todayOrders = (todayOrdersRaw as TodayRow[] | null) ?? [];
-
   const orders = (monthOrders as MonthOrder[] | null) ?? [];
 
   let monthRevenue = 0;
@@ -215,12 +189,6 @@ export default async function DashboardPage({
   const top30 = Array.from(custMap.values())
     .sort((a, b) => b.total - a.total)
     .slice(0, 30);
-
-  // Resolve technician names for today's schedule
-  const techNameMap = new Map(
-    ((techProfiles as { id: string; name: string; role: string; active: boolean }[] | null) ?? [])
-      .map((p) => [p.id, p.name] as const),
-  );
 
   return (
     <div className="p-5 space-y-4">
@@ -403,57 +371,6 @@ export default async function DashboardPage({
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>今日案件（{todayOrders.length}）</CardTitle>
-        </CardHeader>
-        <CardBody className="p-0">
-          {todayOrders.length === 0 ? (
-            <p className="p-5 text-sm text-zinc-500">今天沒有排定的案件</p>
-          ) : (
-            <ul className="divide-y divide-zinc-200">
-              {todayOrders.map((o) => {
-                const techIds = Array.from(
-                  new Set(
-                    o.items
-                      .map((it) => it.technician_id)
-                      .filter(Boolean) as string[],
-                  ),
-                );
-                const techs = techIds
-                  .map((tid) => techNameMap.get(tid))
-                  .filter(Boolean) as string[];
-                const time = new Date(o.scheduled_at).toLocaleTimeString(
-                  "zh-TW",
-                  { hour: "2-digit", minute: "2-digit", hour12: false },
-                );
-                return (
-                  <li key={o.id}>
-                    <Link
-                      href={`/orders/${o.id}`}
-                      className="flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-zinc-50"
-                    >
-                      <span className="w-12 shrink-0 font-mono text-zinc-900">{time}</span>
-                      <span className="w-24 shrink-0 truncate font-medium text-zinc-900">
-                        {o.customer?.name ?? "—"}
-                      </span>
-                      <span className="hidden w-16 shrink-0 truncate text-xs text-zinc-400 sm:inline">
-                        {o.address?.district ?? ""}
-                      </span>
-                      <span className="flex-1 truncate text-xs text-zinc-500">
-                        {techs.length > 0 ? techs.join("、") : "未指派"}
-                      </span>
-                      <span className={`shrink-0 text-xs font-semibold ${o.status === "done" ? "text-green-600" : "text-amber-600"}`}>
-                        {o.status === "done" ? "完成" : "未完成"}
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardBody>
-      </Card>
     </div>
   );
 }
