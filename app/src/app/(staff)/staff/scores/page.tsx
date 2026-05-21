@@ -60,7 +60,7 @@ export default async function StaffScoresPage({
   ]);
 
   const monthPromos = (monthData as PromoRow[] | null) ?? [];
-  const kpi = typeof kpiRow?.value === "number" ? kpiRow.value : 3;
+  const kpi = typeof kpiRow?.value === "number" ? kpiRow.value : 30;
 
   // 每位師傅本月積分
   const pointsByTech = new Map<string, number>();

@@ -72,7 +72,7 @@ export default async function ScoresPage({
   const monthPromos = (promosData as PromoRow[] | null) ?? [];
   const techs = (techData as { id: string; name: string; role: string }[] | null) ?? [];
   const techMap = new Map(techs.map((t) => [t.id, t]));
-  const kpi = typeof kpiRow?.value === "number" ? kpiRow.value : 3;
+  const kpi = typeof kpiRow?.value === "number" ? kpiRow.value : 30;
 
   // Aggregate: 每位師傅本月積分總和
   const pointsByTech = new Map<string, { points: number; count: number }>();

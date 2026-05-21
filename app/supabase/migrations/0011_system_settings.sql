@@ -29,7 +29,7 @@ create policy "settings write owner" on public.system_settings for all
 
 insert into public.system_settings (key, value, description) values
   ('monthly_promotion_kpi',
-   '3'::jsonb,
+   '30'::jsonb,
    '師傅每月促銷積分 KPI 目標（達標換色顯示）');
 
 -- ---------------------------------------------------------------------------

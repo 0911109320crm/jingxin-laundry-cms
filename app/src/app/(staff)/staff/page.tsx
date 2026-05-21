@@ -88,7 +88,7 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
 
   const myPoints = ((myPromosThisMonth as { points_snapshot: number }[] | null) ?? [])
     .reduce((s, r) => s + r.points_snapshot, 0);
-  const kpi = typeof kpiRow?.value === "number" ? kpiRow.value : 3;
+  const kpi = typeof kpiRow?.value === "number" ? kpiRow.value : 30;
   const kpiPct = Math.min(100, Math.round((myPoints / Math.max(1, kpi)) * 100));
   const kpiAchieved = myPoints >= kpi;
 

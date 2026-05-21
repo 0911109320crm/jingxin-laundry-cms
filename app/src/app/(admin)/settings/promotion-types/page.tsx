@@ -23,7 +23,7 @@ export default async function PromotionTypesPage() {
   ]);
 
   const promos = (types as PromotionType[] | null) ?? [];
-  const kpiValue = typeof kpiRow?.value === "number" ? kpiRow.value : 3;
+  const kpiValue = typeof kpiRow?.value === "number" ? kpiRow.value : 30;
 
   return (
     <div className="p-8 space-y-5">
