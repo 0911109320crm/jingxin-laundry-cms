@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Wallet, Coins } from "lucide-react";
+import { ChevronLeft, Wallet, Coins } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/dal";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
-import { formatDate, formatNTD } from "@/lib/utils";
-import { SettleBatchButton } from "./SettleButton";
+import { formatNTD } from "@/lib/utils";
+import { SettleGroup, type PendingOrderLite } from "./SettleButton";
 
-type PendingOrder = {
+type PendingOrderRow = {
   id: string;
   order_code: string;
   total: number;
@@ -16,7 +16,7 @@ type PendingOrder = {
   note: string | null;
   customer: { name: string; phone: string } | null;
   address: { county: string; district: string } | null;
-  items: { technician_id: string | null }[];
+  items: { technician_id: string | null; created_at: string }[];
 };
 
 const UNASSIGNED = "__unassigned__";
@@ -32,20 +32,33 @@ export default async function SettlementsPage() {
       `id, order_code, total, service_at, scheduled_at, note,
        customer:customers(name, phone),
        address:customer_addresses(county, district),
-       items:order_items(technician_id)`,
+       items:order_items(technician_id, created_at)`,
     )
     .eq("payment_method", "cash")
     .eq("settlement_status", "pending")
     .order("service_at", { ascending: true, nullsFirst: false });
 
-  const orders = (data as PendingOrder[] | null) ?? [];
+  const orders = (data as PendingOrderRow[] | null) ?? [];
 
-  // Group by primary technician (first item's technician)
-  const grouped = new Map<string, PendingOrder[]>();
+  // Group by primary technician (earliest item with a technician)
+  const grouped = new Map<string, PendingOrderLite[]>();
   for (const o of orders) {
-    const techId = o.items.find((it) => it.technician_id)?.technician_id ?? UNASSIGNED;
+    const sortedItems = [...o.items]
+      .filter((it) => it.technician_id)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const techId = sortedItems[0]?.technician_id ?? UNASSIGNED;
     if (!grouped.has(techId)) grouped.set(techId, []);
-    grouped.get(techId)!.push(o);
+    grouped.get(techId)!.push({
+      id: o.id,
+      order_code: o.order_code,
+      total: Number(o.total),
+      service_at: o.service_at,
+      scheduled_at: o.scheduled_at,
+      customer_name: o.customer?.name ?? "—",
+      area: o.address
+        ? `${o.address.county} ${o.address.district}`
+        : null,
+    });
   }
 
   // Resolve technician names
@@ -71,22 +84,31 @@ export default async function SettlementsPage() {
       techId,
       name: techId === UNASSIGNED ? "未指派師傅" : nameMap.get(techId) ?? "未知",
       orders: list,
-      total: list.reduce((s, o) => s + Number(o.total), 0),
+      total: list.reduce((s, o) => s + o.total, 0),
     }))
     .sort((a, b) => b.total - a.total);
 
   return (
     <div className="p-6 space-y-4">
-      <header className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
+        <Link
+          href="/payroll"
+          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
+        >
+          <ChevronLeft className="h-4 w-4" /> 回師傅薪資
+        </Link>
+      </div>
+
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">師傅待回繳</h1>
           <p className="text-sm text-zinc-500">
-            列出所有「已收款-現金」但「待回繳」的訂單，按師傅分組
+            師傅收了現金、還沒交回給老闆娘的訂單。可逐筆勾選、批次標記、或點查看訂單細節。
           </p>
         </div>
         <Card className="px-5 py-3">
           <p className="text-xs text-zinc-500">全部待回繳總額</p>
-          <p className="text-2xl font-bold text-amber-700 font-mono">
+          <p className="font-mono text-2xl font-bold text-amber-700">
             {formatNTD(grandTotal)}
           </p>
           <p className="text-xs text-zinc-500">{orders.length} 筆訂單</p>
@@ -103,7 +125,7 @@ export default async function SettlementsPage() {
           </CardBody>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {groups.map((g) => (
             <Card key={g.techId}>
               <CardHeader className="flex items-center justify-between">
@@ -114,47 +136,15 @@ export default async function SettlementsPage() {
                     {g.orders.length} 筆
                   </span>
                 </div>
-                <p className="text-xl font-bold text-amber-700 font-mono">
+                <p className="font-mono text-xl font-bold text-amber-700">
                   {formatNTD(g.total)}
                 </p>
               </CardHeader>
-              <CardBody className="space-y-1 p-0">
-                <ul className="divide-y divide-zinc-200">
-                  {g.orders.map((o) => (
-                    <li key={o.id}>
-                      <Link
-                        href={`/orders/${o.id}`}
-                        className="grid grid-cols-[1fr_auto] gap-2 px-5 py-2.5 text-sm transition-colors hover:bg-zinc-50"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs text-zinc-400">
-                              {o.order_code}
-                            </span>
-                            <span className="font-medium text-zinc-900">
-                              {o.customer?.name ?? "—"}
-                            </span>
-                          </div>
-                          <p className="text-xs text-zinc-500">
-                            {o.address &&
-                              `${o.address.county} ${o.address.district} · `}
-                            {formatDate(o.service_at ?? o.scheduled_at)}
-                          </p>
-                        </div>
-                        <span className="self-center font-mono text-zinc-900">
-                          {formatNTD(o.total)}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                <div className="border-t border-zinc-200 px-5 py-3">
-                  <SettleBatchButton
-                    orderIds={g.orders.map((o) => o.id)}
-                    technicianName={g.name}
-                    total={g.total}
-                  />
-                </div>
+              <CardBody className="p-0">
+                <SettleGroup
+                  technicianName={g.name}
+                  orders={g.orders}
+                />
               </CardBody>
             </Card>
           ))}

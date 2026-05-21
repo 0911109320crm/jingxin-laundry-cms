@@ -18,6 +18,15 @@ export function backTarget(origin: BackOrigin, fallbackHref = "/orders") {
       label: "回顧客詳情",
     };
   }
+  if (origin.from === "settlements") {
+    return { href: "/payroll/settlements", label: "回師傅待回繳" };
+  }
+  if (origin.from === "payroll" && origin.cid) {
+    return {
+      href: `/payroll/${origin.cid}`,
+      label: "回師傅薪資",
+    };
+  }
   return { href: fallbackHref, label: "回訂單列表" };
 }
 
