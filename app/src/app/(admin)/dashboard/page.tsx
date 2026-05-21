@@ -5,6 +5,7 @@ import {
   CalendarClock,
   BellRing,
   Wallet,
+  Trophy,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -73,6 +74,7 @@ export default async function DashboardPage({
     { data: pendingCashOrders },
     { data: techProfiles },
     { count: todayRemainingCount },
+    { data: allDoneOrders },
   ] = await Promise.all([
     supabase
       .from("orders")
@@ -108,6 +110,11 @@ export default async function DashboardPage({
       .gte("scheduled_at", today.start)
       .lt("scheduled_at", today.end)
       .in("status", ["pending", "scheduled", "in_progress"]),
+    supabase
+      .from("orders")
+      .select("customer_id, total, customer:customers(id, name, phone, code)")
+      .eq("status", "done")
+      .not("customer_id", "is", null),
   ]);
 
   // Today's full schedule for the bottom panel
@@ -192,6 +199,23 @@ export default async function DashboardPage({
 
   const maxTotal = Math.max(1, ...technicianRows.map((t) => t.total));
 
+  // Top 30 customers by lifetime spending
+  type DoneRow = { customer_id: string; total: number; customer: { id: string; name: string; phone: string; code: string } | null };
+  const custMap = new Map<string, { id: string; name: string; phone: string; code: string; total: number; orders: number }>();
+  for (const o of (allDoneOrders as DoneRow[] | null) ?? []) {
+    if (!o.customer_id || !o.customer) continue;
+    const existing = custMap.get(o.customer_id);
+    if (existing) {
+      existing.total += Number(o.total);
+      existing.orders += 1;
+    } else {
+      custMap.set(o.customer_id, { ...o.customer, total: Number(o.total), orders: 1 });
+    }
+  }
+  const top30 = Array.from(custMap.values())
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 30);
+
   // Resolve technician names for today's schedule
   const techNameMap = new Map(
     ((techProfiles as { id: string; name: string; role: string; active: boolean }[] | null) ?? [])
@@ -199,11 +223,11 @@ export default async function DashboardPage({
   );
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-5 space-y-4">
       <header className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">儀表板</h1>
-          <p className="text-sm text-zinc-500">{label} 營運概況</p>
+          <h1 className="text-xl font-bold text-zinc-900">儀表板</h1>
+          <p className="text-xs text-zinc-500">{label} 營運概況</p>
         </div>
         {(pendingCashOrders?.length ?? 0) > 0 && (
           <Link
@@ -216,7 +240,7 @@ export default async function DashboardPage({
         )}
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <KpiCard
           icon={<TrendingUp className="h-5 w-5 text-emerald-500" />}
           label="本月營業額"
@@ -296,13 +320,13 @@ export default async function DashboardPage({
                   <Link
                     key={t.id}
                     href={`/calendar?tech=${t.id}`}
-                    className="block rounded-lg p-2 transition-colors hover:bg-zinc-50"
+                    className="block rounded-lg px-2 py-1.5 transition-colors hover:bg-zinc-50"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="w-20 shrink-0 text-sm font-medium text-zinc-900">
+                      <span className="w-16 shrink-0 text-sm font-medium text-zinc-900">
                         {t.name}
                       </span>
-                      <div className="flex h-7 flex-1 overflow-hidden rounded-md bg-zinc-100">
+                      <div className="flex h-6 flex-1 overflow-hidden rounded-md bg-zinc-100">
                         {t.done > 0 && (
                           <div
                             className="flex items-center justify-end bg-green-500 px-2 text-xs font-medium text-white"
@@ -336,13 +360,48 @@ export default async function DashboardPage({
         </CardBody>
       </Card>
 
-      <section id="source-analysis" className="space-y-5 border-t border-zinc-200 pt-6">
+      <section id="source-analysis" className="space-y-4 border-t border-zinc-200 pt-4">
         <SourceAnalysis
           range={rangeParam}
           customStart={sp.start}
           customEnd={sp.end}
         />
       </section>
+
+      {top30.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-amber-500" />
+              歷史消費前 30 名客戶
+            </CardTitle>
+          </CardHeader>
+          <CardBody className="p-0">
+            <div className="grid grid-cols-1 divide-y divide-zinc-100 sm:grid-cols-2 lg:grid-cols-3">
+              {top30.map((c, i) => (
+                <Link
+                  key={c.id}
+                  href={`/customers/${c.id}`}
+                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-50 transition-colors"
+                >
+                  <span className={`w-7 shrink-0 text-center text-sm font-bold ${
+                    i === 0 ? "text-amber-500" : i === 1 ? "text-zinc-400" : i === 2 ? "text-orange-400" : "text-zinc-300"
+                  }`}>
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-zinc-900">{c.name}</p>
+                    <p className="text-xs text-zinc-400">{c.phone} · {c.orders} 筆</p>
+                  </div>
+                  <span className="shrink-0 font-mono text-sm font-semibold text-zinc-700">
+                    {formatNTD(c.total)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -372,20 +431,20 @@ export default async function DashboardPage({
                   <li key={o.id}>
                     <Link
                       href={`/orders/${o.id}`}
-                      className="flex items-center gap-3 px-5 py-2.5 text-sm transition-colors hover:bg-zinc-50"
+                      className="flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-zinc-50"
                     >
-                      <span className="w-14 font-mono text-zinc-900">{time}</span>
-                      <span className="w-32 truncate font-medium text-zinc-900">
+                      <span className="w-12 shrink-0 font-mono text-zinc-900">{time}</span>
+                      <span className="w-24 shrink-0 truncate font-medium text-zinc-900">
                         {o.customer?.name ?? "—"}
                       </span>
-                      <span className="hidden w-24 truncate text-xs text-zinc-500 md:inline">
+                      <span className="hidden w-16 shrink-0 truncate text-xs text-zinc-400 sm:inline">
                         {o.address?.district ?? ""}
                       </span>
-                      <span className="flex-1 text-xs text-zinc-500 truncate">
-                        {techs.length > 0 ? `師傅：${techs.join("、")}` : "未指派"}
+                      <span className="flex-1 truncate text-xs text-zinc-500">
+                        {techs.length > 0 ? techs.join("、") : "未指派"}
                       </span>
-                      <span className="text-xs font-medium text-zinc-700">
-                        {o.status === "done" ? "已完成" : "未完成"}
+                      <span className={`shrink-0 text-xs font-semibold ${o.status === "done" ? "text-green-600" : "text-amber-600"}`}>
+                        {o.status === "done" ? "完成" : "未完成"}
                       </span>
                     </Link>
                   </li>
@@ -420,19 +479,19 @@ function KpiCard({
         alert ? "border-rose-300 bg-rose-50" : ""
       }`}
     >
-      <CardBody>
-        <div className="flex items-center gap-2 text-sm text-zinc-500">
+      <CardBody className="p-3">
+        <div className="flex items-center gap-1.5 text-xs text-zinc-500">
           {icon}
           {label}
         </div>
         <p
-          className={`mt-2 text-3xl font-bold ${
+          className={`mt-1 text-2xl font-bold leading-tight ${
             alert ? "text-rose-700" : "text-zinc-900"
           }`}
         >
           {value}
         </p>
-        {sub && <p className="mt-1 text-xs text-zinc-400">{sub}</p>}
+        {sub && <p className="mt-0.5 text-xs text-zinc-400 leading-tight">{sub}</p>}
       </CardBody>
     </Card>
   );
