@@ -81,8 +81,37 @@ export function StaffActions({
   const [pending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"complete" | "edit">("complete");
-  const [tags, setTags] = useState<string[]>(initialTags);
   const [notes, setNotes] = useState<string>(initialNotes);
+
+  // Track selection by preset ID so same-label presets in different categories stay independent.
+  // On init, map each stored label → all matching preset IDs.
+  const buildSelectedIds = () => {
+    const ids = new Set<string>();
+    for (const p of presets) {
+      if (initialTags.includes(p.label)) ids.add(p.id);
+    }
+    return ids;
+  };
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(buildSelectedIds);
+  // Stale tags: labels no longer in any active preset (show with strikethrough to let user remove)
+  const presetLabelSet = new Set(presets.map((p) => p.label));
+  const [staleTags, setStaleTags] = useState<string[]>(
+    initialTags.filter((t) => !presetLabelSet.has(t)),
+  );
+
+  const togglePreset = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  // Convert selectedIds + staleTags → label string array for saving
+  const tagsForSave = () => [
+    ...new Set(presets.filter((p) => selectedIds.has(p.id)).map((p) => p.label)),
+    ...staleTags,
+  ];
 
   // Local adjustments state — updated optimistically
   const [localAdj, setLocalAdj] = useState<Adjustment[]>(adjustments);
@@ -107,7 +136,8 @@ export function StaffActions({
 
   const openComplete = () => {
     setDialogMode("complete");
-    setTags(initialTags);
+    setSelectedIds(buildSelectedIds());
+    setStaleTags(initialTags.filter((t) => !presetLabelSet.has(t)));
     setNotes(initialNotes);
     setLocalAdj(adjustments);
     setDialogOpen(true);
@@ -115,16 +145,11 @@ export function StaffActions({
 
   const openEdit = () => {
     setDialogMode("edit");
-    setTags(initialTags);
+    setSelectedIds(buildSelectedIds());
+    setStaleTags(initialTags.filter((t) => !presetLabelSet.has(t)));
     setNotes(initialNotes);
     setLocalAdj(adjustments);
     setDialogOpen(true);
-  };
-
-  const toggleTag = (label: string) => {
-    setTags((prev) =>
-      prev.includes(label) ? prev.filter((t) => t !== label) : [...prev, label],
-    );
   };
 
   const submitDialog = () => {
@@ -132,11 +157,11 @@ export function StaffActions({
       const res =
         dialogMode === "complete"
           ? await completeOrderAction(orderId, {
-              service_tags: tags,
+              service_tags: tagsForSave(),
               service_notes: notes,
             })
           : await updateServiceNotesAction(orderId, {
-              service_tags: tags,
+              service_tags: tagsForSave(),
               service_notes: notes,
             });
       if (!res.ok) {
@@ -203,8 +228,6 @@ export function StaffActions({
     });
   };
 
-  const presetLabels = new Set(presets.map((p) => p.label));
-  const extraTags = tags.filter((t) => !presetLabels.has(t));
 
   const addonItems = adjustmentItems.filter((a) => a.type === "addon");
   const discountItems = adjustmentItems.filter((a) => a.type === "discount");
@@ -509,12 +532,12 @@ export function StaffActions({
                           </p>
                           <div className="flex flex-wrap gap-1.5">
                             {group.map((p) => {
-                              const selected = tags.includes(p.label);
+                              const selected = selectedIds.has(p.id);
                               return (
                                 <button
                                   key={p.id}
                                   type="button"
-                                  onClick={() => toggleTag(p.label)}
+                                  onClick={() => togglePreset(p.id)}
                                   className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
                                     selected
                                       ? "border-brand-600 bg-brand-600 text-white"
@@ -538,12 +561,12 @@ export function StaffActions({
                           <p className="mb-1 text-xs font-medium text-zinc-500">其他</p>
                           <div className="flex flex-wrap gap-1.5">
                             {ungrouped.map((p) => {
-                              const selected = tags.includes(p.label);
+                              const selected = selectedIds.has(p.id);
                               return (
                                 <button
                                   key={p.id}
                                   type="button"
-                                  onClick={() => toggleTag(p.label)}
+                                  onClick={() => togglePreset(p.id)}
                                   className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
                                     selected
                                       ? "border-brand-600 bg-brand-600 text-white"
@@ -560,15 +583,15 @@ export function StaffActions({
                     })()}
                   </div>
                 )}
-                {extraTags.length > 0 && (
+                {staleTags.length > 0 && (
                   <div className="mt-2">
                     <p className="mb-1 text-xs text-zinc-500">已停用 / 已刪除的舊標籤</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {extraTags.map((t) => (
+                      {staleTags.map((t) => (
                         <button
                           key={t}
                           type="button"
-                          onClick={() => toggleTag(t)}
+                          onClick={() => setStaleTags((prev) => prev.filter((s) => s !== t))}
                           className="rounded-full border border-zinc-400 bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700 line-through"
                           title="點擊移除"
                         >
