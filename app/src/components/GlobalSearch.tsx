@@ -95,7 +95,7 @@ export function GlobalSearch() {
 
       {/* Modal card */}
       <div
-        className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden"
+        className="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input row */}
@@ -171,9 +171,9 @@ export function GlobalSearch() {
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500">
                       <ClipboardList className="h-3.5 w-3.5" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-zinc-900 truncate">{o.order_code}</p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-zinc-500 truncate">
                         {o.customer_name}
                         {o.scheduled_at && (
                           <> · {new Date(o.scheduled_at).toLocaleDateString("zh-TW")}</>
