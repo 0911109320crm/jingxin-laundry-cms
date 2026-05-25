@@ -32,10 +32,17 @@ export default async function StaffPayroll({
   const prev = shiftMonth(month, -1);
   const next = shiftMonth(month, 1);
 
+  // 師傅只看「完成幾件 + 總服務金額」，不看抽成 / 加減項 / 獎金
+  const monthServiceTotal =
+    data?.rows.reduce(
+      (s, r) => s + r.items.reduce((ss, it) => ss + it.subtotal, 0),
+      0,
+    ) ?? 0;
+
   return (
     <div className="p-4 space-y-4">
       <header className="space-y-2">
-        <h1 className="text-xl font-bold text-zinc-900">我的薪資</h1>
+        <h1 className="text-xl font-bold text-zinc-900">我的接案紀錄</h1>
         <div className="flex items-center gap-1">
           <Link
             href={`/staff/payroll?month=${prev}`}
@@ -65,81 +72,64 @@ export default async function StaffPayroll({
         <>
           <Card>
             <CardBody className="space-y-1 text-center">
-              <p className="text-xs text-zinc-500">本月應收計件</p>
+              <p className="text-xs text-zinc-500">本月完成</p>
               <p className="text-3xl font-bold text-brand-700 font-mono">
-                {formatNTD(data.monthTotal)}
+                {data.totalItems} <span className="text-xl">件</span>
               </p>
               <p className="text-xs text-zinc-500">
-                共 {data.totalItems} 件
-                {data.monthAddon > 0 && ` · 加價 ${formatNTD(data.monthAddon)}`}
-                {data.monthDiscount > 0 && ` · 折扣 ${formatNTD(data.monthDiscount)}`}
+                服務總額 {formatNTD(monthServiceTotal)}
               </p>
             </CardBody>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>每日明細</CardTitle>
+              <CardTitle>每日接案明細</CardTitle>
             </CardHeader>
             <CardBody className="p-0">
               <ul className="divide-y divide-zinc-200">
                 {data.rows
                   .filter((row) => row.items.length > 0)
-                  .map((row) => {
-                    const dayNet =
-                      row.dayTotal + row.addonTotal - row.discountTotal;
-                    return (
-                      <li key={row.day} className="px-4 py-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold">
-                            {row.date.slice(5)}（{row.day}日）
-                          </span>
-                          <span className="font-mono font-semibold text-zinc-900">
-                            {formatNTD(dayNet)}
-                          </span>
-                        </div>
-                        <ul className="space-y-1">
-                          {row.items.map((it) => (
-                            <li
-                              key={it.id}
-                              className="flex items-center justify-between text-xs text-zinc-600"
-                            >
-                              <span>
-                                {it.customer_name}
-                                {it.service_code && ` · ${it.service_code}`}
-                                {it.tag && ` (${it.tag})`}
-                              </span>
-                              <span className="font-mono">
-                                {formatNTD(it.unit_price)}
-                              </span>
-                            </li>
-                          ))}
-                          {row.addonTotal > 0 && (
-                            <li className="flex items-center justify-between text-xs text-orange-600">
-                              <span>加價</span>
-                              <span className="font-mono">
-                                +{formatNTD(row.addonTotal)}
-                              </span>
-                            </li>
-                          )}
-                          {row.discountTotal > 0 && (
-                            <li className="flex items-center justify-between text-xs text-blue-600">
-                              <span>折扣</span>
-                              <span className="font-mono">
-                                -{formatNTD(row.discountTotal)}
-                              </span>
-                            </li>
-                          )}
-                        </ul>
-                      </li>
-                    );
-                  })}
+                  .map((row) => (
+                    <li key={row.day} className="px-4 py-3 space-y-2">
+                      <div className="text-sm font-semibold text-zinc-700">
+                        {row.date.slice(5)}（{row.items.length} 件）
+                      </div>
+                      <ul className="space-y-1.5">
+                        {row.items.map((it) => (
+                          <li
+                            key={it.id}
+                            className="flex items-start justify-between gap-2 text-xs text-zinc-600"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-mono text-zinc-500">
+                                {it.order_code}
+                              </p>
+                              <p className="text-zinc-700">
+                                {it.service_name ?? "—"}
+                                {it.tag && (
+                                  <span className="ml-1 text-zinc-500">
+                                    ({it.tag})
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-zinc-400">{it.customer_name}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
               </ul>
               {data.rows.every((row) => row.items.length === 0) && (
                 <p className="p-5 text-sm text-zinc-500">本月尚無接案</p>
               )}
             </CardBody>
           </Card>
+
+          <p className="text-center text-xs text-zinc-400">
+            薪資金額由老闆娘核算後發放
+          </p>
         </>
       )}
     </div>

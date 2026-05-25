@@ -1,7 +1,7 @@
 {
-  "name": "淨新洗衣管理系統",
-  "short_name": "淨新洗衣",
-  "description": "淨新洗衣機清潔工坊後台管理系統",
+  "name": "淨新清潔工坊管理系統",
+  "short_name": "淨新清潔工坊",
+  "description": "淨新清潔工坊後台管理系統",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

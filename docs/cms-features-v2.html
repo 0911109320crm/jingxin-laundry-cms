@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>淨新清潔工坊 — 管理系統功能總覽</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC",
+      "Microsoft JhengHei", "Segoe UI", sans-serif;
+    line-height: 1.7;
+    color: #18181b;
+    background: #f4f4f5;
+    padding: 24px;
+  }
+  .container { max-width: 1080px; margin: 0 auto; }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    padding: 32px 40px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: 32px;
+    color: #18181b;
+    margin-bottom: 8px;
+  }
+  h2 {
+    font-size: 22px;
+    color: #18181b;
+    margin: 28px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e4e4e7;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .badge {
+    background: #ddd6fe;
+    color: #5b21b6;
+    font-size: 14px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  h3 {
+    font-size: 17px;
+    color: #27272a;
+    margin: 18px 0 8px;
+  }
+  p { margin-bottom: 12px; color: #3f3f46; }
+  .subtitle { color: #71717a; font-size: 14px; }
+  ul, ol { margin: 12px 0 14px 22px; color: #3f3f46; }
+  li { margin-bottom: 6px; }
+  a { color: #4f46e5; }
+
+  .toc {
+    background: #fafafa;
+    border: 1px solid #e4e4e7;
+    border-radius: 12px;
+    padding: 16px 22px;
+    margin: 16px 0 24px;
+  }
+  .toc ol { columns: 2; gap: 16px; margin-left: 22px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+
+  .mock-screen {
+    display: block;
+    width: 100%;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    margin: 14px 0;
+    background: #fafafa;
+    overflow: hidden;
+  }
+
+  .scenario {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 4px solid #f59e0b;
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 16px 0;
+  }
+  .scenario strong { color: #92400e; }
+  .scenario p { color: #78350f; margin: 4px 0; }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .compare-box {
+    padding: 14px 18px;
+    border-radius: 10px;
+  }
+  .compare-before {
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+  }
+  .compare-before strong { color: #991b1b; }
+  .compare-after {
+    background: #d1fae5;
+    border: 1px solid #a7f3d0;
+  }
+  .compare-after strong { color: #065f46; }
+  .compare-box p { color: #3f3f46; font-size: 14px; margin-top: 4px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid #e4e4e7;
+    padding: 10px 14px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #fafafa;
+    font-weight: 600;
+    color: #18181b;
+  }
+  tr:nth-child(even) td { background: #fcfcfc; }
+  td.before { background: #fef2f2; }
+  td.after { background: #ecfdf5; }
+
+  .kbd {
+    display: inline-block;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: "SF Mono", "Cascadia Mono", "Consolas", monospace;
+    font-size: 12px;
+    color: #27272a;
+  }
+  .chip {
+    display: inline-block;
+    background: #ede9fe;
+    color: #5b21b6;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    margin: 0 2px;
+  }
+  .chip.green { background: #d1fae5; color: #065f46; }
+  .chip.amber { background: #fef3c7; color: #92400e; }
+  .chip.rose  { background: #fee2e2; color: #991b1b; }
+  .chip.blue  { background: #dbeafe; color: #1e40af; }
+
+  .hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff;
+    padding: 40px 44px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+  }
+  .hero h1 { color: #fff; font-size: 36px; }
+  .hero p { color: rgba(255,255,255,.9); font-size: 16px; margin-top: 6px; }
+  .hero .tags { margin-top: 14px; }
+  .hero .tag {
+    display: inline-block;
+    background: rgba(255,255,255,.2);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    margin-right: 8px;
+    margin-bottom: 6px;
+  }
+
+  footer {
+    text-align: center;
+    color: #71717a;
+    font-size: 13px;
+    padding: 24px 0;
+  }
+
+  @media (max-width: 768px) {
+    body { padding: 12px; }
+    .card { padding: 22px; }
+    .toc ol { columns: 1; }
+    .comparison { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<section class="hero">
+  <h1>淨新清潔工坊 — 管理系統功能總覽</h1>
+  <p>為老闆娘設計的全業務管理工具，從建單、派工、薪資到回繳都一站搞定</p>
+  <div class="tags">
+    <span class="tag">&#10003; 取代散亂的紙本排班單</span>
+    <span class="tag">&#10003; 取代手寫服務紀錄</span>
+    <span class="tag">&#10003; 取代手算薪水</span>
+    <span class="tag">&#10003; 取代月底翻紀錄找到期客戶</span>
+  </div>
+</section>
+
+<section class="card">
+  <h2>整體痛點對應表 <span class="badge">5 分鐘了解全貌</span></h2>
+  <p>下表把您原本最花時間的事，跟系統現在怎麼處理一條條對應。</p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 24%">日常事務</th>
+        <th style="width: 38%">以前怎麼做</th>
+        <th style="width: 38%">現在系統怎麼做</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>客戶來店查歷史</strong></td>
+        <td class="before">客戶來電預約沒辦法馬上識別老客戶，容易降低顧客滿意度，感覺自己沒有被記住。</td>
+        <td class="after">按 <span class="kbd">Ctrl+K</span> 任何頁面打名字/電話/編號就跳出客戶卡，連最近訂單一起秀。一秒識別客戶：「王太太今天一樣要洗冷氣嗎?」讓客戶倍感尊榮！</td>
+      </tr>
+      <tr>
+        <td><strong>客戶介紹親友</strong></td>
+        <td class="before">寫在備註欄文字「王大明介紹」，沒辦法回頭算王大明總共介紹幾個人</td>
+        <td class="after">老闆娘可以了解哪些顧客最喜歡推薦親友，針對這類客戶給予回饋及維護關係，有利拓展客源！</td>
+      </tr>
+      <tr>
+        <td><strong>多地址多機器</strong></td>
+        <td class="before">同一個王大明三個地方都有機器，紀錄分散、容易搞錯哪台在哪</td>
+        <td class="after">客戶下可建多地址、每台機器指定地址，建單選機器會自動帶地址</td>
+      </tr>
+      <tr>
+        <td><strong>一通電話多地址預約</strong></td>
+        <td class="before">輸入 3 次客戶資料建 3 張單，過程被打斷就出包</td>
+        <td class="after">建好第一筆後出現「同客戶再建一筆」按鈕，快速準確  的完成訂單建立！</td>
+      </tr>
+      <tr>
+        <td><strong>派工給師傅</strong></td>
+        <td class="before">老闆娘手寫排班單張給師傅，有文字理解錯誤風險，其他師傅也可能看到他人案件資料，存在客戶資料外洩的安全隱患。</td>
+        <td class="after">月曆拖曳派工，每位師傅獨立顏色；師傅登入後只看到自己的訂單。排班頁面可利用× 按鈕可一鍵回到待派工或取消，不管是更換服務師傅或是備註取消原因都在幾秒內完成！</td>
+      </tr>
+      <tr>
+        <td><strong>計件薪資結算</strong></td>
+        <td class="before">雖已用 Excel 輔助，但派案細節仍是紙本，兩邊對照容易出錯且費時費力</td>
+        <td class="after">系統自動算每位師傅本月應發 + 加減項 + 積分 + 待回繳，一頁看完</td>
+      </tr>
+      <tr>
+        <td><strong>師傅交回現金對帳</strong></td>
+        <td class="before">師傅需回憶前幾天做的客人與收了多少錢，出錯機率非常高；若對帳不上，老闆娘還要從紙本排班表逐一比對，費時且帳目不清</td>
+        <td class="after">待回繳頁逐筆顯示，可勾選確認、單筆標記或全部標記，金額即時加總</td>
+      </tr>
+      <tr>
+        <td><strong>到期 1 年的客戶要主動聯繫</strong></td>
+        <td class="before">月底翻紀錄找出 11-12 個月前服務的客戶，名單常漏</td>
+        <td class="after">「即將到期」頁自動列出名單，一鍵複製 LINE 訊息模板，貼給客戶就好</td>
+      </tr>
+      <tr>
+        <td><strong>追蹤師傅業績目標</strong></td>
+        <td class="before">沒有具體指標，靠主觀判斷</td>
+        <td class="after">促銷積分系統（FB 按讚/Google 5 星等）每月達標可給獎金，進度條一目了然</td>
+      </tr>
+      <tr>
+        <td><strong>看本月營業狀況</strong></td>
+        <td class="before">因無完整管理系統，許多細節無法精確掌握，只能靠記憶或月底手動匯整</td>
+        <td class="after">儀表板即時顯示本月營業額、案件數、取消率、待回繳、師傅案量</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="card toc">
+  <h2 style="border: none; margin: 0 0 8px;">功能目錄</h2>
+  <ol>
+    <li><a href="#login">登入畫面</a></li>
+    <li><a href="#dashboard">儀表板</a></li>
+    <li><a href="#search">快速搜尋任何資料（<span class="kbd">Ctrl+K</span>）</a></li>
+    <li><a href="#customers">客戶管理</a></li>
+    <li><a href="#customer-detail">客戶詳細</a></li>
+    <li><a href="#orders">訂單管理</a></li>
+    <li><a href="#orders-filter">依師傅篩選訂單</a></li>
+    <li><a href="#order-detail">訂單詳細（含右側客戶資料）</a></li>
+    <li><a href="#order-new">新增訂單 + 同客戶再建一筆</a></li>
+    <li><a href="#calendar">月曆排案（拖曳派工）</a></li>
+    <li><a href="#payroll">師傅薪資列表</a></li>
+    <li><a href="#payroll-detail">師傅薪資詳細</a></li>
+    <li><a href="#payroll-formula">薪資抽成與結算規則</a></li>
+    <li><a href="#settlements">待回繳對帳（逐筆勾選）</a></li>
+    <li><a href="#reports">營業報表</a></li>
+    <li><a href="#reminders">即將到期客戶</a></li>
+    <li><a href="#scores">促銷積分榜</a></li>
+    <li><a href="#settings">系統設定</a></li>
+    <li><a href="#staff">師傅手機版</a></li>
+  </ol>
+</section>
+
+<!-- ====== Login ====== -->
+<section class="card" id="login">
+  <h2>1. 登入畫面</h2>
+  <p>系統要登入才能用，每個人都有自己的帳號跟權限（老闆娘擁有全部權限，管理員可建單派工，師傅只看自己的案件）。</p>
+  <ul>
+    <li><strong>老闆娘</strong>：可以看全部、改全部、管帳號</li>
+    <li><strong>管理員</strong>：建單、改單、派工，但不能管帳號</li>
+    <li><strong>師傅</strong>：只看自己今日案件、收費、完成（用手機）</li>
+  </ul>
+
+  <!-- Login mock screen -->
+  <svg class="mock-screen" viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="400" fill="#f4f4f5"/>
+    <!-- center card -->
+    <rect x="300" y="60" width="300" height="280" rx="16" fill="white" filter="url(#shadow)"/>
+    <defs>
+      <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="0" dy="2" stdDeviation="6" flood-opacity="0.08"/>
+      </filter>
+    </defs>
+    <!-- logo area -->
+    <rect x="380" y="90" width="140" height="36" rx="8" fill="#4f46e5"/>
+    <text x="450" y="114" text-anchor="middle" fill="white" font-size="14" font-family="sans-serif" font-weight="600">淨新清潔工坊管理系統</text>
+    <text x="450" y="148" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">請登入您的帳號</text>
+    <!-- username -->
+    <rect x="320" y="162" width="260" height="36" rx="8" fill="#f9fafb" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="336" y="185" fill="#9ca3af" font-size="12" font-family="sans-serif">帳號</text>
+    <!-- password -->
+    <rect x="320" y="208" width="260" height="36" rx="8" fill="#f9fafb" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="336" y="231" fill="#9ca3af" font-size="12" font-family="sans-serif">密碼</text>
+    <!-- button -->
+    <rect x="320" y="258" width="260" height="40" rx="8" fill="#4f46e5"/>
+    <text x="450" y="283" text-anchor="middle" fill="white" font-size="14" font-family="sans-serif" font-weight="600">登入</text>
+    <!-- role badges -->
+    <text x="450" y="330" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">owner · manager · technician</text>
+  </svg>
+
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>新來的師傅小李，您只要在「設定 → 帳號管理」幫他建一個帳號（預設密碼 admin1234），他用手機登入後就能看到您派給他的訂單，不會看到其他師傅的資料。</p>
+  </div>
+</section>
+
+<!-- ====== Dashboard ====== -->
+<section class="card" id="dashboard">
+  <h2>2. 儀表板</h2>
+  <p>登入後首頁，本月關鍵指標一目了然：</p>
+  <ul>
+    <li><strong>本月營業額</strong>（自動比較上月增減 %）</li>
+    <li><strong>本月案件數</strong></li>
+    <li><strong>今日待完成</strong>（連結到月曆）</li>
+    <li><strong>即將到期客戶數</strong>（連結到提醒清單）</li>
+    <li><strong>本月取消率</strong>（≥20% 會變紅警示）</li>
+    <li><strong>師傅本月案量堆疊直條圖</strong>（綠 = 已完成、黃 = 待完成，可點跳月曆）</li>
+    <li><strong>歷史消費前 30 名客戶</strong>（最重要的常客名單）</li>
+  </ul>
+
+  <!-- Dashboard mock screen -->
+  <svg class="mock-screen" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="520" fill="#f4f4f5"/>
+    <!-- top nav -->
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#4f46e5" font-size="15" font-family="sans-serif" font-weight="700">淨新清潔工坊管理系統</text>
+    <text x="170" y="32" fill="#6366f1" font-size="13" font-family="sans-serif">儀表板</text>
+    <text x="260" y="32" fill="#71717a" font-size="13" font-family="sans-serif">訂單</text>
+    <text x="320" y="32" fill="#71717a" font-size="13" font-family="sans-serif">客戶</text>
+    <text x="380" y="32" fill="#71717a" font-size="13" font-family="sans-serif">月曆</text>
+    <text x="440" y="32" fill="#71717a" font-size="13" font-family="sans-serif">薪資</text>
+    <rect x="840" y="14" width="48" height="24" rx="6" fill="#f4f4f5"/>
+    <text x="864" y="30" text-anchor="middle" fill="#27272a" font-size="11" font-family="sans-serif">搜尋</text>
+
+    <!-- KPI cards row -->
+    <!-- card 1: 本月營業額 -->
+    <rect x="16" y="68" width="162" height="84" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="90" fill="#71717a" font-size="11" font-family="sans-serif">本月營業額</text>
+    <text x="30" y="118" fill="#18181b" font-size="20" font-family="sans-serif" font-weight="700">NT$ 72,400</text>
+    <text x="30" y="138" fill="#22c55e" font-size="11" font-family="sans-serif">▲ 14% 較上月</text>
+
+    <!-- card 2: 本月案件數 -->
+    <rect x="188" y="68" width="162" height="84" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="202" y="90" fill="#71717a" font-size="11" font-family="sans-serif">本月案件數</text>
+    <text x="202" y="118" fill="#18181b" font-size="20" font-family="sans-serif" font-weight="700">48 件</text>
+    <text x="202" y="138" fill="#22c55e" font-size="11" font-family="sans-serif">▲ 6 件 較上月</text>
+
+    <!-- card 3: 今日待完成 -->
+    <rect x="360" y="68" width="162" height="84" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="374" y="90" fill="#71717a" font-size="11" font-family="sans-serif">今日待完成</text>
+    <text x="374" y="118" fill="#f59e0b" font-size="20" font-family="sans-serif" font-weight="700">6 筆</text>
+    <text x="374" y="138" fill="#4f46e5" font-size="11" font-family="sans-serif">→ 查看月曆</text>
+
+    <!-- card 4: 即將到期 -->
+    <rect x="532" y="68" width="162" height="84" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="546" y="90" fill="#71717a" font-size="11" font-family="sans-serif">即將到期客戶</text>
+    <text x="546" y="118" fill="#ef4444" font-size="20" font-family="sans-serif" font-weight="700">9 位</text>
+    <text x="546" y="138" fill="#4f46e5" font-size="11" font-family="sans-serif">→ 查看名單</text>
+
+    <!-- card 5: 取消率 -->
+    <rect x="704" y="68" width="180" height="84" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="718" y="90" fill="#71717a" font-size="11" font-family="sans-serif">本月取消率</text>
+    <text x="718" y="118" fill="#22c55e" font-size="20" font-family="sans-serif" font-weight="700">4.2 %</text>
+    <text x="718" y="138" fill="#71717a" font-size="11" font-family="sans-serif">正常（&lt;20%）</text>
+
+    <!-- Bottom row: bar chart left, VIP list right -->
+    <!-- Bar chart card -->
+    <rect x="16" y="168" width="540" height="240" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="194" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">師傅本月案量（用於分派新案）</text>
+
+    <!-- legend -->
+    <rect x="30" y="204" width="10" height="10" rx="2" fill="#22c55e"/>
+    <text x="44" y="213" fill="#71717a" font-size="11" font-family="sans-serif">已完成</text>
+    <rect x="105" y="204" width="10" height="10" rx="2" fill="#fbbf24"/>
+    <text x="119" y="213" fill="#71717a" font-size="11" font-family="sans-serif">待完成</text>
+
+    <!-- bar chart baseline -->
+    <line x1="30" y1="368" x2="540" y2="368" stroke="#e4e4e7" stroke-width="1"/>
+
+    <!-- Bar 1: 阿志 done=18 todo=5 (max=24) -->
+    <text x="95" y="236" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif" font-weight="600">23</text>
+    <!-- todo bar amber -->
+    <rect x="68" y="243" width="54" height="31" rx="0" fill="#fbbf24"/>
+    <text x="95" y="263" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif">5</text>
+    <!-- done bar green -->
+    <rect x="68" y="274" width="54" height="94" rx="0" fill="#22c55e"/>
+    <text x="95" y="330" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif">18</text>
+
+    <!-- Bar 2: 小明 done=22 todo=2 -->
+    <text x="203" y="229" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif" font-weight="600">24</text>
+    <!-- todo bar -->
+    <rect x="176" y="236" width="54" height="13" rx="0" fill="#fbbf24"/>
+    <!-- done bar -->
+    <rect x="176" y="249" width="54" height="119" rx="0" fill="#22c55e"/>
+    <text x="203" y="320" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif">22</text>
+
+    <!-- Bar 3: 大哥 done=14 todo=8 -->
+    <text x="311" y="236" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif" font-weight="600">22</text>
+    <!-- todo bar -->
+    <rect x="284" y="243" width="54" height="50" rx="0" fill="#fbbf24"/>
+    <text x="311" y="273" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif">8</text>
+    <!-- done bar -->
+    <rect x="284" y="293" width="54" height="75" rx="0" fill="#22c55e"/>
+    <text x="311" y="337" text-anchor="middle" fill="white" font-size="10" font-family="sans-serif">14</text>
+
+    <!-- Bar 4: 小花 done=9 todo=3 -->
+    <text x="419" y="295" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif" font-weight="600">12</text>
+    <!-- todo bar -->
+    <rect x="392" y="302" width="54" height="19" rx="0" fill="#fbbf24"/>
+    <!-- done bar -->
+    <rect x="392" y="321" width="54" height="47" rx="0" fill="#22c55e"/>
+
+    <!-- names axis -->
+    <text x="95" y="386" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif" font-weight="500">阿志</text>
+    <text x="203" y="386" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif" font-weight="500">小明</text>
+    <text x="311" y="386" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif" font-weight="500">大哥</text>
+    <text x="419" y="386" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif" font-weight="500">小花</text>
+
+    <!-- VIP list card -->
+    <rect x="572" y="168" width="312" height="240" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="586" y="194" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">歷史消費前 30 名客戶</text>
+    <!-- rows -->
+    <text x="586" y="220" fill="#27272a" font-size="12" font-family="sans-serif">1. 王大明</text>
+    <text x="820" y="220" text-anchor="end" fill="#4f46e5" font-size="12" font-family="sans-serif">NT$ 28,500</text>
+    <line x1="586" y1="228" x2="868" y2="228" stroke="#f4f4f5" stroke-width="1"/>
+    <text x="586" y="246" fill="#27272a" font-size="12" font-family="sans-serif">2. 陳美玲</text>
+    <text x="820" y="246" text-anchor="end" fill="#4f46e5" font-size="12" font-family="sans-serif">NT$ 24,200</text>
+    <line x1="586" y1="254" x2="868" y2="254" stroke="#f4f4f5" stroke-width="1"/>
+    <text x="586" y="272" fill="#27272a" font-size="12" font-family="sans-serif">3. 林志偉</text>
+    <text x="820" y="272" text-anchor="end" fill="#4f46e5" font-size="12" font-family="sans-serif">NT$ 19,800</text>
+    <line x1="586" y1="280" x2="868" y2="280" stroke="#f4f4f5" stroke-width="1"/>
+    <text x="586" y="298" fill="#27272a" font-size="12" font-family="sans-serif">4. 黃雅婷</text>
+    <text x="820" y="298" text-anchor="end" fill="#4f46e5" font-size="12" font-family="sans-serif">NT$ 16,400</text>
+    <line x1="586" y1="306" x2="868" y2="306" stroke="#f4f4f5" stroke-width="1"/>
+    <text x="586" y="324" fill="#27272a" font-size="12" font-family="sans-serif">5. 張家豪</text>
+    <text x="820" y="324" text-anchor="end" fill="#4f46e5" font-size="12" font-family="sans-serif">NT$ 14,600</text>
+    <text x="586" y="390" fill="#a1a1aa" font-size="11" font-family="sans-serif">... 共 30 位 VIP 客戶</text>
+
+    <!-- section label -->
+    <text x="450" y="490" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">儀表板示意圖</text>
+  </svg>
+
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>每天早上開電腦第一眼，您就知道「今天還有 6 筆要做、本月已收 NT$ 72,400、比上月多 14%、小明 24 件最多、小花 12 件最少」，要不要加派人手、要不要催沒回的客戶一目了然。以前因為沒有完整的管理系統，這些數字都只能靠印象，很多細節根本無法精確掌握。</p>
+  </div>
+</section>
+
+<!-- ====== Global Search ====== -->
+<section class="card" id="search">
+  <h2>3. 快速搜尋任何資料 <span class="badge">Ctrl + K</span></h2>
+  <p>系統任何頁面，按 <span class="kbd">Ctrl</span> + <span class="kbd">K</span>（或左上點搜尋圖示）就跳出搜尋框，打：</p>
+  <ul>
+    <li>客戶姓名、電話、編號</li>
+    <li>地址、縣市鄉鎮</li>
+    <li>訂單編號、訂單備註</li>
+  </ul>
+  <p>都能立即找到並跳到對應頁面。</p>
+
+  <!-- Search modal mock -->
+  <svg class="mock-screen" viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="340" fill="#18181b" opacity="0.4"/>
+    <!-- wider modal: max-w-xl = 576px, centered -->
+    <rect x="150" y="40" width="600" height="260" rx="14" fill="white"/>
+    <!-- search input row -->
+    <rect x="150" y="40" width="600" height="56" rx="14" fill="#f4f4f5"/>
+    <rect x="150" y="80" width="600" height="16" fill="white"/>
+    <rect x="150" y="82" width="600" height="1" fill="#e4e4e7"/>
+    <text x="178" y="74" fill="#9ca3af" font-size="13" font-family="sans-serif">&#128269;  王大明</text>
+    <rect x="696" y="52" width="40" height="24" rx="5" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="716" y="68" text-anchor="middle" fill="#71717a" font-size="11" font-family="sans-serif">ESC</text>
+    <!-- section: 客戶 -->
+    <text x="166" y="108" fill="#a1a1aa" font-size="10" font-family="sans-serif" font-weight="600">顧客</text>
+    <!-- customer row -->
+    <rect x="150" y="114" width="600" height="48" rx="0" fill="#fafafa"/>
+    <rect x="166" y="125" width="28" height="28" rx="14" fill="#ede9fe"/>
+    <text x="180" y="143" text-anchor="middle" fill="#5b21b6" font-size="12" font-family="sans-serif" font-weight="700">王</text>
+    <text x="206" y="137" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">王大明</text>
+    <text x="206" y="153" fill="#71717a" font-size="11" font-family="sans-serif">0912-345-678 · C-0042</text>
+    <!-- section: 訂單 -->
+    <rect x="150" y="162" width="600" height="1" fill="#e4e4e7"/>
+    <text x="166" y="180" fill="#a1a1aa" font-size="10" font-family="sans-serif" font-weight="600">訂單</text>
+    <!-- order row 1 -->
+    <rect x="150" y="186" width="600" height="44" rx="0" fill="white"/>
+    <rect x="166" y="197" width="28" height="28" rx="14" fill="#f4f4f5"/>
+    <text x="180" y="215" text-anchor="middle" fill="#71717a" font-size="10" font-family="sans-serif">&#128203;</text>
+    <text x="206" y="209" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">#ORD-0481</text>
+    <text x="206" y="224" fill="#71717a" font-size="11" font-family="sans-serif">王大明 · 2025-04-15 · </text>
+    <text x="340" y="224" fill="#16a34a" font-size="11" font-family="sans-serif" font-weight="500">已完成</text>
+    <!-- order row 2 -->
+    <rect x="150" y="230" width="600" height="44" rx="0" fill="#fafafa"/>
+    <rect x="166" y="241" width="28" height="28" rx="14" fill="#f4f4f5"/>
+    <text x="180" y="259" text-anchor="middle" fill="#71717a" font-size="10" font-family="sans-serif">&#128203;</text>
+    <text x="206" y="253" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">#ORD-0476</text>
+    <text x="206" y="268" fill="#71717a" font-size="11" font-family="sans-serif">王大明 · 2025-01-08 · </text>
+    <text x="340" y="268" fill="#16a34a" font-size="11" font-family="sans-serif" font-weight="500">已完成</text>
+
+    <text x="450" y="320" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">全域搜尋 Ctrl+K 示意圖（max-w-xl，狀態欄完整顯示）</text>
+  </svg>
+
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>客戶來店：「我上次清的洗衣機是幾月幾號？」<br>
+    您按 <span class="kbd">Ctrl+K</span>，打對方電話「0912」，1 秒內看到該客戶 + 最近訂單，點進去看完工日期。整個流程不到 10 秒，客戶不需要久等。以前要翻一疊紙本記錄，找起來又慢又費力。</p>
+  </div>
+</section>
+
+<!-- ====== Customers list ====== -->
+<section class="card" id="customers">
+  <h2>4. 客戶管理</h2>
+  <p>客戶清單頁面，能：</p>
+  <ul>
+    <li>按姓名/電話/編號/備註模糊搜尋</li>
+    <li>按縣市、鄉鎮篩選</li>
+    <li>看頂部摘要：總客戶數、本月活躍、即將到期</li>
+    <li>看「🏆 介紹效益榜」前 5 名（誰介紹來的客戶最有貢獻）</li>
+    <li>匯出資料表</li>
+  </ul>
+
+  <!-- Customer list mock -->
+  <svg class="mock-screen" viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="380" fill="#f4f4f5"/>
+    <!-- page header -->
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">客戶管理</text>
+    <rect x="700" y="14" width="80" height="28" rx="6" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="740" y="32" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">匯出資料表</text>
+    <rect x="796" y="14" width="88" height="28" rx="6" fill="#4f46e5"/>
+    <text x="840" y="32" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif">+ 新增客戶</text>
+
+    <!-- KPI row -->
+    <rect x="16" y="68" width="200" height="60" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="88" fill="#71717a" font-size="11" font-family="sans-serif">總客戶數</text>
+    <text x="30" y="114" fill="#18181b" font-size="22" font-family="sans-serif" font-weight="700">284</text>
+
+    <rect x="228" y="68" width="200" height="60" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="242" y="88" fill="#71717a" font-size="11" font-family="sans-serif">本月活躍</text>
+    <text x="242" y="114" fill="#18181b" font-size="22" font-family="sans-serif" font-weight="700">38</text>
+
+    <rect x="440" y="68" width="200" height="60" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="454" y="88" fill="#71717a" font-size="11" font-family="sans-serif">即將到期</text>
+    <text x="454" y="114" fill="#ef4444" font-size="22" font-family="sans-serif" font-weight="700">9</text>
+
+    <!-- referral banner -->
+    <rect x="652" y="68" width="232" height="60" rx="8" fill="#fefce8" stroke="#fde68a" stroke-width="1"/>
+    <text x="666" y="88" fill="#92400e" font-size="11" font-family="sans-serif" font-weight="600">🏆 介紹效益榜 Top 1</text>
+    <text x="666" y="108" fill="#78350f" font-size="12" font-family="sans-serif">王大明 · 介紹 5 位 · 貢獻 NT$18,500</text>
+
+    <!-- search bar -->
+    <rect x="16" y="144" width="560" height="36" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="32" y="167" fill="#9ca3af" font-size="13" font-family="sans-serif">&#128269; 搜尋姓名、電話、編號…</text>
+
+    <!-- customer table -->
+    <rect x="16" y="192" width="868" height="36" rx="0" fill="#fafafa"/>
+    <text x="30" y="215" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">姓名</text>
+    <text x="200" y="215" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">電話</text>
+    <text x="360" y="215" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">地區</text>
+    <text x="500" y="215" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">上次服務</text>
+    <text x="650" y="215" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">累計消費</text>
+
+    <line x1="16" y1="228" x2="884" y2="228" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="251" fill="#27272a" font-size="12" font-family="sans-serif">王大明</text>
+    <text x="200" y="251" fill="#27272a" font-size="12" font-family="sans-serif">0912-345-678</text>
+    <text x="360" y="251" fill="#27272a" font-size="12" font-family="sans-serif">彰化縣員林市</text>
+    <text x="500" y="251" fill="#27272a" font-size="12" font-family="sans-serif">2025-04-15</text>
+    <text x="650" y="251" fill="#27272a" font-size="12" font-family="sans-serif">NT$ 28,500</text>
+
+    <line x1="16" y1="264" x2="884" y2="264" stroke="#f4f4f5" stroke-width="1"/>
+    <rect x="16" y="265" width="868" height="36" fill="#fcfcfc"/>
+    <text x="30" y="288" fill="#27272a" font-size="12" font-family="sans-serif">陳美玲</text>
+    <text x="200" y="288" fill="#27272a" font-size="12" font-family="sans-serif">0923-456-789</text>
+    <text x="360" y="288" fill="#27272a" font-size="12" font-family="sans-serif">彰化縣和美鎮</text>
+    <text x="500" y="288" fill="#27272a" font-size="12" font-family="sans-serif">2025-05-02</text>
+    <text x="650" y="288" fill="#27272a" font-size="12" font-family="sans-serif">NT$ 24,200</text>
+
+    <line x1="16" y1="302" x2="884" y2="302" stroke="#f4f4f5" stroke-width="1"/>
+    <text x="30" y="325" fill="#27272a" font-size="12" font-family="sans-serif">林志偉</text>
+    <text x="200" y="325" fill="#27272a" font-size="12" font-family="sans-serif">0934-567-890</text>
+    <text x="360" y="325" fill="#27272a" font-size="12" font-family="sans-serif">南投縣草屯鎮</text>
+    <text x="500" y="325" fill="#27272a" font-size="12" font-family="sans-serif">2025-03-28</text>
+    <text x="650" y="325" fill="#27272a" font-size="12" font-family="sans-serif">NT$ 19,800</text>
+    <text x="450" y="365" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">客戶管理示意圖</text>
+  </svg>
+
+  <div class="scenario">
+    <strong>實例 — 介紹效益榜：</strong>
+    <p>王大明介紹了 3 個朋友來，這 3 個人總共消費 NT$ 12,500。系統自動算出來放在介紹榜，您一眼看到「王大明貢獻最高」，下次他來時可以送個小禮表達感謝，創造更多介紹。</p>
+  </div>
+</section>
+
+<!-- ====== Customer detail ====== -->
+<section class="card" id="customer-detail">
+  <h2>5. 客戶詳細</h2>
+  <p>點任一客戶進去，看到：</p>
+  <ul>
+    <li>姓名、編號、客戶來源、可直接點擊撥打的電話</li>
+    <li>「由 XXX 介紹 →」標籤（如果有介紹人）</li>
+    <li>4 個指標卡：累計消費、距上次服務、平均週期、臨時取消次數（≥3 次變紅警示）</li>
+    <li>客戶備註 + 地址清單 + 機器清單（機器按地址分組）</li>
+    <li>「介紹過的客戶」列表（如果這位客戶介紹過別人）</li>
+    <li>完整服務歷史（每筆可展開看明細）</li>
+  </ul>
+
+  
+  <svg class="mock-screen" viewBox="0 0 900 440" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="440" fill="#f4f4f5"/>
+    <!-- top nav bar -->
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="16" y="32" fill="#4f46e5" font-size="13" font-family="sans-serif">← 返回</text>
+    <text x="70" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">王大明</text>
+    <text x="180" y="32" fill="#71717a" font-size="12" font-family="sans-serif">C-0042</text>
+    <!-- basic info row -->
+    <rect x="16" y="60" width="868" height="44" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="86" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">王大明</text>
+    <text x="120" y="86" fill="#71717a" font-size="12" font-family="sans-serif">C-0042</text>
+    <text x="220" y="86" fill="#4f46e5" font-size="12" font-family="sans-serif">0912-345-678</text>
+    <text x="380" y="86" fill="#71717a" font-size="12" font-family="sans-serif">來源：LINE 介紹</text>
+    <!-- referrer tag -->
+    <rect x="570" y="72" width="130" height="20" rx="10" fill="#ede9fe"/>
+    <text x="635" y="86" text-anchor="middle" fill="#5b21b6" font-size="11" font-family="sans-serif">由 陳美玲 介紹 →</text>
+    <!-- 4 KPI cards -->
+    <rect x="16" y="114" width="200" height="68" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="134" fill="#71717a" font-size="11" font-family="sans-serif">累計消費</text>
+    <text x="30" y="160" fill="#18181b" font-size="18" font-family="sans-serif" font-weight="700">NT$ 28,500</text>
+    <rect x="226" y="114" width="200" height="68" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="240" y="134" fill="#71717a" font-size="11" font-family="sans-serif">距上次服務</text>
+    <text x="240" y="160" fill="#f59e0b" font-size="18" font-family="sans-serif" font-weight="700">37 天</text>
+    <rect x="436" y="114" width="200" height="68" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="450" y="134" fill="#71717a" font-size="11" font-family="sans-serif">平均週期</text>
+    <text x="450" y="160" fill="#18181b" font-size="18" font-family="sans-serif" font-weight="700">8.2 個月</text>
+    <rect x="646" y="114" width="238" height="68" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="660" y="134" fill="#71717a" font-size="11" font-family="sans-serif">臨時取消</text>
+    <text x="660" y="160" fill="#22c55e" font-size="18" font-family="sans-serif" font-weight="700">0 次</text>
+    <!-- machine list by address -->
+    <rect x="16" y="192" width="868" height="148" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="214" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">機器清單（按地址分組）</text>
+    <!-- address group 1 -->
+    <text x="30" y="238" fill="#71717a" font-size="11" font-family="sans-serif">員林區中山路（家）</text>
+    <rect x="30" y="244" width="240" height="24" rx="6" fill="#f4f4f5"/>
+    <text x="42" y="260" fill="#27272a" font-size="12" font-family="sans-serif">LG 直立洗衣機 12kg</text>
+    <!-- address group 2 -->
+    <text x="310" y="238" fill="#71717a" font-size="11" font-family="sans-serif">員林區工業路（公司）</text>
+    <rect x="310" y="244" width="240" height="24" rx="6" fill="#f4f4f5"/>
+    <text x="322" y="260" fill="#27272a" font-size="12" font-family="sans-serif">Daikin 冷氣 1.2 噸</text>
+    <!-- address group 3 -->
+    <text x="590" y="238" fill="#71717a" font-size="11" font-family="sans-serif">田尾鄉中央路（媽媽家）</text>
+    <rect x="590" y="244" width="260" height="24" rx="6" fill="#f4f4f5"/>
+    <text x="602" y="260" fill="#27272a" font-size="12" font-family="sans-serif">國際牌 直立洗衣機 8kg</text>
+    <!-- service history -->
+    <text x="30" y="296" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">服務歷史</text>
+    <line x1="30" y1="306" x2="870" y2="306" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="324" fill="#27272a" font-size="12" font-family="sans-serif">2025-04-15</text>
+    <text x="160" y="324" fill="#27272a" font-size="12" font-family="sans-serif">直立洗衣機清洗 12kg</text>
+    <text x="600" y="324" fill="#27272a" font-size="12" font-family="sans-serif" font-weight="600">NT$ 1,800</text>
+    <rect x="700" y="312" width="52" height="20" rx="10" fill="#d1fae5"/>
+    <text x="726" y="326" text-anchor="middle" fill="#065f46" font-size="10" font-family="sans-serif">已完成</text>
+    <line x1="30" y1="334" x2="870" y2="334" stroke="#f4f4f5" stroke-width="1"/>
+    <text x="30" y="352" fill="#27272a" font-size="12" font-family="sans-serif">2025-01-08</text>
+    <text x="160" y="352" fill="#27272a" font-size="12" font-family="sans-serif">冷氣清洗 1.2 噸</text>
+    <text x="600" y="352" fill="#27272a" font-size="12" font-family="sans-serif" font-weight="600">NT$ 2,200</text>
+    <rect x="700" y="340" width="52" height="20" rx="10" fill="#d1fae5"/>
+    <text x="726" y="354" text-anchor="middle" fill="#065f46" font-size="10" font-family="sans-serif">已完成</text>
+    <!-- label -->
+    <text x="450" y="425" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">客戶詳細示意圖</text>
+  </svg>
+
+<div class="scenario">
+    <strong>實例 — 機器分組：</strong>
+    <p>王大明自家 1 台 LG 洗衣機、公司 1 台 Daikin 冷氣、媽媽家 1 台國際洗衣機。系統按地址分組顯示，您不用再問「他公司那台是什麼牌子？」<br>
+    建新訂單時選了「國際洗衣機（媽媽家）」，地址欄會自動跳成媽媽家。</p>
+  </div>
+</section>
+
+<section class="card">
+  <h3>5.1 新增/編輯客戶</h3>
+  <p>表單包含：</p>
+  <ul>
+    <li>基本資料（姓名、電話、編號、來源、加入日期、介紹人、備註）</li>
+    <li>「介紹人」直接打字就能搜尋選擇，不用從頭滾到底</li>
+    <li>可加多個地址（每個可標籤如「家」「公司」「媽媽家」）</li>
+    <li>可加多台機器，當客戶有 2 個以上地址時，每台機器可選歸屬地址</li>
+    <li>地址新增當下自動偵測同址重複（如果有人已在同地址登記）</li>
+  </ul>
+</section>
+
+<!-- ====== Orders list ====== -->
+<section class="card" id="orders">
+  <h2>6. 訂單管理</h2>
+  <p>所有訂單一覽，支援多重篩選：</p>
+  <ul>
+    <li><strong>狀態分頁</strong>：全部 / 待派工 / 已排案 / 已完成 / 已取消</li>
+    <li><strong>關鍵字搜尋</strong>：訂單編號、備註</li>
+    <li><strong>收款方式</strong>：未收、現金、匯款、刷卡、LINE Pay</li>
+    <li><strong>回繳狀態</strong>：待回繳、已回繳、免回繳</li>
+    <li><strong>師傅</strong>：依清洗師傅篩選</li>
+  </ul>
+  <p>頂部 3 個摘要卡：篩選結果筆數、總金額、已完成金額/件數</p>
+
+  <!-- Orders list mock -->
+  <svg class="mock-screen" viewBox="0 0 900 360" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="360" fill="#f4f4f5"/>
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">訂單管理</text>
+    <rect x="796" y="14" width="88" height="28" rx="6" fill="#4f46e5"/>
+    <text x="840" y="32" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif">+ 新增訂單</text>
+
+    <!-- Status tabs -->
+    <rect x="16" y="60" width="868" height="40" rx="0" fill="white"/>
+    <rect x="16" y="60" width="70" height="40" rx="0" fill="white"/>
+    <text x="51" y="85" text-anchor="middle" fill="#4f46e5" font-size="13" font-family="sans-serif" font-weight="600">全部</text>
+    <line x1="16" y1="100" x2="86" y2="100" stroke="#4f46e5" stroke-width="2"/>
+    <text x="130" y="85" text-anchor="middle" fill="#71717a" font-size="13" font-family="sans-serif">待派工</text>
+    <text x="205" y="85" text-anchor="middle" fill="#71717a" font-size="13" font-family="sans-serif">已排案</text>
+    <text x="280" y="85" text-anchor="middle" fill="#71717a" font-size="13" font-family="sans-serif">已完成</text>
+    <text x="355" y="85" text-anchor="middle" fill="#71717a" font-size="13" font-family="sans-serif">已取消</text>
+
+    <!-- Filters row -->
+    <rect x="16" y="106" width="340" height="32" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="32" y="127" fill="#9ca3af" font-size="12" font-family="sans-serif">&#128269; 搜尋訂單編號、備註…</text>
+    <rect x="368" y="106" width="120" height="32" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="428" y="127" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">收款方式 ▾</text>
+    <rect x="500" y="106" width="120" height="32" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="560" y="127" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">回繳狀態 ▾</text>
+    <rect x="632" y="106" width="120" height="32" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="692" y="127" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">師傅 ▾</text>
+
+    <!-- KPI mini cards -->
+    <rect x="16" y="146" width="170" height="50" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="164" fill="#71717a" font-size="10" font-family="sans-serif">本頁筆數</text>
+    <text x="30" y="184" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">48 筆</text>
+    <rect x="198" y="146" width="170" height="50" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="212" y="164" fill="#71717a" font-size="10" font-family="sans-serif">總金額</text>
+    <text x="212" y="184" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">NT$ 72,400</text>
+    <rect x="380" y="146" width="200" height="50" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="394" y="164" fill="#71717a" font-size="10" font-family="sans-serif">已完成</text>
+    <text x="394" y="184" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">NT$ 68,200 / 44 件</text>
+
+    <!-- order rows -->
+    <rect x="16" y="204" width="868" height="32" rx="0" fill="#fafafa"/>
+    <text x="30" y="224" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">編號</text>
+    <text x="130" y="224" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">客戶</text>
+    <text x="260" y="224" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">預約日期</text>
+    <text x="380" y="224" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">師傅</text>
+    <text x="480" y="224" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">金額</text>
+    <text x="580" y="224" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">狀態</text>
+    <text x="680" y="224" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">回繳</text>
+
+    <line x1="16" y1="236" x2="884" y2="236" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="256" fill="#27272a" font-size="11" font-family="sans-serif">#0481</text>
+    <text x="130" y="256" fill="#27272a" font-size="11" font-family="sans-serif">王大明</text>
+    <text x="260" y="256" fill="#27272a" font-size="11" font-family="sans-serif">2025-05-20</text>
+    <text x="380" y="256" fill="#27272a" font-size="11" font-family="sans-serif">小明</text>
+    <text x="480" y="256" fill="#27272a" font-size="11" font-family="sans-serif">NT$ 1,800</text>
+    <rect x="572" y="244" width="52" height="20" rx="10" fill="#d1fae5"/>
+    <text x="598" y="258" text-anchor="middle" fill="#065f46" font-size="10" font-family="sans-serif">已完成</text>
+    <rect x="672" y="244" width="52" height="20" rx="10" fill="#fef3c7"/>
+    <text x="698" y="258" text-anchor="middle" fill="#92400e" font-size="10" font-family="sans-serif">待回繳</text>
+
+    <line x1="16" y1="268" x2="884" y2="268" stroke="#f4f4f5" stroke-width="1"/>
+    <rect x="16" y="269" width="868" height="32" fill="#fcfcfc"/>
+    <text x="30" y="289" fill="#27272a" font-size="11" font-family="sans-serif">#0480</text>
+    <text x="130" y="289" fill="#27272a" font-size="11" font-family="sans-serif">陳美玲</text>
+    <text x="260" y="289" fill="#27272a" font-size="11" font-family="sans-serif">2025-05-20</text>
+    <text x="380" y="289" fill="#27272a" font-size="11" font-family="sans-serif">阿志</text>
+    <text x="480" y="289" fill="#27272a" font-size="11" font-family="sans-serif">NT$ 2,200</text>
+    <rect x="572" y="277" width="52" height="20" rx="10" fill="#dbeafe"/>
+    <text x="598" y="291" text-anchor="middle" fill="#1e40af" font-size="10" font-family="sans-serif">已排案</text>
+    <rect x="672" y="277" width="52" height="20" rx="10" fill="#f4f4f5"/>
+    <text x="698" y="291" text-anchor="middle" fill="#71717a" font-size="10" font-family="sans-serif">免回繳</text>
+
+    <text x="450" y="345" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">訂單管理示意圖</text>
+  </svg>
+</section>
+
+<section class="card" id="orders-filter">
+  <h3>6.1 依師傅篩選 — 查訂單明細 vs 月底算薪資</h3>
+  <p>當您選擇某位師傅時，上方出現提示橫條，可直接跳到該師傅本月薪資頁。</p>
+  
+  <svg class="mock-screen" viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="300" fill="#f4f4f5"/>
+    <!-- nav -->
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">訂單管理</text>
+    <!-- filters row -->
+    <rect x="16" y="60" width="200" height="32" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="32" y="80" fill="#9ca3af" font-size="12" font-family="sans-serif">狀態 ▾</text>
+    <rect x="228" y="60" width="160" height="32" rx="8" fill="#4f46e5"/>
+    <text x="308" y="80" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif" font-weight="600">師傅：小明 ▾</text>
+    <!-- blue banner -->
+    <rect x="16" y="100" width="868" height="36" rx="6" fill="#dbeafe" stroke="#93c5fd" stroke-width="1"/>
+    <text x="30" y="122" fill="#1e40af" font-size="12" font-family="sans-serif">目前篩選師傅：小明　本月 24 筆　→ 查看小明本月薪資</text>
+    <!-- order rows header -->
+    <rect x="16" y="144" width="868" height="28" rx="0" fill="#fafafa"/>
+    <text x="30" y="162" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">編號</text>
+    <text x="130" y="162" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">客戶</text>
+    <text x="270" y="162" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">日期</text>
+    <text x="420" y="162" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">金額</text>
+    <text x="560" y="162" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">狀態</text>
+    <line x1="16" y1="172" x2="884" y2="172" stroke="#e4e4e7" stroke-width="1"/>
+    <!-- row 1 -->
+    <text x="30" y="191" fill="#27272a" font-size="11" font-family="sans-serif">#0481</text>
+    <text x="130" y="191" fill="#27272a" font-size="11" font-family="sans-serif">王大明</text>
+    <text x="270" y="191" fill="#27272a" font-size="11" font-family="sans-serif">2025-05-20</text>
+    <text x="420" y="191" fill="#27272a" font-size="11" font-family="sans-serif">NT$ 1,800</text>
+    <rect x="552" y="179" width="52" height="20" rx="10" fill="#d1fae5"/>
+    <text x="578" y="193" text-anchor="middle" fill="#065f46" font-size="10" font-family="sans-serif">已完成</text>
+    <line x1="16" y1="202" x2="884" y2="202" stroke="#f4f4f5" stroke-width="1"/>
+    <!-- row 2 -->
+    <rect x="16" y="203" width="868" height="28" fill="#fcfcfc"/>
+    <text x="30" y="221" fill="#27272a" font-size="11" font-family="sans-serif">#0479</text>
+    <text x="130" y="221" fill="#27272a" font-size="11" font-family="sans-serif">黃雅婷</text>
+    <text x="270" y="221" fill="#27272a" font-size="11" font-family="sans-serif">2025-05-18</text>
+    <text x="420" y="221" fill="#27272a" font-size="11" font-family="sans-serif">NT$ 2,200</text>
+    <rect x="552" y="209" width="52" height="20" rx="10" fill="#d1fae5"/>
+    <text x="578" y="223" text-anchor="middle" fill="#065f46" font-size="10" font-family="sans-serif">已完成</text>
+    <line x1="16" y1="232" x2="884" y2="232" stroke="#f4f4f5" stroke-width="1"/>
+    <!-- row 3 -->
+    <text x="30" y="251" fill="#27272a" font-size="11" font-family="sans-serif">#0477</text>
+    <text x="130" y="251" fill="#27272a" font-size="11" font-family="sans-serif">林志偉</text>
+    <text x="270" y="251" fill="#27272a" font-size="11" font-family="sans-serif">2025-05-15</text>
+    <text x="420" y="251" fill="#27272a" font-size="11" font-family="sans-serif">NT$ 1,400</text>
+    <rect x="552" y="239" width="52" height="20" rx="10" fill="#dbeafe"/>
+    <text x="578" y="253" text-anchor="middle" fill="#1e40af" font-size="10" font-family="sans-serif">已排案</text>
+    <text x="450" y="285" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">依師傅篩選訂單示意圖</text>
+  </svg>
+
+<p><strong>兩頁分工：</strong></p>
+  <table>
+    <tr>
+      <th>頁面</th>
+      <th>看什麼</th>
+      <th>什麼時候用</th>
+    </tr>
+    <tr>
+      <td><strong>訂單管理 + 師傅篩選</strong></td>
+      <td>該師傅每一筆訂單（客戶、狀態、金額）</td>
+      <td>找特定訂單、改派、檢查還沒做的</td>
+    </tr>
+    <tr>
+      <td><strong>師傅薪資</strong></td>
+      <td>該師傅本月總計、加減項、積分、待回繳</td>
+      <td>月底結算薪水、看業績</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ====== Order detail ====== -->
+<section class="card" id="order-detail">
+  <h2>7. 訂單詳細（含右側客戶資料）</h2>
+  <p>點任一訂單進去，看到：</p>
+  <ul>
+    <li><strong>左 2/3</strong>：訂單編號、狀態標籤、服務明細、加減項、總計、備註、師傅現場備註、促銷積分</li>
+    <li><strong>右 1/3</strong>（電腦寬螢幕顯示時）<strong>右側客戶資料欄</strong>：客戶基本資訊、累計消費、平均週期、機器清單、最近 5 筆訂單（不含本筆）</li>
+  </ul>
+  <p>右側客戶資料欄在捲動時固定不動，您看訂單細節時隨時能對照客戶背景。</p>
+
+  
+  <svg class="mock-screen" viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="480" fill="#f4f4f5"/>
+    <!-- nav -->
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="16" y="32" fill="#4f46e5" font-size="13" font-family="sans-serif">← 返回</text>
+    <text x="70" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">#ORD-0481 訂單詳細</text>
+    <!-- left 60% order detail -->
+    <rect x="16" y="60" width="530" height="400" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <!-- order header -->
+    <rect x="30" y="74" width="52" height="22" rx="11" fill="#d1fae5"/>
+    <text x="56" y="89" text-anchor="middle" fill="#065f46" font-size="11" font-family="sans-serif" font-weight="600">已完成</text>
+    <text x="100" y="88" fill="#71717a" font-size="12" font-family="sans-serif">2025-05-20　客戶：王大明</text>
+    <!-- service detail -->
+    <text x="30" y="118" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">服務明細</text>
+    <rect x="30" y="126" width="500" height="1" fill="#e4e4e7"/>
+    <text x="30" y="148" fill="#27272a" font-size="12" font-family="sans-serif">直立洗衣機 12kg</text>
+    <text x="430" y="148" text-anchor="end" fill="#27272a" font-size="12" font-family="sans-serif">NT$ 1,800</text>
+    <!-- adjustments -->
+    <text x="30" y="172" fill="#71717a" font-size="12" font-family="sans-serif">加大費</text>
+    <text x="430" y="172" text-anchor="end" fill="#22c55e" font-size="12" font-family="sans-serif">+ NT$ 200</text>
+    <rect x="30" y="184" width="500" height="1" fill="#e4e4e7"/>
+    <!-- total -->
+    <text x="30" y="206" fill="#18181b" font-size="14" font-family="sans-serif" font-weight="700">合計</text>
+    <text x="430" y="206" text-anchor="end" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">NT$ 2,000</text>
+    <!-- payment -->
+    <text x="30" y="234" fill="#71717a" font-size="12" font-family="sans-serif">收款方式</text>
+    <rect x="120" y="220" width="52" height="22" rx="11" fill="#fef3c7"/>
+    <text x="146" y="235" text-anchor="middle" fill="#92400e" font-size="11" font-family="sans-serif">現金</text>
+    <!-- tech note -->
+    <text x="30" y="268" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">師傅現場備註</text>
+    <rect x="30" y="276" width="500" height="50" rx="6" fill="#fef3c7" stroke="#fde68a" stroke-width="1"/>
+    <text x="42" y="296" fill="#78350f" font-size="11" font-family="sans-serif">轉軸有些異常，建議下次提早保養</text>
+    <!-- right 38% customer sidebar -->
+    <rect x="558" y="60" width="326" height="400" rx="10" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="572" y="84" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">王大明 客戶資料</text>
+    <line x1="572" y1="92" x2="870" y2="92" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="572" y="114" fill="#71717a" font-size="11" font-family="sans-serif">累計消費</text>
+    <text x="572" y="132" fill="#18181b" font-size="14" font-family="sans-serif" font-weight="700">NT$ 28,500</text>
+    <text x="572" y="154" fill="#71717a" font-size="11" font-family="sans-serif">平均週期</text>
+    <text x="572" y="172" fill="#18181b" font-size="14" font-family="sans-serif" font-weight="700">8.2 個月</text>
+    <text x="572" y="194" fill="#71717a" font-size="11" font-family="sans-serif">機器</text>
+    <rect x="572" y="200" width="290" height="24" rx="6" fill="#ede9fe"/>
+    <text x="584" y="216" fill="#5b21b6" font-size="11" font-family="sans-serif">LG 直立洗衣機 12kg</text>
+    <text x="572" y="244" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">最近訂單</text>
+    <line x1="572" y1="252" x2="870" y2="252" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="572" y="270" fill="#27272a" font-size="11" font-family="sans-serif">2025-04-15</text>
+    <text x="800" y="270" text-anchor="end" fill="#4f46e5" font-size="11" font-family="sans-serif">NT$ 1,800</text>
+    <text x="572" y="290" fill="#27272a" font-size="11" font-family="sans-serif">2025-01-08</text>
+    <text x="800" y="290" text-anchor="end" fill="#4f46e5" font-size="11" font-family="sans-serif">NT$ 2,200</text>
+    <text x="572" y="310" fill="#27272a" font-size="11" font-family="sans-serif">2024-08-22</text>
+    <text x="800" y="310" text-anchor="end" fill="#4f46e5" font-size="11" font-family="sans-serif">NT$ 1,600</text>
+    <text x="450" y="466" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">訂單詳細（含右側客戶資料欄）示意圖</text>
+  </svg>
+
+<div class="scenario">
+    <strong>實例：</strong>
+    <p>師傅完工回報這位客戶機器轉軸異常，您看完場服務備註後，馬上能看到右側欄位「這位客戶平均週期 8 個月、共做 5 次」，當下評估是否要主動建議客戶提早預約下次清洗。</p>
+  </div>
+</section>
+
+<!-- ====== Order new ====== -->
+<section class="card" id="order-new">
+  <h2>8. 新增訂單</h2>
+  <p><strong>左右雙欄版面</strong>（大螢幕 ≥ 1024px）：</p>
+  <ul>
+    <li><strong>左欄</strong>：客戶 / 排程（客戶、地址、預約時間、預計時長、狀態、收款、來源、備註）</li>
+    <li><strong>右欄</strong>：服務項目 → 加價 / 折扣 → 應收總額（由上而下接續）</li>
+  </ul>
+  <p>平板或手機（&lt; 1024px）會自動回到單欄由上而下，不會擠成一團。這樣排版減少大片空白，老闆娘填單時眼睛不用上下狂滑。</p>
+
+  <p>建單欄位：</p>
+  <ul>
+    <li>選客戶（會自動帶出他的地址、機器清單）</li>
+    <li>預約開始時間（日期、小時、分鐘分開選，使用 24 小時制，清楚不易出錯）</li>
+    <li><strong>預計時長：可自訂分鐘數</strong>（例如 45、80、100 等，以 5 分鐘為一格），旁邊保留 60 / 90 / 120 / 180 快選按鈕</li>
+    <li>多項服務明細，每項可：選機器、選師傅、改單價、加代號、加備註</li>
+    <li>多項加減項（加大、折扣、其他自訂）</li>
+    <li>選了機器若機器有歸屬地址，自動帶地址；不一致時跳警示「⚠ 此機器在另一地址」可一鍵切換</li>
+  </ul>
+
+  
+  <svg class="mock-screen" viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="500" fill="#f4f4f5"/>
+    <!-- nav -->
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="16" y="32" fill="#4f46e5" font-size="13" font-family="sans-serif">← 返回</text>
+    <text x="70" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">新增訂單</text>
+    <!-- form card -->
+    <rect x="16" y="60" width="868" height="400" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <!-- customer field -->
+    <text x="30" y="88" fill="#71717a" font-size="11" font-family="sans-serif">客戶</text>
+    <rect x="30" y="96" width="300" height="34" rx="8" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="46" y="117" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">王大明</text>
+    <text x="130" y="117" fill="#71717a" font-size="11" font-family="sans-serif">C-0042</text>
+    <!-- datetime -->
+    <text x="30" y="150" fill="#71717a" font-size="11" font-family="sans-serif">預約時間</text>
+    <rect x="30" y="158" width="180" height="34" rx="8" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="46" y="179" fill="#18181b" font-size="12" font-family="sans-serif">2025-06-07　10:00</text>
+    <!-- duration -->
+    <text x="30" y="214" fill="#71717a" font-size="11" font-family="sans-serif">預計時長</text>
+    <rect x="30" y="222" width="60" height="28" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="60" y="240" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">60分</text>
+    <rect x="100" y="222" width="60" height="28" rx="6" fill="#4f46e5"/>
+    <text x="130" y="240" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif" font-weight="600">90分</text>
+    <rect x="170" y="222" width="60" height="28" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="200" y="240" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">120分</text>
+    <rect x="240" y="222" width="60" height="28" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="270" y="240" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">180分</text>
+    <!-- service detail -->
+    <text x="30" y="274" fill="#71717a" font-size="11" font-family="sans-serif">服務明細</text>
+    <rect x="30" y="282" width="840" height="40" rx="8" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="44" y="306" fill="#27272a" font-size="12" font-family="sans-serif">直立洗衣機 12kg</text>
+    <text x="280" y="306" fill="#71717a" font-size="12" font-family="sans-serif">師傅：小明</text>
+    <text x="700" y="306" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">NT$ 1,800</text>
+    <!-- adjustment -->
+    <text x="30" y="342" fill="#71717a" font-size="11" font-family="sans-serif">加減項</text>
+    <rect x="30" y="350" width="840" height="32" rx="6" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="44" y="370" fill="#27272a" font-size="12" font-family="sans-serif">加大費</text>
+    <text x="700" y="370" fill="#22c55e" font-size="12" font-family="sans-serif" font-weight="600">+ NT$ 200</text>
+    <!-- total line -->
+    <text x="700" y="406" fill="#18181b" font-size="14" font-family="sans-serif" font-weight="700">合計　NT$ 2,000</text>
+    <!-- address -->
+    <text x="30" y="428" fill="#71717a" font-size="11" font-family="sans-serif">服務地址</text>
+    <rect x="30" y="436" width="300" height="28" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="44" y="454" fill="#18181b" font-size="12" font-family="sans-serif">員林區中山路（家）</text>
+    <!-- buttons -->
+    <rect x="530" y="430" width="160" height="34" rx="8" fill="#4f46e5"/>
+    <text x="610" y="451" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="600">確認建立</text>
+    <rect x="704" y="430" width="160" height="34" rx="8" fill="white" stroke="#4f46e5" stroke-width="1"/>
+    <text x="784" y="451" text-anchor="middle" fill="#4f46e5" font-size="12" font-family="sans-serif">同客戶再建一筆</text>
+    <text x="450" y="486" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">新增訂單示意圖</text>
+  </svg>
+
+<div class="scenario">
+    <strong>實例 — 同客戶再建一筆：</strong>
+    <p>王大明來電：「禮拜六 9 點員林家、11 點公司、下午 2 點田尾媽媽家都要洗」<br>
+    您建好第一筆（員林家 9 點）後，訂單詳細頁頂部跳出「同客戶再建一筆」按鈕。按下去 → 新建訂單頁的客戶 + 日期已預填，您只要選下個地址、機器、調整時間。3 筆訂單從輸入 3 次客戶資料變成輸入 1 次 + 微調 2 次。</p>
+  </div>
+</section>
+
+<!-- ====== Calendar ====== -->
+<section class="card" id="calendar">
+  <h2>9. 月曆排案</h2>
+  <p>左側是「待派工」清單，右側是月曆。功能：</p>
+  <ul>
+    <li>拖曳待派工卡片到月曆某天 → 自動派給目前選擇的師傅、設為已排案</li>
+    <li>每位師傅獨立顏色，可切換頁籤看單一師傅的排程</li>
+    <li>每天日期格右下顯示當日營業總額</li>
+    <li>滑鼠移到月曆上的案件卡片，會彈出小視窗顯示完整資訊（訂單編號、客戶、地址、服務、應收金額）</li>
+    <li>案件卡片右上 × 按鈕：<strong>不直接刪除</strong>，跳出選單可選「↩ 回到待派工」或「✕ 取消訂單（要填原因）」</li>
+    <li>已排案的案件可以再拖曳到其他日期修改</li>
+  </ul>
+
+  <!-- Calendar mock -->
+  <svg class="mock-screen" viewBox="0 0 900 460" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="460" fill="#f4f4f5"/>
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">月曆排案</text>
+    <!-- tech tabs -->
+    <rect x="200" y="14" width="70" height="28" rx="6" fill="#4f46e5"/>
+    <text x="235" y="32" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif">小明</text>
+    <rect x="280" y="14" width="70" height="28" rx="6" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="315" y="32" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">阿志</text>
+    <rect x="360" y="14" width="70" height="28" rx="6" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="395" y="32" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">大哥</text>
+    <rect x="440" y="14" width="70" height="28" rx="6" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="475" y="32" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">小花</text>
+
+    <!-- Left panel: 待派工 -->
+    <rect x="0" y="52" width="160" height="408" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="16" y="76" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">待派工 (3)</text>
+    <!-- pending cards -->
+    <rect x="8" y="86" width="144" height="64" rx="8" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1"/>
+    <text x="16" y="104" fill="#5b21b6" font-size="11" font-family="sans-serif" font-weight="600">#0490 黃雅婷</text>
+    <text x="16" y="120" fill="#7c3aed" font-size="10" font-family="sans-serif">直立洗衣機 12kg</text>
+    <text x="16" y="136" fill="#7c3aed" font-size="10" font-family="sans-serif">南投草屯</text>
+
+    <rect x="8" y="158" width="144" height="64" rx="8" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1"/>
+    <text x="16" y="176" fill="#5b21b6" font-size="11" font-family="sans-serif" font-weight="600">#0491 李大華</text>
+    <text x="16" y="192" fill="#7c3aed" font-size="10" font-family="sans-serif">滾筒洗衣機 15kg</text>
+    <text x="16" y="208" fill="#7c3aed" font-size="10" font-family="sans-serif">彰化員林</text>
+
+    <rect x="8" y="230" width="144" height="64" rx="8" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1"/>
+    <text x="16" y="248" fill="#5b21b6" font-size="11" font-family="sans-serif" font-weight="600">#0492 張家豪</text>
+    <text x="16" y="264" fill="#7c3aed" font-size="10" font-family="sans-serif">直立洗衣機 8kg</text>
+    <text x="16" y="280" fill="#7c3aed" font-size="10" font-family="sans-serif">彰化和美</text>
+
+    <!-- Calendar grid -->
+    <!-- day headers -->
+    <rect x="160" y="52" width="740" height="36" fill="#fafafa"/>
+    <text x="265" y="74" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">一</text>
+    <text x="371" y="74" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">二</text>
+    <text x="477" y="74" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">三</text>
+    <text x="583" y="74" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">四</text>
+    <text x="689" y="74" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">五</text>
+    <text x="795" y="74" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">六</text>
+    <text x="880" y="74" text-anchor="middle" fill="#71717a" font-size="12" font-family="sans-serif">日</text>
+
+    <!-- Week row -->
+    <line x1="160" y1="88" x2="900" y2="88" stroke="#e4e4e7" stroke-width="1"/>
+    <!-- vertical lines -->
+    <line x1="318" y1="88" x2="318" y2="460" stroke="#e4e4e7" stroke-width="1"/>
+    <line x1="424" y1="88" x2="424" y2="460" stroke="#e4e4e7" stroke-width="1"/>
+    <line x1="530" y1="88" x2="530" y2="460" stroke="#e4e4e7" stroke-width="1"/>
+    <line x1="636" y1="88" x2="636" y2="460" stroke="#e4e4e7" stroke-width="1"/>
+    <line x1="742" y1="88" x2="742" y2="460" stroke="#e4e4e7" stroke-width="1"/>
+    <line x1="848" y1="88" x2="848" y2="460" stroke="#e4e4e7" stroke-width="1"/>
+
+    <!-- date numbers -->
+    <text x="178" y="106" fill="#27272a" font-size="12" font-family="sans-serif" font-weight="600">19</text>
+    <text x="284" y="106" fill="#27272a" font-size="12" font-family="sans-serif">20</text>
+    <text x="390" y="106" fill="#27272a" font-size="12" font-family="sans-serif">21</text>
+    <text x="496" y="106" fill="#27272a" font-size="12" font-family="sans-serif">22</text>
+    <rect x="582" y="90" width="26" height="26" rx="13" fill="#4f46e5"/>
+    <text x="595" y="108" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif" font-weight="600">23</text>
+    <text x="758" y="106" fill="#27272a" font-size="12" font-family="sans-serif">24</text>
+    <text x="862" y="106" fill="#71717a" font-size="12" font-family="sans-serif">25</text>
+
+    <!-- events on 20th -->
+    <rect x="168" y="114" width="142" height="36" rx="6" fill="#6366f1"/>
+    <text x="180" y="128" fill="white" font-size="10" font-family="sans-serif" font-weight="600">王大明 #0481</text>
+    <text x="180" y="142" fill="rgba(255,255,255,0.8)" font-size="10" font-family="sans-serif">滾筒 16kg · NT$2,200</text>
+    <text x="298" y="122" fill="white" font-size="14" font-family="sans-serif">×</text>
+
+    <rect x="168" y="156" width="142" height="36" rx="6" fill="#6366f1"/>
+    <text x="180" y="170" fill="white" font-size="10" font-family="sans-serif" font-weight="600">陳美玲 #0480</text>
+    <text x="180" y="184" fill="rgba(255,255,255,0.8)" font-size="10" font-family="sans-serif">直立 12kg · NT$1,800</text>
+    <text x="298" y="164" fill="white" font-size="14" font-family="sans-serif">×</text>
+
+    <!-- revenue badge on 20th -->
+    <text x="308" y="244" text-anchor="end" fill="#71717a" font-size="10" font-family="sans-serif">NT$ 4,000</text>
+
+    <!-- event on 23rd -->
+    <rect x="538" y="114" width="90" height="36" rx="6" fill="#6366f1"/>
+    <text x="550" y="128" fill="white" font-size="10" font-family="sans-serif" font-weight="600">林志偉</text>
+    <text x="550" y="142" fill="rgba(255,255,255,0.8)" font-size="10" font-family="sans-serif">直立 8kg</text>
+    <text x="622" y="122" fill="white" font-size="14" font-family="sans-serif">×</text>
+
+    <!-- × dropdown tooltip -->
+    <rect x="576" y="152" width="148" height="56" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1" filter="url(#shadow)"/>
+    <rect x="588" y="162" width="124" height="20" rx="4" fill="#f0f9ff"/>
+    <text x="600" y="176" fill="#0369a1" font-size="11" font-family="sans-serif">↩ 回到待派工</text>
+    <rect x="588" y="186" width="124" height="20" rx="4" fill="#fff5f5"/>
+    <text x="600" y="200" fill="#dc2626" font-size="11" font-family="sans-serif">✕ 取消訂單</text>
+
+    <text x="530" y="450" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">月曆排案示意圖（× 按鈕選單）</text>
+  </svg>
+
+  <div class="scenario">
+    <strong>實例 — 取代紙本排班的安全升級：</strong>
+    <p>以前老闆娘手寫排班單給師傅，師傅拿到紙張後可能理解有誤，也可能看到不屬於自己的客戶資料。<br>
+    現在師傅用手機登入，系統只顯示派給他的訂單，其他師傅的案件完全看不到。排班改動也不必重寫紙單 — 月曆上點 × 選「回到待派工」，再拖到正確師傅，3 步搞定。</p>
+  </div>
+</section>
+
+<!-- ====== Payroll list ====== -->
+<section class="card" id="payroll">
+  <h2>10. 師傅薪資列表</h2>
+  <p>取代紙本派案對 Excel 的繁複流程。本頁顯示：</p>
+  <ul>
+    <li><strong>頂部 4 項指標</strong>：本月總應發、待回繳現金、積分達標師傅數、平均積分</li>
+    <li><strong>每位師傅一張緊湊卡</strong>（2-col 內部排版）：
+      <ul>
+        <li>左：本月應發大字 + 加價/折扣明細</li>
+        <li>右：積分 KPI 進度條（達標綠色、未達標黃色）+ 達標提示</li>
+        <li>底部 footer：本月接案 N 件 ｜ 待回繳金額（如有）</li>
+      </ul>
+    </li>
+    <li>「✓ 已達標」標籤 — 積分達到目標時顯示</li>
+    <li>「🔒 已結算」標籤 — 該月已 snapshot 鎖定（見下方說明）</li>
+    <li>月份切換看歷史；標題列顯示「已結算 X/N」進度</li>
+    <li>右上「結算整月」按鈕（owner only）— 一鍵把所有師傅當月薪資 freeze 起來</li>
+  </ul>
+
+  <!-- Payroll list mock -->
+  <svg class="mock-screen" viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="400" fill="#f4f4f5"/>
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">師傅薪資列表</text>
+    <rect x="700" y="14" width="80" height="28" rx="6" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="740" y="32" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">&lt; 2025-05 &gt;</text>
+
+    <!-- Top KPI -->
+    <rect x="16" y="68" width="200" height="60" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="88" fill="#71717a" font-size="11" font-family="sans-serif">本月總應發</text>
+    <text x="30" y="114" fill="#18181b" font-size="18" font-family="sans-serif" font-weight="700">NT$ 52,800</text>
+
+    <rect x="228" y="68" width="200" height="60" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="242" y="88" fill="#71717a" font-size="11" font-family="sans-serif">待回繳現金</text>
+    <text x="242" y="114" fill="#f59e0b" font-size="18" font-family="sans-serif" font-weight="700">NT$ 12,400</text>
+
+    <rect x="440" y="68" width="200" height="60" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="454" y="88" fill="#71717a" font-size="11" font-family="sans-serif">積分達標師傅</text>
+    <text x="454" y="114" fill="#22c55e" font-size="18" font-family="sans-serif" font-weight="700">2 / 4</text>
+
+    <rect x="652" y="68" width="232" height="60" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="666" y="88" fill="#71717a" font-size="11" font-family="sans-serif">平均積分</text>
+    <text x="666" y="114" fill="#18181b" font-size="18" font-family="sans-serif" font-weight="700">26.5 / 30</text>
+
+    <!-- technician cards row 1 -->
+    <rect x="16" y="144" width="422" height="110" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="168" fill="#27272a" font-size="14" font-family="sans-serif" font-weight="700">小明</text>
+    <text x="30" y="188" fill="#71717a" font-size="11" font-family="sans-serif">24 件</text>
+    <text x="250" y="168" fill="#18181b" font-size="22" font-family="sans-serif" font-weight="700">NT$ 16,800</text>
+    <rect x="30" y="198" width="100" height="18" rx="9" fill="#d1fae5" stroke="#a7f3d0" stroke-width="1"/>
+    <text x="80" y="211" text-anchor="middle" fill="#065f46" font-size="11" font-family="sans-serif">&#10003; 已達標</text>
+    <!-- progress bar -->
+    <rect x="30" y="220" width="388" height="8" rx="4" fill="#e4e4e7"/>
+    <rect x="30" y="220" width="388" height="8" rx="4" fill="#22c55e"/>
+    <text x="30" y="244" fill="#71717a" font-size="10" font-family="sans-serif">積分 30/30</text>
+
+    <rect x="462" y="144" width="422" height="110" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="476" y="168" fill="#27272a" font-size="14" font-family="sans-serif" font-weight="700">阿志</text>
+    <text x="476" y="188" fill="#71717a" font-size="11" font-family="sans-serif">23 件</text>
+    <text x="620" y="168" fill="#18181b" font-size="22" font-family="sans-serif" font-weight="700">NT$ 14,950</text>
+    <!-- pending badge -->
+    <rect x="476" y="196" width="368" height="20" rx="4" fill="#fff7ed"/>
+    <text x="480" y="210" fill="#c2410c" font-size="10" font-family="sans-serif">&#9888; 待回繳 NT$ 5,400 · 3 筆</text>
+    <!-- progress bar partial -->
+    <rect x="476" y="220" width="388" height="8" rx="4" fill="#e4e4e7"/>
+    <rect x="476" y="220" width="310" height="8" rx="4" fill="#22c55e"/>
+    <text x="476" y="244" fill="#71717a" font-size="10" font-family="sans-serif">積分 24/30　還差 6 點，本月剩 9 天</text>
+
+    <text x="450" y="384" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">師傅薪資列表示意圖</text>
+  </svg>
+
+  <div class="comparison">
+    <div class="compare-box compare-before">
+      <strong>以前（紙本 + Excel 月底對帳）</strong>
+      <p>派案詳細都記在紙本排班單，月底要把紙本和 Excel 兩邊對照，一筆一筆手動加總計件、加大、折扣，常常對不上、算錯要重來，每月耗費大量時間精力。</p>
+    </div>
+    <div class="compare-box compare-after">
+      <strong>現在（一頁看 4 位師傅）</strong>
+      <p>進系統 5 秒鐘看完所有師傅本月應發 + 業績目標 + 待回繳。月底結算只要按「全部標記已回繳」確認現金到手即可，0 計算錯誤。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====== Payroll detail ====== -->
+<section class="card" id="payroll-detail">
+  <h2>11. 師傅薪資詳細</h2>
+  <p>點任一師傅卡進去，看到：</p>
+  <ul>
+    <li><strong>頂部大字</strong>：本月應發金額（已含抽成、加減項、月度獎勵 / 扣款）+ 接案件數</li>
+    <li><strong>4 個指標卡</strong>：計件抽成、加減項（進薪資）、積分達標、待回繳</li>
+    <li><strong>積分目標區</strong>：進度條 + 達標標籤 + 促銷類型分布 + 可展開查看本月每筆積分明細（點一下可跳到對應訂單）</li>
+    <li><strong>月度獎勵 / 扣款區</strong>：可即時新增 / 刪除每筆獎勵或扣款，每筆都要填原因（給審計）</li>
+    <li><strong>待回繳訂單區</strong>：未交回現金的訂單清單 + 一鍵跳「待回繳對帳」</li>
+    <li><strong>每日明細</strong>（折疊式）：點某天展開看當天每筆訂單；每筆顯示「該筆抽成金額（抽成方式 of 原價）」</li>
+    <li>右上「結算本月」按鈕 — 把當下計算結果 snapshot 起來鎖定；之後改抽成設定不影響此月份</li>
+    <li>右上「看這位師傅所有訂單」連到訂單管理頁</li>
+    <li>右上「匯出 Excel」可下載完整的薪資對帳單（四個分頁）</li>
+  </ul>
+
+  <h3>匯出薪資對帳單說明</h3>
+  <p>下載的 Excel 檔案共四個分頁：</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>分頁名稱</th>
+        <th>內容</th>
+        <th>用途</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>薪資總覽</strong></td>
+        <td>計件抽成、加價（進薪資）、折扣（進薪資）、本月獎勵、本月扣款、應發薪資、是否已結算鎖定、業績目標積分</td>
+        <td>月底結算時，老闆娘與師傅對照確認</td>
+      </tr>
+      <tr>
+        <td><strong>案件計件明細</strong></td>
+        <td>每筆服務一行：日期、訂單編號、客戶、服務項目、原價（小計）、<strong>抽成方式</strong>、<strong>計件抽成</strong>、加價、折扣、本筆小計、收款方式</td>
+        <td>師傅可核對每一筆抽成計算是否正確，有疑問可按編號查訂單</td>
+      </tr>
+      <tr>
+        <td><strong>月度獎勵 / 扣款</strong></td>
+        <td>本月所有手動加的獎勵 / 扣款：建立時間、類型、金額、原因</td>
+        <td>給師傅看清楚每一筆額外加減的明細與原因</td>
+      </tr>
+      <tr>
+        <td><strong>積分明細</strong></td>
+        <td>每筆積分：日期、訂單編號、客戶、積分類型（FB 按讚 / Google 5 星⋯）、點數</td>
+        <td>核對業績目標積分來源</td>
+      </tr>
+    </tbody>
+  </table>
+
+  
+  <svg class="mock-screen" viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="500" fill="#f4f4f5"/>
+    <!-- gradient top banner -->
+    <defs>
+      <linearGradient id="payGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:#4f46e5"/>
+        <stop offset="100%" style="stop-color:#7c3aed"/>
+      </linearGradient>
+    </defs>
+    <rect width="900" height="110" fill="url(#payGrad)"/>
+    <text x="24" y="34" fill="rgba(255,255,255,0.8)" font-size="13" font-family="sans-serif">← 返回　阿志 — 2025-05</text>
+    <text x="24" y="80" fill="white" font-size="36" font-family="sans-serif" font-weight="700">NT$ 14,950</text>
+    <text x="260" y="80" fill="rgba(255,255,255,0.7)" font-size="18" font-family="sans-serif">24 件</text>
+    <!-- 4 KPI cards -->
+    <rect x="16" y="120" width="196" height="68" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="140" fill="#71717a" font-size="11" font-family="sans-serif">計件抽成</text>
+    <text x="30" y="166" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">NT$ 14,500</text>
+    <rect x="222" y="120" width="196" height="68" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="236" y="140" fill="#71717a" font-size="11" font-family="sans-serif">加減項</text>
+    <text x="236" y="166" fill="#22c55e" font-size="16" font-family="sans-serif" font-weight="700">+ NT$ 450</text>
+    <rect x="428" y="120" width="196" height="68" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="442" y="140" fill="#71717a" font-size="11" font-family="sans-serif">積分</text>
+    <text x="442" y="166" fill="#f59e0b" font-size="16" font-family="sans-serif" font-weight="700">24 / 30</text>
+    <rect x="634" y="120" width="250" height="68" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="648" y="140" fill="#71717a" font-size="11" font-family="sans-serif">待回繳</text>
+    <text x="648" y="166" fill="#ef4444" font-size="16" font-family="sans-serif" font-weight="700">NT$ 5,400</text>
+    <!-- score progress -->
+    <rect x="16" y="200" width="550" height="120" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="222" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">積分目標進度</text>
+    <rect x="30" y="234" width="508" height="12" rx="6" fill="#e4e4e7"/>
+    <rect x="30" y="234" width="407" height="12" rx="6" fill="#f59e0b"/>
+    <text x="30" y="262" fill="#71717a" font-size="11" font-family="sans-serif">24 / 30　（80%）</text>
+    <rect x="340" y="256" width="208" height="20" rx="6" fill="#fef3c7" stroke="#fde68a" stroke-width="1"/>
+    <text x="444" y="270" text-anchor="middle" fill="#92400e" font-size="11" font-family="sans-serif">還差 6 點，本月剩 9 天</text>
+    <text x="30" y="296" fill="#71717a" font-size="11" font-family="sans-serif">FB 按讚 8次　Google 5星 10次　在地社團 6次</text>
+    <!-- daily detail collapse -->
+    <rect x="16" y="332" width="550" height="100" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="354" fill="#18181b" font-size="13" font-family="sans-serif" font-weight="600">每日明細</text>
+    <rect x="30" y="362" width="522" height="30" rx="6" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="44" y="381" fill="#27272a" font-size="12" font-family="sans-serif" font-weight="600">▼ 5月20日</text>
+    <text x="30" y="410" fill="#71717a" font-size="11" font-family="sans-serif">  #0481 王大明　直立洗衣機 12kg　NT$ 1,800（現金）</text>
+    <text x="30" y="428" fill="#71717a" font-size="11" font-family="sans-serif">  #0480 陳美玲　滾筒洗衣機 16kg　NT$ 2,200（匯款）</text>
+    <text x="450" y="488" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">師傅薪資詳細示意圖</text>
+  </svg>
+
+<div class="scenario">
+    <strong>實例 — 積分目標提醒：</strong>
+    <p>師傅 C 本月積分 25/30，系統顯示「還差 5 點，本月剩 8 天」。您可以提醒師傅 C：「剩一週了，多請客戶幫忙在 FB 留言或打卡，每筆 1 點，達標可以拿獎金。」<br>
+    師傅自己也能在手機版看自己的積分進度。</p>
+  </div>
+</section>
+
+<!-- ====== Commission Formula ====== -->
+<section class="card" id="payroll-formula">
+  <h2>12. 薪資抽成與結算規則</h2>
+  <p>薪資公式完全是<strong>參數化設定</strong>，老闆娘可以隨時調整抽成方式、加減項是否進薪資、月度獎勵 / 扣款，不需要工程師動程式碼。</p>
+
+  <h3>12.1 應發薪資公式</h3>
+  <pre style="background:#18181b; color:#a7f3d0; padding:14px 18px; border-radius:8px; font-size:13px; overflow-x:auto;">
+應發 = Σ(每件抽成) + Σ(進薪資的加價) − Σ(進薪資的折扣)
+       + Σ(本月獎勵) − Σ(本月扣款)
+  </pre>
+
+  <h3>12.2 每件抽成怎麼算</h3>
+  <p>每個<strong>服務項目</strong>（在「設定 → 服務項目」維護）有兩個抽成欄位：</p>
+  <ul>
+    <li><strong>抽成方式</strong>：
+      <ul>
+        <li><code>預設</code> — 套用全店 fallback（在「設定 → 薪資設定」維護）</li>
+        <li><code>百分比 (%)</code> — 例如「60」表示該筆服務金額的 60% 給師傅</li>
+        <li><code>固定金額 ($/件)</code> — 例如「500」表示不管收多少，師傅一件抽 NT$ 500</li>
+      </ul>
+    </li>
+    <li><strong>抽成數值</strong>：搭配上面的方式，數字</li>
+  </ul>
+
+  <table>
+    <thead>
+      <tr><th>服務項目</th><th>單價</th><th>抽成方式</th><th>抽成數值</th><th>實際抽成</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>直立洗衣機 (WV-S)</td><td>NT$ 1,800</td><td>百分比</td><td>60</td><td>NT$ 1,080</td></tr>
+      <tr><td>滾筒洗衣機 (WD-L1)</td><td>NT$ 4,000</td><td>固定金額</td><td>1500</td><td>NT$ 1,500</td></tr>
+      <tr><td>沙發一字型 (SF-200)</td><td>NT$ 2,500</td><td>預設（60%）</td><td>—</td><td>NT$ 1,500</td></tr>
+    </tbody>
+  </table>
+
+  <h3>12.3 加減項是否進薪資</h3>
+  <p>每個<strong>加減項</strong>（在「設定 → 折扣 / 加價項目」維護）有 <strong>「進薪資」 checkbox</strong>：</p>
+  <ul>
+    <li>✅ <strong>進薪資</strong>：師傅多做的工要算薪水
+      <ul>
+        <li>「加大費」「拆解費」「卡軸無法洗」「移機費」「無旋鈕全液晶螢幕」 → 勾</li>
+        <li>客戶當場議價的「議價折扣」 → 勾（折扣從師傅薪資扣）</li>
+      </ul>
+    </li>
+    <li>❌ <strong>不進薪資</strong>：店家行銷成本，不該扣師傅
+      <ul>
+        <li>「節慶折扣」「老顧客回饋」「LINE 點數折抵」 → 不勾</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>12.4 月度獎勵 / 扣款</h3>
+  <p>在師傅薪資詳細頁底部的「月度獎勵 / 扣款」區，老闆娘可隨時加幾筆：</p>
+  <ul>
+    <li><strong>獎勵</strong>：滿件獎金、客戶讚美獎、節慶紅包⋯⋯</li>
+    <li><strong>扣款</strong>：遲到、客訴扣款、物品損壞⋯⋯</li>
+    <li>每筆必填「原因」（給審計 / 給師傅看明細）</li>
+    <li>該月若已結算鎖定，就不能新增 / 刪除</li>
+  </ul>
+
+  <h3>12.5 月結 snapshot 鎖定（重要）</h3>
+  <p>月底在師傅薪資詳細頁按「<strong>結算本月</strong>」（或在師傅薪資列表頁按「<strong>結算整月</strong>」一鍵全部）會把當下計算結果<strong>凍結快照</strong>到資料庫。</p>
+  <ul>
+    <li>已結算的月份：之後改抽成設定、加減項、預設 % <strong>都不會影響</strong>歷史薪資數字（防止帳目飄移）</li>
+    <li>未結算的月份：永遠用最新設定即時計算</li>
+    <li>已結算的月份會顯示 <strong>「🔒 已結算」</strong> 標籤，無法新增月度調整</li>
+    <li>老闆娘（owner）可按「解除結算」回滾，再次解鎖該月（給更正用）</li>
+  </ul>
+
+  <div class="scenario">
+    <strong>實例 — 為什麼要鎖定：</strong>
+    <p>5 月底結算阿志薪資為 NT$ 18,500，已發給他。6 月老闆娘把直立洗衣機抽成從 60% 調高到 65%。<br>
+    <strong>如果沒有 snapshot：</strong>回頭看 5 月薪資會自動變成 NT$ 19,200，但實際付的是 NT$ 18,500，帳對不上、阿志也會誤會。<br>
+    <strong>有了 snapshot：</strong>5 月永遠是 NT$ 18,500，跟付出去的對得上。6 月開始才套新抽成率。</p>
+  </div>
+
+  <h3>12.6 老闆娘維護流程建議</h3>
+  <ol>
+    <li>初次：到「設定 → 薪資設定」設定預設抽成（例如百分比 60%）</li>
+    <li>到「設定 → 服務項目」針對特殊服務（沙發、床墊清洗）填寫個別抽成（如固定 $1,200/件）</li>
+    <li>到「設定 → 折扣 / 加價項目」確認每個加減項的「進薪資」勾選是否正確</li>
+    <li>月底進師傅薪資頁逐位確認，有需要加獎勵 / 扣款的填上</li>
+    <li>確認無誤後按「結算本月」（或一鍵「結算整月」）鎖定</li>
+    <li>匯出 Excel 對帳單交給師傅 / 留底</li>
+  </ol>
+</section>
+
+<!-- ====== Settlements ====== -->
+<section class="card" id="settlements">
+  <h2>13. 待回繳對帳</h2>
+  <p>師傅收現金後要交回給您。這頁列出所有「已收現金、未交回」的訂單，按師傅分組。</p>
+  <ul>
+    <li>右上總額大字顯示，焦慮感降低</li>
+    <li>每組（每位師傅）一張卡，顯示總額 + 筆數</li>
+    <li><strong>每筆訂單前面有勾選方塊</strong></li>
+    <li><strong>逐筆「✓ 已回繳」按鈕</strong>，現場一筆一筆確認</li>
+    <li><strong>「標記選取為已回繳」</strong>一次勾選多筆一起確認</li>
+    <li><strong>「全部標記已回繳」</strong>一次清空</li>
+    <li>每筆可點「查看」進訂單頁，左上「回上頁」自動回到此頁</li>
+  </ul>
+
+  <!-- Settlements mock -->
+  <svg class="mock-screen" viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="380" fill="#f4f4f5"/>
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">待回繳對帳</text>
+    <text x="700" y="24" fill="#71717a" font-size="11" font-family="sans-serif">待回繳總額</text>
+    <text x="700" y="42" fill="#f59e0b" font-size="16" font-family="sans-serif" font-weight="700">NT$ 12,400</text>
+
+    <!-- technician group card -->
+    <rect x="16" y="68" width="868" height="28" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1"/>
+    <text x="30" y="87" fill="#c2410c" font-size="13" font-family="sans-serif" font-weight="600">阿志 — 待回繳 NT$ 5,400 · 3 筆</text>
+    <rect x="750" y="72" width="120" height="20" rx="4" fill="#f97316"/>
+    <text x="810" y="86" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif">全部標記已回繳</text>
+
+    <!-- order rows -->
+    <rect x="16" y="100" width="868" height="40" rx="6" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <rect x="28" y="112" width="16" height="16" rx="3" fill="white" stroke="#c4b5fd" stroke-width="2"/>
+    <text x="54" y="124" fill="#27272a" font-size="12" font-family="sans-serif">#0478　王大明　2025-05-18　直立洗衣機 10kg</text>
+    <text x="630" y="124" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">NT$ 1,800</text>
+    <rect x="690" y="108" width="64" height="24" rx="4" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="722" y="124" text-anchor="middle" fill="#3f3f46" font-size="11" font-family="sans-serif">查看</text>
+    <rect x="764" y="108" width="80" height="24" rx="4" fill="#d1fae5" stroke="#a7f3d0" stroke-width="1"/>
+    <text x="804" y="124" text-anchor="middle" fill="#065f46" font-size="11" font-family="sans-serif">&#10003; 已回繳</text>
+
+    <rect x="16" y="146" width="868" height="40" rx="6" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <rect x="28" y="158" width="16" height="16" rx="3" fill="#6366f1"/>
+    <text x="44" y="170" fill="white" font-size="12" font-family="sans-serif" font-weight="600">&#10003;</text>
+    <text x="54" y="170" fill="#27272a" font-size="12" font-family="sans-serif">#0476　陳美玲　2025-05-17　滾筒洗衣機 16kg</text>
+    <text x="630" y="170" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">NT$ 2,200</text>
+    <rect x="690" y="154" width="64" height="24" rx="4" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="722" y="170" text-anchor="middle" fill="#3f3f46" font-size="11" font-family="sans-serif">查看</text>
+    <rect x="764" y="154" width="80" height="24" rx="4" fill="#d1fae5" stroke="#a7f3d0" stroke-width="1"/>
+    <text x="804" y="170" text-anchor="middle" fill="#065f46" font-size="11" font-family="sans-serif">&#10003; 已回繳</text>
+
+    <rect x="16" y="192" width="868" height="40" rx="6" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <rect x="28" y="204" width="16" height="16" rx="3" fill="white" stroke="#c4b5fd" stroke-width="2"/>
+    <text x="54" y="216" fill="#27272a" font-size="12" font-family="sans-serif">#0475　林志偉　2025-05-16　直立洗衣機 12kg</text>
+    <text x="630" y="216" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">NT$ 1,400</text>
+    <rect x="690" y="200" width="64" height="24" rx="4" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="722" y="216" text-anchor="middle" fill="#3f3f46" font-size="11" font-family="sans-serif">查看</text>
+    <rect x="764" y="200" width="80" height="24" rx="4" fill="#d1fae5" stroke="#a7f3d0" stroke-width="1"/>
+    <text x="804" y="216" text-anchor="middle" fill="#065f46" font-size="11" font-family="sans-serif">&#10003; 已回繳</text>
+
+    <!-- batch button -->
+    <rect x="16" y="244" width="200" height="28" rx="6" fill="#4f46e5"/>
+    <text x="116" y="262" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif">標記選取為已回繳</text>
+
+    <text x="450" y="364" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">待回繳對帳示意圖</text>
+  </svg>
+
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>以前師傅收了多天的現金，要自己回憶「昨天收了誰的錢、收了多少、前天的呢？」出錯機率非常高；萬一對不上帳，老闆娘還要從紙本排班表裡一一翻找比對，耗時費力帳目又不清。<br>
+    現在系統逐筆列出哪一天、哪位客戶、收了多少，師傅拿著現金對照清單，一筆勾一筆，對完就清，清晰明瞭。</p>
+  </div>
+</section>
+
+<!-- ====== Reports ====== -->
+<section class="card" id="reports">
+  <h2>14. 營業報表</h2>
+  <p>本月/上月/全年/自訂日期區間，看：</p>
+  <ul>
+    <li>總營業額、平均單價、案件數</li>
+    <li>狀態分布（待派工 / 已排案 / 已完成 / 已取消）</li>
+    <li>收款方式分布</li>
+    <li>客戶來源分析（LINE / Google / Facebook / 跟車 / 老客介紹⋯）</li>
+    <li>匯出資料表（可用 Excel 開啟），方便記帳或報稅</li>
+  </ul>
+
+  
+  <svg class="mock-screen" viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="420" fill="#f4f4f5"/>
+    <!-- nav -->
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">營業報表</text>
+    <!-- date range row -->
+    <rect x="16" y="60" width="280" height="34" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="81" fill="#18181b" font-size="12" font-family="sans-serif">2025-05-01 ~ 2025-05-31</text>
+    <rect x="308" y="60" width="60" height="34" rx="8" fill="#4f46e5"/>
+    <text x="338" y="81" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif">本月</text>
+    <rect x="378" y="60" width="60" height="34" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="408" y="81" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">上月</text>
+    <rect x="448" y="60" width="60" height="34" rx="8" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="478" y="81" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">全年</text>
+    <!-- 3 KPI cards -->
+    <rect x="16" y="106" width="258" height="70" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="126" fill="#71717a" font-size="11" font-family="sans-serif">本月營業額</text>
+    <text x="30" y="156" fill="#18181b" font-size="20" font-family="sans-serif" font-weight="700">NT$ 72,400</text>
+    <rect x="284" y="106" width="258" height="70" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="298" y="126" fill="#71717a" font-size="11" font-family="sans-serif">平均單價</text>
+    <text x="298" y="156" fill="#18181b" font-size="20" font-family="sans-serif" font-weight="700">NT$ 1,766</text>
+    <rect x="552" y="106" width="258" height="70" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="566" y="126" fill="#71717a" font-size="11" font-family="sans-serif">案件數</text>
+    <text x="566" y="156" fill="#18181b" font-size="20" font-family="sans-serif" font-weight="700">41 筆</text>
+    <!-- status bar -->
+    <rect x="16" y="190" width="868" height="70" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="212" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">狀態分布</text>
+    <rect x="30" y="220" width="600" height="20" rx="4" fill="#22c55e"/>
+    <rect x="630" y="220" width="80" height="20" rx="4" fill="#ef4444"/>
+    <text x="220" y="234" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif">已完成 38 筆</text>
+    <text x="670" y="234" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif">已取消 3</text>
+    <!-- payment method -->
+    <rect x="16" y="274" width="418" height="90" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="296" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">收款方式分布</text>
+    <rect x="30" y="306" width="147" height="16" rx="3" fill="#4f46e5"/>
+    <text x="30" y="336" fill="#71717a" font-size="11" font-family="sans-serif">現金 60%</text>
+    <rect x="183" y="306" width="61" height="16" rx="3" fill="#6366f1"/>
+    <text x="183" y="336" fill="#71717a" font-size="11" font-family="sans-serif">匯款 25%</text>
+    <rect x="248" y="306" width="25" height="16" rx="3" fill="#818cf8"/>
+    <text x="248" y="336" fill="#71717a" font-size="11" font-family="sans-serif">LPay</text>
+    <rect x="285" y="306" width="12" height="16" rx="3" fill="#a5b4fc"/>
+    <text x="285" y="336" fill="#71717a" font-size="11" font-family="sans-serif">刷卡</text>
+    <!-- customer source -->
+    <rect x="448" y="274" width="436" height="90" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="462" y="296" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">客戶來源分析</text>
+    <text x="462" y="316" fill="#71717a" font-size="11" font-family="sans-serif">LINE 介紹 45%</text>
+    <rect x="562" y="306" width="90" height="14" rx="3" fill="#4f46e5"/>
+    <text x="462" y="336" fill="#71717a" font-size="11" font-family="sans-serif">老客回購 25%</text>
+    <rect x="562" y="326" width="50" height="14" rx="3" fill="#6366f1"/>
+    <text x="660" y="316" fill="#71717a" font-size="11" font-family="sans-serif">Google 20%</text>
+    <rect x="760" y="306" width="40" height="14" rx="3" fill="#818cf8"/>
+    <text x="660" y="336" fill="#71717a" font-size="11" font-family="sans-serif">其他 10%</text>
+    <rect x="760" y="326" width="20" height="14" rx="3" fill="#a5b4fc"/>
+    <text x="450" y="408" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">營業報表示意圖</text>
+  </svg>
+
+<div class="scenario">
+    <strong>實例：</strong>
+    <p>以前老闆娘因為沒有完整的管理系統，很多細節無法精確掌握：「這個月收入到底多少？哪個來源帶來最多客人？」都只能憑印象。<br>
+    現在進系統選好日期區間，所有數字即時呈現，客戶來源分析讓您知道廣告效益，匯出資料表 方便記帳報稅。</p>
+  </div>
+</section>
+
+<!-- ====== Reminders ====== -->
+<section class="card" id="reminders">
+  <h2>15. 即將到期客戶</h2>
+  <p>系統自動找出上次服務在 11-13 個月前、之後沒再聯絡的客戶（洗衣機通常 1 年清一次）。</p>
+  <ul>
+    <li>每張卡顯示客戶名、電話、上次服務日、機器型號</li>
+    <li>一鍵複製 LINE 訊息模板（含問候 + 客戶姓名 + 上次服務日）</li>
+    <li>標記為「已聯絡」，下個月不再出現</li>
+  </ul>
+
+  
+  <svg class="mock-screen" viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="380" fill="#f4f4f5"/>
+    <!-- nav -->
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">即將到期客戶</text>
+    <text x="24" y="48" fill="#71717a" font-size="11" font-family="sans-serif">上次服務距今 11-13 個月，建議主動聯繫</text>
+    <!-- summary banner -->
+    <rect x="16" y="58" width="868" height="30" rx="6" fill="#fef3c7" stroke="#fde68a" stroke-width="1"/>
+    <text x="30" y="77" fill="#92400e" font-size="12" font-family="sans-serif" font-weight="600">共 12 位客戶待聯繫</text>
+    <!-- 3 customer cards -->
+    <!-- card 1 -->
+    <rect x="16" y="96" width="270" height="130" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="118" fill="#18181b" font-size="14" font-family="sans-serif" font-weight="700">王大明</text>
+    <text x="30" y="138" fill="#4f46e5" font-size="12" font-family="sans-serif">0912-345-678</text>
+    <text x="30" y="158" fill="#71717a" font-size="11" font-family="sans-serif">上次服務：2024-05-15</text>
+    <text x="30" y="176" fill="#71717a" font-size="11" font-family="sans-serif">LG 直立洗衣機 12kg</text>
+    <rect x="30" y="188" width="110" height="26" rx="6" fill="#22c55e"/>
+    <text x="85" y="205" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="600">複製訊息</text>
+    <rect x="150" y="188" width="110" height="26" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="205" y="205" text-anchor="middle" fill="#71717a" font-size="11" font-family="sans-serif">已聯絡</text>
+    <!-- card 2 -->
+    <rect x="298" y="96" width="270" height="130" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="312" y="118" fill="#18181b" font-size="14" font-family="sans-serif" font-weight="700">黃雅婷</text>
+    <text x="312" y="138" fill="#4f46e5" font-size="12" font-family="sans-serif">0934-567-890</text>
+    <text x="312" y="158" fill="#71717a" font-size="11" font-family="sans-serif">上次服務：2024-05-20</text>
+    <text x="312" y="176" fill="#71717a" font-size="11" font-family="sans-serif">國際牌 直立洗衣機 8kg</text>
+    <rect x="312" y="188" width="110" height="26" rx="6" fill="#22c55e"/>
+    <text x="367" y="205" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="600">複製訊息</text>
+    <rect x="432" y="188" width="110" height="26" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="487" y="205" text-anchor="middle" fill="#71717a" font-size="11" font-family="sans-serif">已聯絡</text>
+    <!-- card 3 -->
+    <rect x="580" y="96" width="270" height="130" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="594" y="118" fill="#18181b" font-size="14" font-family="sans-serif" font-weight="700">張家豪</text>
+    <text x="594" y="138" fill="#4f46e5" font-size="12" font-family="sans-serif">0945-678-901</text>
+    <text x="594" y="158" fill="#71717a" font-size="11" font-family="sans-serif">上次服務：2024-05-08</text>
+    <text x="594" y="176" fill="#71717a" font-size="11" font-family="sans-serif">滾筒洗衣機 12kg</text>
+    <rect x="594" y="188" width="110" height="26" rx="6" fill="#22c55e"/>
+    <text x="649" y="205" text-anchor="middle" fill="white" font-size="11" font-family="sans-serif" font-weight="600">複製訊息</text>
+    <rect x="714" y="188" width="110" height="26" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="769" y="205" text-anchor="middle" fill="#71717a" font-size="11" font-family="sans-serif">已聯絡</text>
+    <!-- LINE message preview -->
+    <rect x="16" y="240" width="868" height="100" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+    <text x="30" y="260" fill="#15803d" font-size="12" font-family="sans-serif" font-weight="600">LINE 訊息預覽（複製後直接貼給客戶）</text>
+    <text x="30" y="280" fill="#27272a" font-size="12" font-family="sans-serif">您好，王大明！去年 5 月 15 日您的洗衣機已經快滿一年了，</text>
+    <text x="30" y="298" fill="#27272a" font-size="12" font-family="sans-serif">是否需要安排一次清洗保養呢？歡迎來電或回覆此訊息預約，謝謝！</text>
+    <text x="30" y="316" fill="#15803d" font-size="11" font-family="sans-serif">— 淨新清潔工坊</text>
+    <text x="450" y="366" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">即將到期客戶示意圖</text>
+  </svg>
+
+<div class="scenario">
+    <strong>實例：</strong>
+    <p>4 月底打開系統，看到 12 位客戶在去年 5 月前後做過、現在快滿一年。您點「複製訊息」貼到 LINE 群發或單發。預估接回 5-6 單，多接 NT$ 10,000+。<br>
+    以前這 12 位客戶可能就被遺忘，他們也就找別家了。</p>
+  </div>
+</section>
+
+<!-- ====== Scores ====== -->
+<section class="card" id="scores">
+  <h2>16. 促銷積分榜（師傅業績目標）</h2>
+  <p>師傅請客戶在每筆訂單做的促銷動作（FB 按讚/留言/打卡/Google 5 星/在地社團發文⋯）會累積積分。</p>
+  <ul>
+    <li>9 種促銷類型，每種 1-2 點</li>
+    <li>每月目標預設 30 點（可在設定調整）</li>
+    <li>排行榜 + 進度條 + 達標標籤</li>
+    <li>各類型本月次數統計</li>
+    <li>達標可給獎金（待您決定政策）</li>
+  
+  <svg class="mock-screen" viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="380" fill="#f4f4f5"/>
+    <!-- nav -->
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">促銷積分榜</text>
+    <rect x="700" y="14" width="80" height="28" rx="6" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="740" y="32" text-anchor="middle" fill="#3f3f46" font-size="12" font-family="sans-serif">&lt; 2025-05 &gt;</text>
+    <!-- leaderboard -->
+    <rect x="16" y="60" width="868" height="200" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="82" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">排名</text>
+    <text x="80" y="82" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">師傅</text>
+    <text x="180" y="82" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">進度</text>
+    <text x="620" y="82" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">積分</text>
+    <text x="720" y="82" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">狀態</text>
+    <line x1="16" y1="90" x2="884" y2="90" stroke="#e4e4e7" stroke-width="1"/>
+    <!-- row 1: 小明 -->
+    <text x="38" y="116" text-anchor="middle" fill="#f59e0b" font-size="14" font-family="sans-serif" font-weight="700">1</text>
+    <text x="80" y="116" fill="#27272a" font-size="13" font-family="sans-serif" font-weight="600">小明</text>
+    <rect x="180" y="104" width="400" height="14" rx="7" fill="#e4e4e7"/>
+    <rect x="180" y="104" width="400" height="14" rx="7" fill="#22c55e"/>
+    <text x="620" y="116" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">30 / 30</text>
+    <rect x="720" y="104" width="64" height="22" rx="11" fill="#d1fae5"/>
+    <text x="752" y="119" text-anchor="middle" fill="#065f46" font-size="11" font-family="sans-serif">✓ 達標</text>
+    <line x1="16" y1="132" x2="884" y2="132" stroke="#f4f4f5" stroke-width="1"/>
+    <!-- row 2: 阿志 -->
+    <text x="38" y="158" text-anchor="middle" fill="#71717a" font-size="13" font-family="sans-serif">2</text>
+    <text x="80" y="158" fill="#27272a" font-size="13" font-family="sans-serif" font-weight="600">阿志</text>
+    <rect x="180" y="146" width="400" height="14" rx="7" fill="#e4e4e7"/>
+    <rect x="180" y="146" width="320" height="14" rx="7" fill="#f59e0b"/>
+    <text x="620" y="158" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">24 / 30</text>
+    <rect x="720" y="146" width="72" height="22" rx="11" fill="#fef3c7"/>
+    <text x="756" y="161" text-anchor="middle" fill="#92400e" font-size="11" font-family="sans-serif">未達標</text>
+    <line x1="16" y1="174" x2="884" y2="174" stroke="#f4f4f5" stroke-width="1"/>
+    <!-- row 3: 大哥 -->
+    <text x="38" y="200" text-anchor="middle" fill="#71717a" font-size="13" font-family="sans-serif">3</text>
+    <text x="80" y="200" fill="#27272a" font-size="13" font-family="sans-serif" font-weight="600">大哥</text>
+    <rect x="180" y="188" width="400" height="14" rx="7" fill="#e4e4e7"/>
+    <rect x="180" y="188" width="400" height="14" rx="7" fill="#22c55e"/>
+    <text x="620" y="200" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">30 / 30</text>
+    <rect x="720" y="188" width="64" height="22" rx="11" fill="#d1fae5"/>
+    <text x="752" y="203" text-anchor="middle" fill="#065f46" font-size="11" font-family="sans-serif">✓ 達標</text>
+    <line x1="16" y1="216" x2="884" y2="216" stroke="#f4f4f5" stroke-width="1"/>
+    <!-- row 4: 小花 -->
+    <text x="38" y="242" text-anchor="middle" fill="#71717a" font-size="13" font-family="sans-serif">4</text>
+    <text x="80" y="242" fill="#27272a" font-size="13" font-family="sans-serif" font-weight="600">小花</text>
+    <rect x="180" y="230" width="400" height="14" rx="7" fill="#e4e4e7"/>
+    <rect x="180" y="230" width="240" height="14" rx="7" fill="#f59e0b"/>
+    <text x="620" y="242" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">18 / 30</text>
+    <rect x="720" y="230" width="72" height="22" rx="11" fill="#fef3c7"/>
+    <text x="756" y="245" text-anchor="middle" fill="#92400e" font-size="11" font-family="sans-serif">未達標</text>
+    <!-- promotion type stats table -->
+    <rect x="16" y="272" width="868" height="80" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="292" fill="#18181b" font-size="12" font-family="sans-serif" font-weight="600">本月促銷類型統計</text>
+    <line x1="16" y1="300" x2="884" y2="300" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="30" y="318" fill="#27272a" font-size="12" font-family="sans-serif">FB 按讚</text>
+    <text x="200" y="318" fill="#27272a" font-size="12" font-family="sans-serif">28 次</text>
+    <text x="340" y="318" fill="#4f46e5" font-size="12" font-family="sans-serif" font-weight="600">28 點</text>
+    <text x="460" y="318" fill="#27272a" font-size="12" font-family="sans-serif">Google 5星</text>
+    <text x="620" y="318" fill="#27272a" font-size="12" font-family="sans-serif">32 次</text>
+    <text x="760" y="318" fill="#4f46e5" font-size="12" font-family="sans-serif" font-weight="600">32 點</text>
+    <text x="30" y="340" fill="#27272a" font-size="12" font-family="sans-serif">在地社團</text>
+    <text x="200" y="340" fill="#27272a" font-size="12" font-family="sans-serif">18 次</text>
+    <text x="340" y="340" fill="#4f46e5" font-size="12" font-family="sans-serif" font-weight="600">36 點</text>
+    <text x="450" y="368" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">促銷積分榜示意圖</text>
+  </svg>
+
+</ul>
+</section>
+
+<!-- ====== Settings ====== -->
+<section class="card" id="settings">
+  <h2>17. 系統設定</h2>
+  
+  <svg class="mock-screen" viewBox="0 0 900 360" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="360" fill="#f4f4f5"/>
+    <!-- nav -->
+    <rect width="900" height="52" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="24" y="32" fill="#18181b" font-size="16" font-family="sans-serif" font-weight="700">系統設定</text>
+    <!-- left sidebar -->
+    <rect x="16" y="60" width="200" height="270" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <rect x="16" y="60" width="200" height="40" rx="0" fill="#ede9fe"/>
+    <rect x="16" y="60" width="200" height="40" rx="10 10 0 0" fill="#ede9fe"/>
+    <text x="30" y="85" fill="#5b21b6" font-size="12" font-family="sans-serif" font-weight="600">服務項目主檔</text>
+    <text x="30" y="122" fill="#27272a" font-size="12" font-family="sans-serif">機器品牌主檔</text>
+    <text x="30" y="154" fill="#27272a" font-size="12" font-family="sans-serif">積分類型設定</text>
+    <text x="30" y="186" fill="#27272a" font-size="12" font-family="sans-serif">帳號管理</text>
+    <text x="30" y="218" fill="#27272a" font-size="12" font-family="sans-serif">稽核紀錄</text>
+    <!-- right content panel -->
+    <rect x="228" y="60" width="656" height="270" rx="10" fill="white" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="244" y="86" fill="#18181b" font-size="14" font-family="sans-serif" font-weight="700">服務項目主檔</text>
+    <rect x="776" y="68" width="96" height="28" rx="6" fill="#4f46e5"/>
+    <text x="824" y="86" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif">+ 新增服務</text>
+    <line x1="244" y1="100" x2="868" y2="100" stroke="#e4e4e7" stroke-width="1"/>
+    <!-- table header -->
+    <rect x="228" y="100" width="656" height="28" rx="0" fill="#fafafa"/>
+    <text x="244" y="119" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">服務名稱</text>
+    <text x="560" y="119" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">單價</text>
+    <text x="700" y="119" fill="#18181b" font-size="11" font-family="sans-serif" font-weight="600">狀態</text>
+    <line x1="228" y1="128" x2="884" y2="128" stroke="#e4e4e7" stroke-width="1"/>
+    <!-- row 1 -->
+    <text x="244" y="150" fill="#27272a" font-size="12" font-family="sans-serif">直立洗衣機 3-5kg</text>
+    <text x="560" y="150" fill="#27272a" font-size="12" font-family="sans-serif">NT$ 1,200</text>
+    <rect x="696" y="138" width="52" height="20" rx="10" fill="#d1fae5"/>
+    <text x="722" y="152" text-anchor="middle" fill="#065f46" font-size="10" font-family="sans-serif">啟用</text>
+    <line x1="228" y1="164" x2="884" y2="164" stroke="#f4f4f5" stroke-width="1"/>
+    <!-- row 2 -->
+    <rect x="228" y="165" width="656" height="28" fill="#fcfcfc"/>
+    <text x="244" y="184" fill="#27272a" font-size="12" font-family="sans-serif">直立洗衣機 6-9kg</text>
+    <text x="560" y="184" fill="#27272a" font-size="12" font-family="sans-serif">NT$ 1,500</text>
+    <rect x="696" y="172" width="52" height="20" rx="10" fill="#d1fae5"/>
+    <text x="722" y="186" text-anchor="middle" fill="#065f46" font-size="10" font-family="sans-serif">啟用</text>
+    <line x1="228" y1="198" x2="884" y2="198" stroke="#f4f4f5" stroke-width="1"/>
+    <!-- row 3 -->
+    <text x="244" y="218" fill="#27272a" font-size="12" font-family="sans-serif">滾筒洗衣機 10-12kg</text>
+    <text x="560" y="218" fill="#27272a" font-size="12" font-family="sans-serif">NT$ 1,800</text>
+    <rect x="696" y="206" width="52" height="20" rx="10" fill="#d1fae5"/>
+    <text x="722" y="220" text-anchor="middle" fill="#065f46" font-size="10" font-family="sans-serif">啟用</text>
+    <line x1="228" y1="232" x2="884" y2="232" stroke="#f4f4f5" stroke-width="1"/>
+    <!-- row 4 -->
+    <rect x="228" y="233" width="656" height="28" fill="#fcfcfc"/>
+    <text x="244" y="252" fill="#27272a" font-size="12" font-family="sans-serif">冷氣（窗型）</text>
+    <text x="560" y="252" fill="#27272a" font-size="12" font-family="sans-serif">NT$ 1,500</text>
+    <rect x="696" y="240" width="52" height="20" rx="10" fill="#d1fae5"/>
+    <text x="722" y="254" text-anchor="middle" fill="#065f46" font-size="10" font-family="sans-serif">啟用</text>
+    <text x="450" y="346" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">系統設定示意圖</text>
+  </svg>
+
+<p>主檔資料維護，全部由您決定，不必每次都麻煩工程師。</p>
+
+  <h3>16.1 服務項目主檔</h3>
+  <p>所有可賣的服務（直立洗衣機 3-17kg、滾筒洗衣機 各容量、冷氣、床墊、沙發、加大、車馬費⋯⋯約 54 項），可改名、改價、新增、停用。</p>
+
+  <h3>16.2 機器品牌主檔</h3>
+  <p>建單時客戶機器的品牌下拉選項（LG、大同、Daikin、國際⋯⋯），可自由維護。</p>
+
+  <h3>16.3 促銷積分類型</h3>
+  <p>9 種促銷動作 + 每種點數，可改點數、停用、調整每月目標門檻。</p>
+
+  <h3>16.4 帳號管理</h3>
+  <p>新建師傅/管理員帳號，預設密碼 admin1234，請告知對方登入後自行更改。也可停用離職師傅帳號（不刪除歷史資料）。</p>
+
+  <h3>16.5 操作稽核紀錄</h3>
+  <p>記錄系統內所有寫入/刪除/取消等敏感操作，避免有爭議時無法回溯。</p>
+</section>
+
+<!-- ====== Staff PWA ====== -->
+<section class="card" id="staff">
+  <h2>18. 師傅手機版</h2>
+  <p>師傅用手機開系統，可以加到手機主畫面直接點開使用，不需要另外安裝 App，省下成本。</p>
+  <ul>
+    <li>只看自己今日案件，依時段排列</li>
+    <li>到場後點開訂單可看客戶資訊（電話可直撥）、地址、機器</li>
+    <li>現場可加減項（加大、其他加價、折扣）</li>
+    <li>完工按「標記完成」自動勾選促銷類型 + 寫現場備註</li>
+    <li>選收款方式（現金/匯款/刷卡/LINE Pay）</li>
+    <li>個人薪資頁可看自己本月積分、待回繳</li>
+  </ul>
+
+  <!-- PWA mock -->
+  <svg class="mock-screen" viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg">
+    <rect width="900" height="380" fill="#f4f4f5"/>
+    <!-- phone frame center -->
+    <rect x="320" y="20" width="260" height="340" rx="24" fill="#18181b"/>
+    <rect x="330" y="48" width="240" height="292" rx="8" fill="white"/>
+    <!-- status bar -->
+    <rect x="330" y="48" width="240" height="32" rx="0" fill="#4f46e5"/>
+    <text x="450" y="69" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif" font-weight="600">今日排程 — 小明</text>
+    <!-- order cards in phone -->
+    <rect x="338" y="88" width="224" height="68" rx="8" fill="#f4f4f5"/>
+    <text x="350" y="106" fill="#71717a" font-size="10" font-family="sans-serif">09:00</text>
+    <text x="350" y="122" fill="#27272a" font-size="12" font-family="sans-serif" font-weight="600">王大明</text>
+    <text x="350" y="138" fill="#71717a" font-size="11" font-family="sans-serif">直立洗衣機 12kg　員林區中山路</text>
+    <rect x="498" y="96" width="56" height="22" rx="11" fill="#d1fae5"/>
+    <text x="526" y="111" text-anchor="middle" fill="#065f46" font-size="10" font-family="sans-serif">已完成</text>
+
+    <rect x="338" y="164" width="224" height="68" rx="8" fill="#fef3c7" stroke="#fde68a" stroke-width="1"/>
+    <text x="350" y="182" fill="#92400e" font-size="10" font-family="sans-serif">11:30</text>
+    <text x="350" y="198" fill="#27272a" font-size="12" font-family="sans-serif" font-weight="600">陳美玲</text>
+    <text x="350" y="214" fill="#71717a" font-size="11" font-family="sans-serif">滾筒洗衣機 16kg　和美鎮中正路</text>
+    <rect x="498" y="172" width="56" height="22" rx="11" fill="#fde68a"/>
+    <text x="526" y="187" text-anchor="middle" fill="#92400e" font-size="10" font-family="sans-serif">待完成</text>
+
+    <rect x="338" y="240" width="224" height="68" rx="8" fill="#f4f4f5"/>
+    <text x="350" y="258" fill="#71717a" font-size="10" font-family="sans-serif">14:00</text>
+    <text x="350" y="274" fill="#27272a" font-size="12" font-family="sans-serif" font-weight="600">林志偉</text>
+    <text x="350" y="290" fill="#71717a" font-size="11" font-family="sans-serif">直立洗衣機 8kg　草屯鎮中興路</text>
+    <rect x="498" y="248" width="56" height="22" rx="11" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/>
+    <text x="526" y="263" text-anchor="middle" fill="#71717a" font-size="10" font-family="sans-serif">待排案</text>
+
+    <!-- hint text -->
+    <text x="640" y="100" fill="#3f3f46" font-size="13" font-family="sans-serif">&#10003; 師傅只看自己的案件</text>
+    <text x="640" y="124" fill="#3f3f46" font-size="13" font-family="sans-serif">&#10003; 完工可直接標記完成</text>
+    <text x="640" y="148" fill="#3f3f46" font-size="13" font-family="sans-serif">&#10003; 現場加減項、備註</text>
+    <text x="640" y="172" fill="#3f3f46" font-size="13" font-family="sans-serif">&#10003; 選收款方式</text>
+    <text x="640" y="196" fill="#3f3f46" font-size="13" font-family="sans-serif">&#10003; 看本月積分進度</text>
+    <text x="640" y="220" fill="#ef4444" font-size="12" font-family="sans-serif">✕ 看不到其他師傅的案件</text>
+    <text x="640" y="240" fill="#ef4444" font-size="12" font-family="sans-serif">✕ 無法存取客戶完整資料庫</text>
+    <text x="450" y="368" text-anchor="middle" fill="#a1a1aa" font-size="11" font-family="sans-serif">師傅手機端 PWA 示意圖</text>
+  </svg>
+
+  <div class="scenario">
+    <strong>實例：</strong>
+    <p>師傅小李上門前在車上開手機看訂單頁，看到客戶今天有 1 台直立洗衣機。完工後現場按「標記完成」+ 勾選「請客戶 Google 5 星 + 照片」+ 收 NT$ 1,800 現金。<br>
+    回到家手機按一下，今日 4 單全部結案，下班。<br>
+    您在電腦端立即看到 4 單已完成、4 筆現金待回繳，明天他來時收錢按「全部標記」結案。</p>
+  </div>
+</section>
+
+<!-- ====== Closing ====== -->
+<section class="card">
+  <h2>結語：這個系統替您省了什麼</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>每月省下的時間</th>
+        <th>原本花在哪</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>~ 4 小時</td><td>紙本派案與 Excel 兩邊對照計件薪資，出錯又要重來</td></tr>
+      <tr><td>~ 2 小時</td><td>翻閱紙本找客戶服務歷史（客戶來店等候時更費力）</td></tr>
+      <tr><td>~ 2 小時</td><td>整理到期客戶名單</td></tr>
+      <tr><td>~ 3 小時</td><td>手寫排班單、改派、撞時間協調</td></tr>
+      <tr><td>~ 1 小時</td><td>師傅回憶多天前的收款金額，對帳出錯後逐筆翻找</td></tr>
+      <tr><td>~ 1 小時</td><td>本月營業統計報表（以前很多細節根本無法精確掌握）</td></tr>
+      <tr style="background: #fef3c7;"><td><strong>合計 ~ 13 小時 / 月</strong></td><td><strong>= 多 1.5+ 個工作天可以做更有價值的事</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="comparison" style="margin-top: 24px;">
+    <div class="compare-box compare-before">
+      <strong>導入前：紙本為主的問題</strong>
+      <ul style="margin-top: 8px;">
+        <li>手寫排班單 → 理解錯誤 + 隱私風險</li>
+        <li>紙本記錄 → 查詢慢、客戶等候</li>
+        <li>紙本 + Excel 對帳 → 費時易錯</li>
+        <li>師傅靠記憶回繳 → 帳目不清</li>
+        <li>無系統 → 無法精確掌握營業細節</li>
+      </ul>
+    </div>
+    <div class="compare-box compare-after">
+      <strong>導入後：數位化的效益</strong>
+      <ul style="margin-top: 8px;">
+        <li>月曆派工 → 師傅只看自己的案件</li>
+        <li>Ctrl+K 秒搜 → 客戶來店立即查到</li>
+        <li>系統自動計件 → 零計算錯誤</li>
+        <li>逐筆對帳清單 → 現場一筆一勾</li>
+        <li>即時儀表板 → 所有細節精確掌握</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+<footer>
+  淨新清潔工坊管理系統 &nbsp;·&nbsp; 系統功能文件 v2 &nbsp;·&nbsp; 2026-05-22
+</footer>
+</body>
+</html>

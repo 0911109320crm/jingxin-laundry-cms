@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Copy, Check, BellOff, Phone, MapPin } from "lucide-react";
+import { Copy, Check, BellOff, MapPin } from "lucide-react";
 import {
   markReminderSent,
   markReminderSkipped,
@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { formatDate } from "@/lib/utils";
+import { PhoneList, type PhoneItem } from "@/components/customers/PhoneList";
 
 export type ReminderItem = {
   id: string;
@@ -19,6 +20,7 @@ export type ReminderItem = {
     name: string;
     phone: string;
     address: string;
+    phones?: PhoneItem[];
   };
   last_service_at: string | null;
 };
@@ -33,11 +35,11 @@ export function ReminderCard({
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const message = `${reminder.customer.name} 您好，這裡是淨新洗衣機清潔工坊 ☘️
+  const message = `${reminder.customer.name} 您好，這裡是淨新清潔工坊 ☘️
 您上次清洗服務在 ${formatDate(reminder.last_service_at)}，已經將近一年了。
 為了維持您家電的乾淨與壽命，建議再次安排清洗服務。
 有需要請回覆此訊息，我們會盡快為您安排。
-— 淨新洗衣 0911-109320`;
+— 淨新清潔工坊 0911-109320`;
 
   const onCopy = async () => {
     await navigator.clipboard.writeText(message);
@@ -80,8 +82,12 @@ export function ReminderCard({
             >
               {reminder.customer.name}
             </Link>
-            <p className="mt-0.5 flex items-center gap-1 text-sm text-zinc-500">
-              <Phone className="h-3.5 w-3.5" /> {reminder.customer.phone}
+            <p className="mt-0.5 text-sm text-zinc-500">
+              <PhoneList
+                primary={reminder.customer.phone}
+                phones={reminder.customer.phones}
+                mode="inline"
+              />
             </p>
           </div>
           {daysDiff > 0 ? (

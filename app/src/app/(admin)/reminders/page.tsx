@@ -17,6 +17,7 @@ type Row = {
     id: string;
     name: string;
     phone: string;
+    phones: { id: string; phone: string; label: string | null; is_primary: boolean }[];
     addresses: { county: string; district: string; address: string; is_default: boolean }[];
   } | null;
   last_order: { service_at: string | null } | null;
@@ -46,7 +47,9 @@ export default async function RemindersPage({
         .from("reminders")
         .select(
           `id, due_date, status, sent_at,
-           customer:customers(id, name, phone, addresses:customer_addresses(county, district, address, is_default)),
+           customer:customers(id, name, phone,
+                            phones:customer_phones(id, phone, label, is_primary),
+                            addresses:customer_addresses(county, district, address, is_default)),
            last_order:orders!reminders_last_order_id_fkey(service_at)`,
         )
         .eq("status", status)
@@ -85,6 +88,7 @@ export default async function RemindersPage({
           id: r.customer!.id,
           name: r.customer!.name,
           phone: r.customer!.phone,
+          phones: r.customer!.phones ?? [],
           address: addr
             ? `${addr.county} ${addr.district} ${addr.address}`
             : "—",

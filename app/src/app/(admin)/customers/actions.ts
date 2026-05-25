@@ -2,12 +2,72 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, requireRole } from "@/lib/dal";
 import { CustomerSchema, type CustomerInput } from "@/lib/validators/customer";
 import { logAudit } from "@/lib/audit";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+/** 在訂單表單裡 inline 新增一筆地址，回傳新建的 address_id */
+const QuickAddressSchema = z.object({
+  customer_id: z.string().uuid(),
+  county: z.string().min(1, "請選縣市"),
+  district: z.string().min(1, "請選鄉鎮市區"),
+  address: z.string().min(1, "請填詳細地址"),
+  label: z.string().optional().nullable(),
+  is_default: z.boolean().default(false),
+});
+
+export async function addCustomerAddressAction(
+  input: z.infer<typeof QuickAddressSchema>,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  await requireRole(["owner", "manager"]);
+  const parsed = QuickAddressSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+
+  // 若新地址是 default，先把其他既有的 default 設為 false
+  if (parsed.data.is_default) {
+    await supabase
+      .from("customer_addresses")
+      .update({ is_default: false })
+      .eq("customer_id", parsed.data.customer_id);
+  }
+
+  const { data, error } = await supabase
+    .from("customer_addresses")
+    .insert({
+      customer_id: parsed.data.customer_id,
+      county: parsed.data.county,
+      district: parsed.data.district,
+      address: parsed.data.address,
+      label: parsed.data.label || null,
+      is_default: parsed.data.is_default,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    return { ok: false, error: error?.message ?? "新增地址失敗" };
+  }
+
+  await logAudit({
+    action: "customer.add_address",
+    target_type: "customer",
+    target_id: parsed.data.customer_id,
+    payload: {
+      county: parsed.data.county,
+      district: parsed.data.district,
+      address: parsed.data.address,
+    },
+  });
+
+  revalidatePath(`/customers/${parsed.data.customer_id}`);
+  return { ok: true, id: (data as { id: string }).id };
+}
 
 export type CustomerPickerResult = {
   id: string;
@@ -62,12 +122,14 @@ export async function createCustomerAction(
   const data = parsed.data;
   const supabase = await createClient();
 
+  const primaryPhone = data.phones.find((p) => p.is_primary) ?? data.phones[0];
+
   const { data: customer, error: customerErr } = await supabase
     .from("customers")
     .insert({
       code: data.code,
       name: data.name,
-      phone: data.phone,
+      phone: primaryPhone.phone,
       source_id: data.source_id ?? null,
       referrer_id: data.referrer_id ?? null,
       note: data.note ?? null,
@@ -82,6 +144,20 @@ export async function createCustomerAction(
       error: customerErr?.message ?? "建立顧客失敗",
     };
   }
+
+  // customer_phones：主電話先插（is_primary=true），副電話後插
+  // 順序很重要：trigger 會把 is_primary=true 同步到 customers.phone
+  const phonesPayload = data.phones.map((p, idx) => ({
+    customer_id: customer.id,
+    phone: p.phone.trim(),
+    label: p.label?.trim() || null,
+    is_primary: p.is_primary,
+    sort_order: idx,
+  }));
+  const { error: phonesErr } = await supabase
+    .from("customer_phones")
+    .insert(phonesPayload);
+  if (phonesErr) return { ok: false, error: `電話寫入失敗：${phonesErr.message}` };
 
   if (data.addresses.length > 0) {
     const { error } = await supabase.from("customer_addresses").insert(
@@ -133,12 +209,14 @@ export async function updateCustomerAction(
     return { ok: false, error: "介紹人不能是自己" };
   }
 
+  const primaryPhone = data.phones.find((p) => p.is_primary) ?? data.phones[0];
+
   const { error: updateErr } = await supabase
     .from("customers")
     .update({
       code: data.code,
       name: data.name,
-      phone: data.phone,
+      phone: primaryPhone.phone,
       source_id: data.source_id ?? null,
       referrer_id: data.referrer_id ?? null,
       note: data.note ?? null,
@@ -146,6 +224,21 @@ export async function updateCustomerAction(
     })
     .eq("id", id);
   if (updateErr) return { ok: false, error: updateErr.message };
+
+  // customer_phones：replace-all 策略（簡單、可靠）。先全刪、再全插。
+  // 注意 trigger trg_sync_primary_phone 會把 is_primary=true 同步到 customers.phone。
+  await supabase.from("customer_phones").delete().eq("customer_id", id);
+  const phonesPayload = data.phones.map((p, idx) => ({
+    customer_id: id,
+    phone: p.phone.trim(),
+    label: p.label?.trim() || null,
+    is_primary: p.is_primary,
+    sort_order: idx,
+  }));
+  const { error: phonesErr } = await supabase
+    .from("customer_phones")
+    .insert(phonesPayload);
+  if (phonesErr) return { ok: false, error: `電話寫入失敗：${phonesErr.message}` };
 
   // Replace-all strategy for addresses and machines (simple v1 — preserves ids when present)
   // Delete addresses not in payload, upsert the rest

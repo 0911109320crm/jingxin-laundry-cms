@@ -1,0 +1,96 @@
+========================================
+忘記密碼救援 SOP
+========================================
+
+3 個步驟就好：
+
+----------------------------------------
+步驟 1：開 PowerShell，cd 到 app 目錄
+----------------------------------------
+
+    cd C:\RenStudio\case\washinmachine\app
+
+
+----------------------------------------
+步驟 2：跑這行
+----------------------------------------
+
+    node scripts/reset-user-password.mjs <帳號> <新密碼>
+
+舉例：
+    老闆娘忘密碼:
+      node scripts/reset-user-password.mjs ting201314 abc12345
+
+    A 師傅陳昶志忘密碼:
+      node scripts/reset-user-password.mjs 201314 abc12345
+
+* 新密碼隨便打，6 字以上就好
+* 建議用「用戶生日+1234」之類好記又安全的
+
+
+----------------------------------------
+步驟 3：打電話告訴對方新密碼
+----------------------------------------
+
+看到 "✓ 已重設 ..." 就成功了。叫對方用新密碼登入即可。
+
+
+========================================
+帳號對照表（記不住就看這）
+========================================
+
+  老闆娘       帳號: ting201314
+  A-陳昶志     帳號: 201314
+  C-徐祥瑋     帳號: 5785
+  D-羅允辰     帳號: 5357
+  E-葉翰霖     帳號: 1227
+  F-楊仕丞     帳號: 6398
+  RC 自己      帳號: ren.studio.dev@gmail.com
+
+
+========================================
+萬一連對方帳號都忘了
+========================================
+
+    cd C:\RenStudio\case\washinmachine\app
+    node scripts/list-users.mjs
+
+會列出所有帳號 + 姓名 + 角色。
+
+
+========================================
+最壞情境：電腦壞了、.env.local 不見了
+========================================
+
+1. 開 Supabase Dashboard:
+   https://supabase.com/dashboard/project/fjjcglsnzjfhohxpvfbp
+
+2. 左側 Settings → API → 複製 "service_role" key
+
+3. 編輯 C:\RenStudio\case\washinmachine\app\.env.local
+   把 SUPABASE_SERVICE_ROLE_KEY=... 那行的值更新
+
+4. 再跑步驟 1
+
+
+========================================
+進階：直接在 Supabase Dashboard 改密碼
+========================================
+
+如果連 node 都跑不起來，可以從 Dashboard 直接改：
+
+1. https://supabase.com/dashboard/project/fjjcglsnzjfhohxpvfbp
+2. 左側 Authentication → Users
+3. 找到那個 email（例如 ting201314@jingxin.local）
+4. 點右側三個點 → Send password recovery（如有設 SMTP）
+   或 Edit user → Password 欄位直接填新密碼
+
+
+========================================
+備註
+========================================
+
+* 老闆娘登入後台後，能自己重設「師傅」的密碼
+  （在 /settings/users 點師傅那列的鑰匙圖示）
+* 只有「老闆娘自己」忘記密碼才需要你出手
+* 這個 SOP 只是備用，平常用不到

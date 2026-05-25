@@ -67,6 +67,13 @@ type Detail = {
     phone: string;
     note: string | null;
     source: { name: string } | null;
+    phones: {
+      id: string;
+      phone: string;
+      label: string | null;
+      is_primary: boolean;
+      sort_order: number;
+    }[] | null;
   } | null;
   address: { county: string; district: string; address: string } | null;
   items: Item[];
@@ -93,7 +100,9 @@ export default async function OrderDetailPage({
        scheduled_at, service_at, subtotal, adjustments_total, total,
        note, source, cancellation_reason, cancelled_at,
        service_tags, service_notes,
-       customer:customers(id, code, name, phone, note, source:customer_sources(name)),
+       customer:customers(id, code, name, phone, note,
+                          source:customer_sources(name),
+                          phones:customer_phones(id, phone, label, is_primary, sort_order)),
        address:customer_addresses(county, district, address),
        items:order_items(id, quantity, unit_price, subtotal, tag, note,
                          technician_id,
@@ -452,6 +461,7 @@ export default async function OrderDetailPage({
                   phone: o.customer.phone,
                   note: o.customer.note,
                   source: o.customer.source?.name ?? null,
+                  phones: o.customer.phones ?? undefined,
                 }}
                 address={o.address}
                 statsOrders={customerStatsOrders}

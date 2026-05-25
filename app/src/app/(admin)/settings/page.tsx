@@ -28,6 +28,11 @@ const sections = [
     desc: "9 種促銷動作對應分數 + 每月 KPI 目標設定",
   },
   {
+    href: "/settings/payroll",
+    title: "薪資設定",
+    desc: "預設抽成 / 計算公式 / 月結說明（個別項目抽成在「服務項目」設定）",
+  },
+  {
     href: "/settings/sources",
     title: "客戶來源",
     desc: "LINE / Google / FB / FB地方社團 / 跟車 / 老客介紹...",

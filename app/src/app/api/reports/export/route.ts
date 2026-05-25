@@ -201,16 +201,25 @@ export async function GET(req: NextRequest) {
   const bom = "﻿";
   const body = bom + lines.join("\r\n");
 
-  const filename = `report_${range}_${start.toISOString().slice(0, 10)}_${new Date(
-    end.getTime() - 86400000,
-  )
+  const RANGE_LABEL: Record<Range, string> = {
+    today: "今日",
+    week: "本週",
+    month: "本月",
+    quarter: "本季",
+    year: "全年",
+    custom: "自訂",
+  };
+  const endLabel = new Date(end.getTime() - 86400000)
     .toISOString()
-    .slice(0, 10)}.csv`;
+    .slice(0, 10);
+  const filename = `營運報表_${RANGE_LABEL[range]}_${start
+    .toISOString()
+    .slice(0, 10)}_至_${endLabel}.csv`;
 
   return new Response(body, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
       "Cache-Control": "no-store",
     },
   });

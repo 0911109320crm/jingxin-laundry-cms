@@ -20,7 +20,7 @@ export default async function StaffLayout({
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div>
-            <p className="text-sm font-bold text-zinc-900">淨新洗衣</p>
+            <p className="text-sm font-bold text-zinc-900">淨新清潔工坊</p>
             <p className="text-xs text-zinc-500">師傅 · {user.profile.name}</p>
           </div>
           <form action={logoutAction}>

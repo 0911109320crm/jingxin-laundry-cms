@@ -21,7 +21,9 @@ export default async function ServicesSettingsPage({
   const supabase = await createClient();
   let q = supabase
     .from("service_items")
-    .select("id, code, name, default_price, category, sort_order, active")
+    .select(
+      "id, code, name, default_price, category, sort_order, active, commission_type, commission_value",
+    )
     .order("sort_order");
   if (activeCategory) q = q.eq("category", activeCategory);
   if (!showInactive) q = q.eq("active", true);
@@ -97,11 +99,12 @@ export default async function ServicesSettingsPage({
           <CardTitle>項目清單（{items.length}）</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
-          <div className="grid grid-cols-[110px_1fr_100px_140px_80px_70px_auto] gap-2 border-b border-zinc-200 bg-zinc-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <div className="grid grid-cols-[100px_1fr_90px_120px_160px_56px_60px_auto] gap-2 border-b border-zinc-200 bg-zinc-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
             <div>代碼</div>
             <div>名稱</div>
             <div>預設價</div>
             <div>分類</div>
+            <div>抽成</div>
             <div>排序</div>
             <div>狀態</div>
             <div></div>

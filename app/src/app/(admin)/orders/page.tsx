@@ -14,6 +14,7 @@ import {
 } from "@/components/orders/StatusBadges";
 import { formatDate, formatNTD, cn } from "@/lib/utils";
 import { type OrderInput } from "@/lib/validators/order";
+import { QuickDeleteOrderButton } from "./QuickDeleteOrderButton";
 
 type SP = Promise<{
   q?: string;
@@ -40,7 +41,12 @@ type Row = {
   settlement_status: "pending" | "settled" | "not_required";
   total: number;
   note: string | null;
-  customer: { name: string; phone: string; code: string } | null;
+  customer: {
+    name: string;
+    phone: string;
+    code: string;
+    phones: { id: string; phone: string; label: string | null; is_primary: boolean }[];
+  } | null;
   address: { county: string; district: string } | null;
 };
 
@@ -98,7 +104,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
     .select(
       `id, order_code, scheduled_at, service_at, cancelled_at, cancellation_reason,
        status, payment_method, settlement_status, total, note,
-       customer:customers(name, phone, code),
+       customer:customers(name, phone, code, phones:customer_phones(id, phone, label, is_primary)),
        address:customer_addresses(county, district)`,
     )
     .order("scheduled_at", { ascending: false, nullsFirst: false })
@@ -274,10 +280,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
           ) : (
             <ul className="divide-y divide-zinc-200">
               {rows.map((o) => (
-                <li key={o.id}>
+                <li key={o.id} className="flex items-stretch">
                   <Link
                     href={`/orders/${o.id}`}
-                    className="flex flex-col gap-2 px-5 py-3 transition-colors hover:bg-zinc-50 md:flex-row md:items-center md:justify-between"
+                    className="flex flex-1 min-w-0 flex-col gap-2 px-5 py-3 transition-colors hover:bg-zinc-50 md:flex-row md:items-center md:justify-between"
                   >
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -296,7 +302,19 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                         <span className="font-medium text-zinc-900">
                           {o.customer?.name ?? "—"}
                         </span>
-                        <span className="text-zinc-500"> · {o.customer?.phone}</span>
+                        <span className="text-zinc-500"> · {o.customer?.phone}
+                          {o.customer?.phones && o.customer.phones.length > 1 && (
+                            <span
+                              className="ml-1 rounded bg-zinc-100 px-1 text-[10px] text-zinc-600"
+                              title={o.customer.phones
+                                .filter((p) => !p.is_primary)
+                                .map((p) => `${p.phone}${p.label ? `（${p.label}）` : ""}`)
+                                .join("、")}
+                            >
+                              +{o.customer.phones.length - 1}
+                            </span>
+                          )}
+                        </span>
                         {o.address && (
                           <span className="text-zinc-500">
                             {" "}· {o.address.county} {o.address.district}
@@ -332,6 +350,15 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                       </p>
                     </div>
                   </Link>
+                  {o.status === "pending" && (
+                    <div className="flex items-center pr-3">
+                      <QuickDeleteOrderButton
+                        id={o.id}
+                        orderCode={o.order_code}
+                        customerName={o.customer?.name ?? "—"}
+                      />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

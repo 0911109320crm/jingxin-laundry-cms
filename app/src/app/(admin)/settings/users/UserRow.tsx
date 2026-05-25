@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { emailToUsername } from "@/lib/auth-username";
 
 export type UserItem = {
   id: string;
@@ -71,7 +72,7 @@ export function UserRow({ user, isSelf }: { user: UserItem; isSelf: boolean }) {
         className="grid grid-cols-[1fr_1fr_1fr_120px_80px_auto] items-center gap-2 px-5 py-3"
       >
         <Input name="name" defaultValue={user.name} required />
-        <div className="text-xs text-zinc-500 truncate">{user.email}</div>
+        <div className="text-xs text-zinc-500 truncate">{emailToUsername(user.email)}</div>
         <Input name="phone" defaultValue={user.phone ?? ""} placeholder="電話" />
         <Select name="role" defaultValue={user.role} disabled={isSelf}>
           <option value="technician">師傅</option>
@@ -113,7 +114,7 @@ export function UserRow({ user, isSelf }: { user: UserItem; isSelf: boolean }) {
           <span className="ml-1 text-xs text-zinc-400">（你）</span>
         )}
       </div>
-      <div className="text-xs text-zinc-500 truncate">{user.email ?? "—"}</div>
+      <div className="text-xs text-zinc-500 truncate">{emailToUsername(user.email) || "—"}</div>
       <div className="text-zinc-600">{user.phone ?? "—"}</div>
       <div>
         <span
@@ -153,7 +154,18 @@ export function UserRow({ user, isSelf }: { user: UserItem; isSelf: boolean }) {
         >
           <KeyRound className="h-4 w-4" />
         </Button>
-        {!isSelf && (
+        {isSelf ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled
+            title="此為管理者帳號，不允許刪除"
+            className="cursor-not-allowed opacity-40"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : (
           <Button
             type="button"
             size="sm"

@@ -247,23 +247,21 @@ export default async function DashboardPage({
               interactive
             />
           </Link>
-          <div className="col-span-2">
-            <KpiCard
-              icon={
-                <span
-                  className={`flex h-5 w-5 items-center justify-center rounded text-xs font-bold ${
-                    cancelRate >= 20 ? "bg-rose-500 text-white" : "bg-zinc-300 text-zinc-700"
-                  }`}
-                >
-                  ×
-                </span>
-              }
-              label="本月取消率"
-              value={`${cancelRate}%`}
-              sub={`${cancelledCount} / ${orders.length} 取消`}
-              alert={cancelRate >= 20}
-            />
-          </div>
+          <KpiCard
+            icon={
+              <span
+                className={`flex h-5 w-5 items-center justify-center rounded text-xs font-bold ${
+                  cancelRate >= 20 ? "bg-rose-500 text-white" : "bg-zinc-300 text-zinc-700"
+                }`}
+              >
+                ×
+              </span>
+            }
+            label="本月取消率"
+            value={`${cancelRate}%`}
+            sub={`${cancelledCount} / ${orders.length} 取消`}
+            alert={cancelRate >= 20}
+          />
         </div>
 
         {/* 右：師傅本月案量 直條圖 */}

@@ -58,7 +58,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
     const { data: src } = await supabase
       .from("orders")
       .select(
-        `customer_id, address_id, source,
+        `customer_id, address_id, source, duration_minutes,
          items:order_items(machine_id, service_item_id, technician_id,
                            quantity, unit_price, tag, note),
          adjustments:order_adjustments(adjustment_item_id, name_snapshot,
@@ -70,6 +70,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
       customer_id: string;
       address_id: string;
       source: string | null;
+      duration_minutes: number | null;
       items: {
         machine_id: string | null;
         service_item_id: string;
@@ -95,14 +96,16 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
         scheduled_at: "",
         scheduled_end_at: "",
         service_at: "",
-        status: "scheduled",
+        duration_minutes: s.duration_minutes ?? 90,
+        status: "pending",
         payment_method: "unpaid",
         note: "",
         source: s.source ?? "",
         items: s.items.map((it) => ({
           machine_id: it.machine_id,
           service_item_id: it.service_item_id,
-          technician_id: it.technician_id,
+          // 複製訂單不帶舊師傅指派，等月曆重新拖曳
+          technician_id: null,
           quantity: it.quantity,
           unit_price: Number(it.unit_price),
           tag: it.tag ?? "",

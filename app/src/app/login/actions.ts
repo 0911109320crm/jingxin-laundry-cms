@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usernameToEmail } from "@/lib/auth-username";
 
 export type LoginState = { error?: string } | undefined;
 
@@ -9,13 +10,16 @@ export async function loginAction(
   _prev: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim();
+  const account = String(formData.get("account") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/");
 
-  if (!email || !password) {
+  if (!account || !password) {
     return { error: "請輸入帳號與密碼" };
   }
+
+  // 純字串帳號（例「ting201314」）→ 補 @jingxin.local；含 @ 就保留原文
+  const email = usernameToEmail(account);
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });

@@ -31,12 +31,15 @@ export function NewUserForm() {
         <Input id="name" name="name" placeholder="例如 王師傅" required />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="account">帳號</Label>
         <Input
-          id="email"
-          name="email"
-          type="email"
-          placeholder="user@example.com"
+          id="account"
+          name="account"
+          type="text"
+          placeholder="例如 ting201314"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           required
         />
       </div>

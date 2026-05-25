@@ -34,6 +34,13 @@ type CustomerDetail = {
   joined_at: string | null;
   referrer_id: string | null;
   source: { name: string } | null;
+  phones: {
+    id: string;
+    phone: string;
+    label: string | null;
+    is_primary: boolean;
+    sort_order: number;
+  }[];
   addresses: {
     id: string;
     county: string;
@@ -118,6 +125,7 @@ export default async function CustomerDetailPage({
       .select(
         `id, code, name, phone, note, joined_at, referrer_id,
          source:customer_sources(name),
+         phones:customer_phones(id, phone, label, is_primary, sort_order),
          addresses:customer_addresses(id, county, district, address, label, is_default),
          machines(id, type, brand, model, sub_type, note, address_id)`,
       )
@@ -207,35 +215,66 @@ export default async function CustomerDetailPage({
         <ChevronLeft className="h-4 w-4" /> 回顧客列表
       </Link>
 
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-zinc-900">{customer.name}</h1>
-            <span className="text-sm text-zinc-400">{customer.code}</span>
-            {customer.source?.name && (
-              <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700">
-                {customer.source.name}
-              </span>
-            )}
-            <a
-              href={`tel:${customer.phone}`}
-              className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-0.5 text-sm font-medium text-zinc-800 hover:bg-zinc-200"
-            >
-              <Phone className="h-3.5 w-3.5" /> {customer.phone}
-            </a>
-            {referrer && (
-              <Link
-                href={`/customers/${referrer.id}`}
-                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100"
-              >
-                由 {referrer.name} 介紹 →
-              </Link>
-            )}
-          </div>
-          <p className="text-xs text-zinc-500">
-            加入：{formatDate(customer.joined_at)}
-          </p>
-        </div>
+      {(() => {
+        const sortedPhones = [...(customer.phones ?? [])].sort(
+          (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+        );
+        // Fallback：DB 沒 customer_phones（不該發生）就退回單支
+        const phonesToShow =
+          sortedPhones.length > 0
+            ? sortedPhones
+            : [{
+                id: "fallback",
+                phone: customer.phone,
+                label: null,
+                is_primary: true,
+                sort_order: 0,
+              }];
+        return (
+          <header className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-bold text-zinc-900">{customer.name}</h1>
+                <span className="text-sm text-zinc-400">{customer.code}</span>
+                {customer.source?.name && (
+                  <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700">
+                    {customer.source.name}
+                  </span>
+                )}
+                {referrer && (
+                  <Link
+                    href={`/customers/${referrer.id}`}
+                    className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100"
+                  >
+                    由 {referrer.name} 介紹 →
+                  </Link>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {phonesToShow.map((p) => (
+                  <a
+                    key={p.id}
+                    href={`tel:${p.phone}`}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-medium hover:bg-zinc-200 ${
+                      p.is_primary
+                        ? "bg-zinc-100 text-zinc-800"
+                        : "bg-zinc-50 text-zinc-600"
+                    }`}
+                    title={p.label || (p.is_primary ? "主要" : "副電話")}
+                  >
+                    <Phone className="h-3.5 w-3.5" /> {p.phone}
+                    {p.label && (
+                      <span className="ml-1 text-xs text-zinc-500">
+                        ({p.label})
+                      </span>
+                    )}
+                  </a>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-500">
+                加入：{formatDate(customer.joined_at)}
+              </p>
+            </div>
         <div className="flex shrink-0 gap-2">
           <Link
             href={`/orders/new?customer=${customer.id}&from=customer&cid=${customer.id}`}
@@ -251,6 +290,8 @@ export default async function CustomerDetailPage({
           </Link>
         </div>
       </header>
+        );
+      })()}
 
       {/* KPI 條 */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

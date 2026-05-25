@@ -114,6 +114,8 @@ export default async function ScoresPage({
   // Achievement summary
   const totalPoints = monthPromos.reduce((s, p) => s + p.points_snapshot, 0);
   const achieversCount = leaderboard.filter((r) => r.achieved).length;
+  // 分母：所有啟用中的師傅（包含 0 分的），而非只有當月有積分紀錄的師傅
+  const totalTechs = techs.filter((t) => t.role === "technician").length;
 
   // Month nav
   const [y, m] = month.split("-").map(Number);
@@ -173,7 +175,7 @@ export default async function ScoresPage({
             <p className="text-xs text-zinc-500">達標師傅</p>
             <p className="mt-1 text-4xl font-bold text-zinc-900 font-mono">
               {achieversCount}
-              <span className="text-base text-zinc-400"> / {leaderboard.length}</span>
+              <span className="text-base text-zinc-400"> / {totalTechs}</span>
             </p>
             <p className="mt-1 text-xs text-zinc-500">人（KPI ≥ {kpi}）</p>
           </CardBody>

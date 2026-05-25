@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useFieldArray, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
@@ -27,6 +27,7 @@ import {
   getCustomerContext,
   previewOrderCodeAction,
 } from "@/app/(admin)/orders/actions";
+import { AddAddressDialog } from "@/components/orders/AddAddressDialog";
 import { formatNTD } from "@/lib/utils";
 
 type Customer = { id: string; code: string; name: string; phone: string };
@@ -103,6 +104,7 @@ export function OrderForm({
   orderCode,
 }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [addresses, setAddresses] = useState<Address[]>(initial?.addresses ?? []);
@@ -129,7 +131,8 @@ export function OrderForm({
           scheduled_at: defaultScheduledAt ?? "",
           scheduled_end_at: "",
           service_at: "",
-          status: "scheduled",
+          duration_minutes: 90,
+          status: "pending",
           payment_method: "unpaid",
           note: "",
           source: "",
@@ -145,8 +148,13 @@ export function OrderForm({
   const watchedAdjustments = useWatch({ control, name: "adjustments" });
   const scheduledAt = useWatch({ control, name: "scheduled_at" });
 
-  // Duration in minutes; default 90, or derived from existing end_at on edit/clone.
+  // Duration in minutes：edit 模式優先用 initial.duration_minutes（DB 存的），
+  // 否則從 scheduled_at + scheduled_end_at 推（舊資料 backfill 失敗時的 fallback），
+  // 都沒有就 90。
   const initialDuration = (() => {
+    if (initial?.duration_minutes && initial.duration_minutes > 0) {
+      return initial.duration_minutes;
+    }
     if (initial?.scheduled_at && initial?.scheduled_end_at) {
       const s = new Date(initial.scheduled_at).getTime();
       const e = new Date(initial.scheduled_end_at).getTime();
@@ -157,6 +165,31 @@ export function OrderForm({
     return 90;
   })();
   const [duration, setDuration] = useState<number>(initialDuration);
+
+  // 把 duration state 同步到表單，submit 才會帶到 server
+  useEffect(() => {
+    setValue("duration_minutes", duration);
+  }, [duration, setValue]);
+
+  // 把 UTC ISO 轉成瀏覽器當地的 "YYYY-MM-DDTHH:mm"（供 DateTimeSelect 使用）。
+  // 修正 prod 上 server timezone ≠ 客戶端時的顯示偏移問題。
+  useEffect(() => {
+    const toLocal = (s: string | null | undefined): string | null => {
+      if (!s) return null;
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s)) return null; // 已是本地格式，不動
+      const d = new Date(s);
+      if (Number.isNaN(d.getTime())) return null;
+      const pad = (n: number) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    for (const field of ["scheduled_at", "scheduled_end_at", "service_at"] as const) {
+      const cur = initial?.[field];
+      const local = toLocal(cur);
+      if (local) setValue(field, local);
+    }
+    // 只在 mount 跑一次（讓 ISO 轉成本地顯示），後續使用者輸入由 DateTimeSelect 管理
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-derive scheduled_end_at from scheduled_at + duration
   useEffect(() => {
@@ -207,17 +240,25 @@ export function OrderForm({
       if (cancel) return;
       setAddresses(ctx.addresses);
       setMachines(ctx.machines);
-      if (ctx.addresses.length > 0) {
-        const def = ctx.addresses.find((a) => a.is_default) ?? ctx.addresses[0];
-        setValue("address_id", def.id);
-      } else {
-        setValue("address_id", "");
-      }
     })();
     return () => {
       cancel = true;
     };
-  }, [customerId, initial?.customer_id, setValue]);
+  }, [customerId, initial?.customer_id]);
+
+  // Auto-select address after the addresses state has rerendered
+  // （拆成獨立 effect，確保 <option> DOM 已渲染 setValue 才能生效）
+  useEffect(() => {
+    if (addresses.length === 0) {
+      if (watchedAddressId) setValue("address_id", "");
+      return;
+    }
+    // 若使用者已選好或表單 initial 帶值，不覆蓋
+    if (watchedAddressId && addresses.some((a) => a.id === watchedAddressId)) return;
+    const def = addresses.find((a) => a.is_default) ?? addresses[0];
+    setValue("address_id", def.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addresses]);
 
   const subtotal = (watchedItems ?? []).reduce(
     (s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0),
@@ -230,23 +271,47 @@ export function OrderForm({
   );
   const total = subtotal + adjTotal;
 
+  // 把 datetime-local 字串 "YYYY-MM-DDTHH:mm"（瀏覽器當地時區）轉成帶時區的 ISO，
+  // 避免 Postgres timestamptz 把無時區字串當 UTC 存（08:00 台灣會變成 16:00）。
+  const localToIso = (s: string | null | undefined): string | null => {
+    if (!s) return null;
+    if (/[Z]|[+-]\d{2}:?\d{2}$/.test(s)) return s; // 已含時區
+    const d = new Date(s); // 瀏覽器當地時區解析
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString();
+  };
+
   const onSubmit = (values: OrderInput) => {
     setServerError(null);
+    const normalized: OrderInput = {
+      ...values,
+      scheduled_at: localToIso(values.scheduled_at),
+      scheduled_end_at: localToIso(values.scheduled_end_at),
+      service_at: localToIso(values.service_at),
+    };
     startTransition(async () => {
       const res =
         mode === "create"
-          ? await createOrderAction(values)
-          : await updateOrderAction(initial!.id!, values);
+          ? await createOrderAction(normalized)
+          : await updateOrderAction(initial!.id!, normalized);
       if (!res.ok) {
         setServerError(res.error);
         return;
       }
-      // 建單成功跳訂單詳細頁時帶 just_created=1，讓詳細頁顯示「同客戶再建一筆」CTA
-      const target =
-        backHref ??
-        (res.id
-          ? `/orders/${res.id}${mode === "create" ? "?just_created=1" : ""}`
-          : "/orders");
+      // 建單模式：永遠跳到 detail 頁顯示「同客戶再建一筆」CTA（即使有 backHref 也忽略）
+      // 編輯模式：跳回使用者來源頁（backHref）
+      let target: string;
+      if (mode === "create" && res.id) {
+        const params = new URLSearchParams();
+        params.set("just_created", "1");
+        const from = searchParams?.get("from");
+        const cid = searchParams?.get("cid");
+        if (from) params.set("from", from);
+        if (cid) params.set("cid", cid);
+        target = `/orders/${res.id}?${params.toString()}`;
+      } else {
+        target = backHref ?? "/orders";
+      }
       router.push(target);
       router.refresh();
     });
@@ -259,6 +324,7 @@ export function OrderForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
       <Card>
         <CardHeader className="flex items-center justify-between">
           <CardTitle>客戶 / 排程</CardTitle>
@@ -273,7 +339,7 @@ export function OrderForm({
             </span>
           )}
         </CardHeader>
-        <CardBody className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <CardBody className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           <Field label="客戶" error={errors.customer_id?.message}>
             <Select {...register("customer_id")}>
               <option value="">— 選擇客戶 —</option>
@@ -285,17 +351,35 @@ export function OrderForm({
             </Select>
           </Field>
           <Field label="服務地址" error={errors.address_id?.message}>
-            <Select {...register("address_id")} disabled={addresses.length === 0}>
-              <option value="">
-                {addresses.length === 0 ? "— 先選客戶 —" : "— 選擇地址 —"}
-              </option>
-              {addresses.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.county} {a.district} {a.address}
-                  {a.label ? ` (${a.label})` : ""}
+            <div className="flex gap-2">
+              <Select
+                {...register("address_id")}
+                disabled={addresses.length === 0}
+                className="min-w-0 flex-1"
+              >
+                <option value="">
+                  {addresses.length === 0 ? "— 先選客戶 —" : "— 選擇地址 —"}
                 </option>
-              ))}
-            </Select>
+                {addresses.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.county} {a.district} {a.address}
+                    {a.label ? ` (${a.label})` : ""}
+                  </option>
+                ))}
+              </Select>
+              {customerId && (
+                <AddAddressDialog
+                  customerId={customerId}
+                  onSaved={async (newId) => {
+                    // 重新撈該客戶的地址列表，並選用剛新增的那筆
+                    const ctx = await getCustomerContext(customerId);
+                    setAddresses(ctx.addresses);
+                    setMachines(ctx.machines);
+                    setValue("address_id", newId);
+                  }}
+                />
+              )}
+            </div>
           </Field>
           <Field label="預約開始時間">
             <Controller
@@ -314,11 +398,13 @@ export function OrderForm({
               <Input
                 type="number"
                 min={0}
-                step={10}
+                step={5}
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value) || 0)}
-                className="w-24"
+                placeholder="自訂 45 / 80…"
+                className="w-28"
               />
+              <span className="text-xs text-zinc-400">或快選：</span>
               <div className="flex gap-1">
                 {[60, 90, 120, 180].map((m) => (
                   <button
@@ -352,15 +438,20 @@ export function OrderForm({
               />
             </Field>
           )}
-          <Field label="訂單狀態">
-            <Select {...register("status")}>
-              {ORDER_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {ORDER_STATUS_LABEL[s]}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          {mode === "edit" && (
+            <Field label="訂單狀態">
+              <Select {...register("status")}>
+                {ORDER_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {ORDER_STATUS_LABEL[s]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          {mode === "create" && (
+            <input type="hidden" {...register("status")} value="pending" />
+          )}
           <Field label="收款狀態">
             <Select {...register("payment_method")}>
               {PAYMENT_METHODS.map((p) => (
@@ -376,7 +467,7 @@ export function OrderForm({
               placeholder="電話 / LINE / 官網表單..."
             />
           </Field>
-          <Field label="備註" className="md:col-span-2">
+          <Field label="備註" className="xl:col-span-2">
             <Textarea
               {...register("note")}
               placeholder="特殊狀況、客戶要求…"
@@ -385,6 +476,7 @@ export function OrderForm({
         </CardBody>
       </Card>
 
+      <div className="space-y-5">
       <Card>
         <CardHeader className="flex items-center justify-between">
           <CardTitle>服務項目（可多項）</CardTitle>
@@ -397,6 +489,11 @@ export function OrderForm({
             <Plus className="h-4 w-4" /> 新增一項
           </Button>
         </CardHeader>
+        {mode === "create" && (
+          <div className="border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs text-amber-800">
+            💡 新建訂單一律進「待派工」，請到月曆頁拖曳指派師傅。
+          </div>
+        )}
         <CardBody className="space-y-3">
           {itemArr.fields.map((field, idx) => (
             <div
@@ -417,7 +514,13 @@ export function OrderForm({
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-[2fr_1fr_80px_120px]">
+              <div
+                className={
+                  mode === "edit"
+                    ? "grid grid-cols-1 gap-3 md:grid-cols-[2fr_1fr_80px_120px]"
+                    : "grid grid-cols-1 gap-3 md:grid-cols-[1fr_80px_120px]"
+                }
+              >
                 <Field
                   label="服務項目"
                   error={errors.items?.[idx]?.service_item_id?.message}
@@ -443,16 +546,18 @@ export function OrderForm({
                     )}
                   />
                 </Field>
-                <Field label="指派師傅">
-                  <Select {...register(`items.${idx}.technician_id`)}>
-                    <option value="">— 未指派 —</option>
-                    {technicians.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
+                {mode === "edit" && (
+                  <Field label="指派師傅">
+                    <Select {...register(`items.${idx}.technician_id`)}>
+                      <option value="">— 未指派 —</option>
+                      {technicians.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                )}
                 <Field label="數量">
                   <Input
                     type="number"
@@ -468,49 +573,57 @@ export function OrderForm({
                   />
                 </Field>
               </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_100px]">
-                <Field label="機器（可選）">
-                  <Select {...register(`items.${idx}.machine_id`)}>
-                    <option value="">— 不指定機器 —</option>
-                    {machines.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {MACHINE_TYPE_LABEL[m.type as keyof typeof MACHINE_TYPE_LABEL] ?? m.type} ·{" "}
-                        {[m.brand, m.model].filter(Boolean).join(" ") || "未填型號"}
-                      </option>
-                    ))}
-                  </Select>
-                  {(() => {
-                    const selectedMachineId = watchedItems?.[idx]?.machine_id;
-                    if (!selectedMachineId) return null;
-                    const m = machines.find((mm) => mm.id === selectedMachineId);
-                    if (!m?.address_id) return null;
-                    if (!watchedAddressId || m.address_id === watchedAddressId)
-                      return null;
-                    const machineAddr = addresses.find(
-                      (a) => a.id === m.address_id,
-                    );
-                    if (!machineAddr) return null;
-                    return (
-                      <div className="mt-1 flex items-start gap-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                        <span className="shrink-0">⚠</span>
-                        <span className="min-w-0 flex-1">
-                          此機器在「{machineAddr.county}
-                          {machineAddr.district}
-                          {machineAddr.address}」，但本單地址不同。
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setValue("address_id", m.address_id!)
-                            }
-                            className="ml-1 font-medium underline hover:text-amber-900"
-                          >
-                            切換到此地址
-                          </button>
-                        </span>
-                      </div>
-                    );
-                  })()}
-                </Field>
+              <div
+                className={
+                  mode === "edit"
+                    ? "grid grid-cols-1 gap-3 md:grid-cols-[1fr_100px]"
+                    : "grid grid-cols-1 gap-3"
+                }
+              >
+                {mode === "edit" && (
+                  <Field label="機器（可選）">
+                    <Select {...register(`items.${idx}.machine_id`)}>
+                      <option value="">— 不指定機器 —</option>
+                      {machines.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {MACHINE_TYPE_LABEL[m.type as keyof typeof MACHINE_TYPE_LABEL] ?? m.type} ·{" "}
+                          {[m.brand, m.model].filter(Boolean).join(" ") || "未填型號"}
+                        </option>
+                      ))}
+                    </Select>
+                    {(() => {
+                      const selectedMachineId = watchedItems?.[idx]?.machine_id;
+                      if (!selectedMachineId) return null;
+                      const m = machines.find((mm) => mm.id === selectedMachineId);
+                      if (!m?.address_id) return null;
+                      if (!watchedAddressId || m.address_id === watchedAddressId)
+                        return null;
+                      const machineAddr = addresses.find(
+                        (a) => a.id === m.address_id,
+                      );
+                      if (!machineAddr) return null;
+                      return (
+                        <div className="mt-1 flex items-start gap-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                          <span className="shrink-0">⚠</span>
+                          <span className="min-w-0 flex-1">
+                            此機器在「{machineAddr.county}
+                            {machineAddr.district}
+                            {machineAddr.address}」，但本單地址不同。
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setValue("address_id", m.address_id!)
+                              }
+                              className="ml-1 font-medium underline hover:text-amber-900"
+                            >
+                              切換到此地址
+                            </button>
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </Field>
+                )}
                 <Field label="代號（遠/母/卡…）">
                   <Input
                     {...register(`items.${idx}.tag`)}
@@ -658,6 +771,8 @@ export function OrderForm({
           </div>
         </CardBody>
       </Card>
+      </div>
+      </div>
 
       {serverError && (
         <Card className="border-red-300 bg-red-50">

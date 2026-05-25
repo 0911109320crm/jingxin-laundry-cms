@@ -22,7 +22,11 @@ type StaffOrder = {
   payment_method: OrderInput["payment_method"];
   settlement_status: "pending" | "settled" | "not_required";
   total: number;
-  customer: { name: string; phone: string } | null;
+  customer: {
+    name: string;
+    phone: string;
+    phones: { id: string; phone: string; label: string | null; is_primary: boolean }[];
+  } | null;
   address: { county: string; district: string; address: string } | null;
   items: { quantity: number; service: { name: string } | null }[];
 };
@@ -61,7 +65,7 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
       .from("orders")
       .select(
         `id, order_code, scheduled_at, status, payment_method, settlement_status, total,
-         customer:customers(name, phone),
+         customer:customers(name, phone, phones:customer_phones(id, phone, label, is_primary)),
          address:customer_addresses(county, district, address),
          items:order_items(quantity, service:service_items(name))`,
       )
@@ -239,6 +243,17 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
                         </p>
                         <p className="text-sm text-zinc-500">
                           {o.customer?.phone}
+                          {o.customer?.phones && o.customer.phones.length > 1 && (
+                            <span
+                              className="ml-1 rounded bg-zinc-100 px-1 text-[10px] text-zinc-600"
+                              title={o.customer.phones
+                                .filter((p) => !p.is_primary)
+                                .map((p) => `${p.phone}${p.label ? `（${p.label}）` : ""}`)
+                                .join("、")}
+                            >
+                              +{o.customer.phones.length - 1}
+                            </span>
+                          )}
                         </p>
                       </div>
                       {o.items.length > 0 && (

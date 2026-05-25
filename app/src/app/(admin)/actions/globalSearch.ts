@@ -34,11 +34,27 @@ export async function globalSearchAction(query: string): Promise<SearchResults> 
 
   const supabase = await createClient();
   const like = `%${trimmed}%`;
+  const digits = trimmed.replace(/\D/g, "");
+
+  // 副電話查詢：只在 query 含 ≥4 位數字時觸發
+  const phoneHitsPromise =
+    digits.length >= 4
+      ? supabase
+          .from("customer_phones")
+          .select(
+            "phone, label, is_primary, customers!inner(id, code, name, phone)",
+          )
+          .ilike("phone", `%${digits}%`)
+          .eq("is_primary", false) // primary 已被下面的 customers 查到
+          .limit(10)
+      : Promise.resolve({ data: null });
 
   const [
     { data: customers },
     { data: orders },
     { data: addressMatches },
+    { data: phoneHits },
+    { data: machineHits },
   ] = await Promise.all([
     supabase
       .from("customers")
@@ -56,6 +72,15 @@ export async function globalSearchAction(query: string): Promise<SearchResults> 
         "address, county, district, label, customers!inner(id, code, name, phone)",
       )
       .or(`address.ilike.${like},district.ilike.${like}`)
+      .limit(10),
+    phoneHitsPromise,
+    supabase
+      .from("machines")
+      .select(
+        "code, brand, model, customers!inner(id, code, name, phone)",
+      )
+      .ilike("code", like)
+      .not("code", "is", null)
       .limit(10),
   ]);
 
@@ -78,6 +103,50 @@ export async function globalSearchAction(query: string): Promise<SearchResults> 
     const c = row.customers;
     if (!c) continue;
     const matched = `${row.county}${row.district} ${row.address}${row.label ? ` (${row.label})` : ""}`;
+    const existing = customerMap.get(c.id);
+    if (existing) {
+      if (!existing.matched_address) existing.matched_address = matched;
+    } else if (customerMap.size < 8) {
+      customerMap.set(c.id, {
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        phone: c.phone,
+        matched_address: matched,
+      });
+    }
+  }
+  // 副電話命中：合進 customerMap，matched_address 改放 "副電話: 09xxx"
+  for (const row of (phoneHits ?? []) as unknown as Array<{
+    phone: string;
+    label: string | null;
+    is_primary: boolean;
+    customers: { id: string; code: string; name: string; phone: string } | null;
+  }>) {
+    const c = row.customers;
+    if (!c) continue;
+    if (customerMap.has(c.id)) continue;
+    if (customerMap.size >= 8) break;
+    const matched = `副電話 ${row.phone}${row.label ? `（${row.label}）` : ""}`;
+    customerMap.set(c.id, {
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      phone: c.phone,
+      matched_address: matched,
+    });
+  }
+  // 機器編碼命中：合進 customerMap，matched_address 顯示 "機器 #XX (品牌 型號)"
+  for (const row of (machineHits ?? []) as unknown as Array<{
+    code: string;
+    brand: string | null;
+    model: string | null;
+    customers: { id: string; code: string; name: string; phone: string } | null;
+  }>) {
+    const c = row.customers;
+    if (!c) continue;
+    const brandModel = [row.brand, row.model].filter(Boolean).join(" ");
+    const matched = `機器 #${row.code}${brandModel ? `（${brandModel}）` : ""}`;
     const existing = customerMap.get(c.id);
     if (existing) {
       if (!existing.matched_address) existing.matched_address = matched;

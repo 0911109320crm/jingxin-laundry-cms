@@ -1,0 +1,281 @@
+#!/usr/bin/env node
+/**
+ * Step 3: 把 out/*.csv 灌進 Supabase。
+ *
+ * 用法:
+ *   node import.mjs --dry-run         只統計、不寫入
+ *   node import.mjs                   實際匯入
+ *   node import.mjs --reset           先刪除所有 OLD- 前綴客戶與訂單，再匯入
+ *
+ * 環境變數從 ../app/.env.local 讀取（SUPABASE_URL, SERVICE_ROLE_KEY）。
+ *
+ * 匯入順序:
+ *   1. 確保 5 個 OLD-XX service_items 存在
+ *   2. customers
+ *   3. customer_addresses
+ *   4. machines
+ *   5. orders（暫時關閉 totals trigger 以保留 CSV 中的金額）
+ *   6. order_items
+ */
+import { createClient } from "@supabase/supabase-js";
+import { readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+// app/scripts/ → app/.env.local
+const envPath = resolve(__dirname, "..", ".env.local");
+// app/scripts/ → ../../migrate/out/
+const MIGRATE_OUT = resolve(__dirname, "..", "..", "migrate", "out");
+if (!existsSync(envPath)) {
+  console.error(`找不到 ${envPath}`);
+  process.exit(1);
+}
+const env = Object.fromEntries(
+  readFileSync(envPath, "utf-8")
+    .split(/\r?\n/)
+    .filter((l) => l && !l.startsWith("#") && l.includes("="))
+    .map((l) => { const [k, ...r] = l.split("="); return [k.trim(), r.join("=").trim()]; })
+);
+
+const supabase = createClient(
+  env.NEXT_PUBLIC_SUPABASE_URL,
+  env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
+const DRY_RUN = process.argv.includes("--dry-run");
+const RESET = process.argv.includes("--reset");
+const OUT = MIGRATE_OUT;
+// --sample N：只匯前 N 個客戶（及其關聯資料）
+const sampleArg = process.argv.find(a => a.startsWith("--sample="));
+const SAMPLE_N = sampleArg ? parseInt(sampleArg.split("=")[1], 10) : null;
+
+// ─── CSV parser ──────────────────────────────────────────────────────────────
+function parseCSV(path) {
+  const text = readFileSync(path, "utf-8").replace(/^﻿/, "");
+  const rows = [];
+  let cur = [];
+  let cell = "";
+  let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') inQ = false;
+      else cell += ch;
+    } else {
+      if (ch === '"') inQ = true;
+      else if (ch === ",") { cur.push(cell); cell = ""; }
+      else if (ch === "\n") { cur.push(cell); rows.push(cur); cur = []; cell = ""; }
+      else if (ch === "\r") continue;
+      else cell += ch;
+    }
+  }
+  if (cell.length > 0 || cur.length > 0) { cur.push(cell); rows.push(cur); }
+  const headers = rows[0];
+  return rows.slice(1).filter(r => r.length === headers.length).map(r =>
+    Object.fromEntries(r.map((v, i) => [headers[i], v]))
+  );
+}
+
+// ─── Batch insert helper ─────────────────────────────────────────────────────
+async function insertBatch(table, rows, batchSize = 500) {
+  if (DRY_RUN) return rows.length;
+  let ok = 0;
+  let fail = 0;
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const { error } = await supabase.from(table).insert(batch);
+    if (error) {
+      console.error(`  ${table} batch ${i}: ${error.message}`);
+      fail += batch.length;
+    } else {
+      ok += batch.length;
+    }
+    process.stdout.write(`\r  ${table}: ${ok}/${rows.length}`);
+  }
+  process.stdout.write("\n");
+  if (fail > 0) console.error(`  ${table}: ${fail} failed`);
+  return ok;
+}
+
+// ─── 0. Reset ────────────────────────────────────────────────────────────────
+async function reset() {
+  console.log("Reset mode: deleting all OLD- data...");
+  // orders 用 order_code like 'OLD-%'
+  const { data: oldOrders } = await supabase
+    .from("orders").select("id").like("order_code", "OLD-%");
+  const orderIds = (oldOrders ?? []).map(o => o.id);
+  if (orderIds.length) {
+    // order_items / order_adjustments cascade
+    const { error } = await supabase.from("orders").delete().in("id", orderIds);
+    if (error) console.error("  orders delete:", error.message);
+    else console.log(`  deleted ${orderIds.length} orders + cascades`);
+  }
+  const { data: oldCusts } = await supabase
+    .from("customers").select("id").like("code", "OLD-%");
+  const custIds = (oldCusts ?? []).map(c => c.id);
+  if (custIds.length) {
+    // machines / addresses cascade
+    const { error } = await supabase.from("customers").delete().in("id", custIds);
+    if (error) console.error("  customers delete:", error.message);
+    else console.log(`  deleted ${custIds.length} customers + cascades`);
+  }
+  console.log("Reset done.\n");
+}
+
+// ─── 1. Service items ────────────────────────────────────────────────────────
+async function ensureServiceItems() {
+  console.log("確認 5 個 OLD-XX service_items...");
+  const items = [
+    { code: "OLD-WASHER-VERTICAL", name: "舊資料-直立式洗衣機", default_price: 1600, category: "washing_vertical", sort_order: 9001 },
+    { code: "OLD-WASHER-DRUM",     name: "舊資料-滾筒洗衣機",   default_price: 3800, category: "washing_drum",     sort_order: 9002 },
+    { code: "OLD-AC",              name: "舊資料-冷氣",         default_price: 2500, category: "ac_split",         sort_order: 9003 },
+    { code: "OLD-MATTRESS",        name: "舊資料-床墊",         default_price: 1800, category: "mattress",         sort_order: 9004 },
+    { code: "OLD-SOFA",            name: "舊資料-沙發",         default_price: 2500, category: "sofa",             sort_order: 9005 },
+  ];
+  if (!DRY_RUN) {
+    const { error } = await supabase.from("service_items").upsert(items, { onConflict: "code" });
+    if (error) { console.error("  service_items:", error.message); process.exit(1); }
+  }
+  const { data } = await supabase.from("service_items").select("id, code").in("code", items.map(i => i.code));
+  const map = new Map((data ?? []).map(r => [r.code, r.id]));
+  for (const it of items) {
+    console.log(`  ${it.code.padEnd(22)} → ${map.get(it.code) ?? "(dry-run)"}`);
+  }
+  return map;
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
+async function main() {
+  console.log(`\n=== Import to Supabase (${DRY_RUN ? "DRY-RUN" : "LIVE"}) ===\n`);
+
+  if (RESET && !DRY_RUN) await reset();
+
+  let customers = parseCSV(resolve(OUT, "customers.csv"));
+  let phones    = parseCSV(resolve(OUT, "customer_phones.csv"));
+  let addresses = parseCSV(resolve(OUT, "customer_addresses.csv"));
+  let machines  = parseCSV(resolve(OUT, "machines.csv"));
+  let orders    = parseCSV(resolve(OUT, "orders.csv"));
+  let items     = parseCSV(resolve(OUT, "order_items.csv"));
+
+  if (SAMPLE_N) {
+    // --sample-multiphone: 優先挑有副電話的客戶
+    if (process.argv.includes("--sample-multiphone")) {
+      const phoneCount = new Map();
+      for (const p of phones) phoneCount.set(p.customer_id, (phoneCount.get(p.customer_id) ?? 0) + 1);
+      customers = customers.filter(c => (phoneCount.get(c.id) ?? 0) >= 2).slice(0, SAMPLE_N);
+    } else {
+      customers = customers.slice(0, SAMPLE_N);
+    }
+    const custIds = new Set(customers.map(c => c.id));
+    phones    = phones.filter(p => custIds.has(p.customer_id));
+    addresses = addresses.filter(a => custIds.has(a.customer_id));
+    machines  = machines.filter(m => custIds.has(m.customer_id));
+    orders    = orders.filter(o => custIds.has(o.customer_id));
+    const orderIds = new Set(orders.map(o => o.id));
+    items     = items.filter(it => orderIds.has(it.order_id));
+    console.log(`\n--sample=${SAMPLE_N}: 只匯 ${customers.length} 個客戶相關資料\n`);
+  }
+
+  console.log(`輸入:`);
+  console.log(`  customers:           ${customers.length}`);
+  console.log(`  customer_phones:     ${phones.length}`);
+  console.log(`  customer_addresses:  ${addresses.length}`);
+  console.log(`  machines:            ${machines.length}`);
+  console.log(`  orders:              ${orders.length}`);
+  console.log(`  order_items:         ${items.length}\n`);
+
+  const svcMap = await ensureServiceItems();
+
+  // customers
+  console.log("\n1) customers");
+  await insertBatch("customers", customers.map(c => ({
+    id: c.id,
+    code: c.code,
+    name: c.name || "（舊資料-無姓名）",
+    phone: c.phone,
+    joined_at: c.joined_at || null,
+    note: c.note || null,
+  })));
+
+  // customer_phones（先擋 trigger：每客戶最多 1 個 primary，故主電話先進、副電話後進）
+  console.log("\n1b) customer_phones");
+  await insertBatch("customer_phones", phones.map(p => ({
+    id: p.id,
+    customer_id: p.customer_id,
+    phone: p.phone,
+    label: p.label || null,
+    is_primary: p.is_primary === "true",
+    sort_order: parseInt(p.sort_order, 10),
+  })));
+
+  // addresses
+  console.log("\n2) customer_addresses");
+  await insertBatch("customer_addresses", addresses.map(a => ({
+    id: a.id,
+    customer_id: a.customer_id,
+    county: a.county,
+    district: a.district,
+    address: a.address,
+    label: a.label || null,
+    is_default: a.is_default === "true",
+  })));
+
+  // machines
+  console.log("\n3) machines");
+  await insertBatch("machines", machines.map(m => ({
+    id: m.id,
+    customer_id: m.customer_id,
+    address_id: m.address_id || null,
+    type: m.type,
+    brand: m.brand || null,
+    model: m.model || null,
+    sub_type: m.sub_type || null,
+    note: m.note || null,
+  })));
+
+  // orders
+  // 注意：
+  //   1. order_items insert 會觸發 refresh_order_totals 把 orders.subtotal/total 重算。
+  //      因為 CSV 中的金額 = sum(items.unit_price)，重算後仍會吻合，所以不必關 trigger。
+  //   2. 歷史訂單都已完成，settlement_status 強制設 'settled'，否則 init_settlement
+  //      trigger 會根據 cash → 設成 'pending'（待回繳），出現在師傅待回繳清單。
+  console.log("\n4) orders");
+  await insertBatch("orders", orders.map(o => ({
+    id: o.id,
+    order_code: o.order_code,
+    customer_id: o.customer_id,
+    address_id: o.address_id,
+    scheduled_at: o.scheduled_at || null,
+    service_at: o.service_at || null,
+    status: o.status,
+    payment_method: o.payment_method || null,
+    settlement_status: "settled",
+    subtotal: parseFloat(o.subtotal),
+    adjustments_total: parseFloat(o.adjustments_total),
+    total: parseFloat(o.total),
+    source: o.source || null,
+    note: o.note || null,
+  })));
+
+  // order_items
+  console.log("\n5) order_items");
+  await insertBatch("order_items", items.map(it => ({
+    id: it.id,
+    order_id: it.order_id,
+    machine_id: it.machine_id || null,
+    service_item_id: svcMap.get(it.service_code),
+    technician_id: it.technician_id || null,
+    quantity: parseInt(it.quantity, 10),
+    unit_price: parseFloat(it.unit_price),
+    subtotal: parseFloat(it.subtotal),
+    tag: it.tag || null,
+    note: it.note || null,
+  })));
+
+  console.log("\n=== Done ===");
+}
+
+main().catch(e => { console.error(e); process.exit(1); });

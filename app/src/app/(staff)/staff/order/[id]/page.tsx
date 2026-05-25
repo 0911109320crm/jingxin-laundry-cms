@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Phone, MapPin } from "lucide-react";
+import { ChevronLeft, MapPin } from "lucide-react";
+import { PhoneList } from "@/components/customers/PhoneList";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/dal";
 import { redirect } from "next/navigation";
@@ -12,8 +13,8 @@ import {
 } from "@/components/orders/StatusBadges";
 import { formatDateTime, formatNTD } from "@/lib/utils";
 import type { OrderInput } from "@/lib/validators/order";
-import { StaffActions } from "./StaffActions";
-import { PromotionsToggle } from "./PromotionsToggle";
+import { OrderWorkflow } from "./OrderWorkflow";
+import { MachineEditor } from "./MachineEditor";
 
 type Detail = {
   id: string;
@@ -30,7 +31,11 @@ type Detail = {
   service_tags: string[] | null;
   service_notes: string | null;
   customer_id: string;
-  customer: { name: string; phone: string } | null;
+  customer: {
+    name: string;
+    phone: string;
+    phones: { id: string; phone: string; label: string | null; is_primary: boolean }[];
+  } | null;
   address: { county: string; district: string; address: string } | null;
   items: {
     id: string;
@@ -40,8 +45,14 @@ type Detail = {
     tag: string | null;
     note: string | null;
     technician_id: string | null;
-    service: { code: string; name: string } | null;
-    machine: { type: string; brand: string | null; model: string | null } | null;
+    service: { code: string; name: string; category: string | null } | null;
+    machine: {
+      id: string;
+      type: string;
+      brand: string | null;
+      model: string | null;
+      code: string | null;
+    } | null;
   }[];
   adjustments: {
     id: string;
@@ -74,12 +85,13 @@ export default async function StaffOrderPage({
       `id, order_code, status, payment_method, settlement_status,
        scheduled_at, service_at, subtotal, adjustments_total, total, note,
        service_tags, service_notes, customer_id,
-       customer:customers(name, phone),
+       customer:customers(name, phone,
+                          phones:customer_phones(id, phone, label, is_primary)),
        address:customer_addresses(county, district, address),
        items:order_items(id, quantity, unit_price, subtotal, tag, note,
                          technician_id,
-                         service:service_items(code, name),
-                         machine:machines(type, brand, model)),
+                         service:service_items(code, name, category),
+                         machine:machines(id, type, brand, model, code)),
        adjustments:order_adjustments(id, name_snapshot, type, amount)`,
     )
     .eq("id", id)
@@ -101,6 +113,16 @@ export default async function StaffOrderPage({
       label: string;
       sort_order: number;
     }[] | null) ?? [];
+
+  // machine_brands 給機器編輯器當 datalist autocomplete
+  const { data: brandsData } = await supabase
+    .from("machine_brands")
+    .select("category, name")
+    .eq("active", true)
+    .order("category")
+    .order("sort_order");
+  const brands =
+    (brandsData as { category: string; name: string }[] | null) ?? [];
 
   // 加減項預設清單
   const { data: adjItemsData } = await supabase
@@ -177,12 +199,11 @@ export default async function StaffOrderPage({
             <p className="text-base font-bold text-zinc-900">
               {o.customer.name}
             </p>
-            <a
-              href={`tel:${o.customer.phone}`}
-              className="inline-flex items-center gap-2 text-sm text-brand-700"
-            >
-              <Phone className="h-4 w-4" /> {o.customer.phone}
-            </a>
+            <PhoneList
+              primary={o.customer.phone}
+              phones={o.customer.phones}
+              mode="stack"
+            />
             {o.address && (
               <p className="flex items-start gap-2 text-sm text-zinc-700">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
@@ -202,44 +223,38 @@ export default async function StaffOrderPage({
         </Card>
       )}
 
-      {o.adjustments.length > 0 && (
-        <Card>
-          <CardBody className="p-0">
-            <ul className="divide-y divide-zinc-200">
-              {o.adjustments.map((a) => (
-                <li
-                  key={a.id}
-                  className="flex items-center justify-between px-4 py-2 text-sm"
-                >
-                  <span>
-                    {a.name_snapshot}{" "}
-                    <span
-                      className={
-                        a.type === "addon"
-                          ? "text-orange-600"
-                          : "text-blue-600"
-                      }
-                    >
-                      ({a.type === "addon" ? "加" : "折"})
-                    </span>
-                  </span>
-                  <span className="font-mono">
-                    {a.type === "addon" ? "+" : "-"}
-                    {formatNTD(a.amount)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </CardBody>
-        </Card>
-      )}
-
       <Card>
-        <CardBody className="flex items-center justify-between">
-          <span className="text-sm text-zinc-600">應收總額</span>
-          <span className="text-2xl font-bold text-brand-700 font-mono">
-            {formatNTD(o.total)}
-          </span>
+        <CardHeader>
+          <CardTitle>服務項目（{o.items.length}）</CardTitle>
+        </CardHeader>
+        <CardBody className="p-0">
+          <ul className="divide-y divide-zinc-200">
+            {o.items.map((it) => (
+              <li key={it.id} className="space-y-1.5 px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-zinc-900">
+                      {it.service?.name ?? "—"}
+                      {it.quantity > 1 && (
+                        <span className="ml-1 text-zinc-500">× {it.quantity}</span>
+                      )}
+                    </p>
+                  </div>
+                  <span className="font-mono text-sm text-zinc-700">
+                    {formatNTD(it.subtotal)}
+                  </span>
+                </div>
+                <MachineEditor
+                  orderId={o.id}
+                  orderItemId={it.id}
+                  customerId={o.customer_id}
+                  serviceCategory={it.service?.category ?? null}
+                  machine={it.machine}
+                  brands={brands}
+                />
+              </li>
+            ))}
+          </ul>
         </CardBody>
       </Card>
 
@@ -322,25 +337,25 @@ export default async function StaffOrderPage({
         </Card>
       )}
 
-      <PromotionsToggle
-        orderId={o.id}
-        promotionTypes={promotionTypes}
-        myPromotions={myPromotions}
-        myUserId={me.id}
-      />
-
-      <StaffActions
+      <OrderWorkflow
         orderId={o.id}
         currentPayment={o.payment_method}
         isDone={o.status === "done"}
+        subtotal={o.subtotal}
+        items={o.items.map((it) => ({
+          id: it.id,
+          service_name: it.service?.name ?? null,
+          quantity: it.quantity,
+          subtotal: Number(it.subtotal),
+        }))}
+        initialAdjustments={o.adjustments}
+        adjustmentItems={adjustmentItems}
         presets={presets}
         initialTags={o.service_tags ?? []}
         initialNotes={o.service_notes ?? ""}
-        adjustments={o.adjustments}
-        adjustmentItems={adjustmentItems}
-        subtotal={o.subtotal}
-        adjustmentsTotal={o.adjustments_total}
-        total={o.total}
+        promotionTypes={promotionTypes}
+        initialPromotions={myPromotions}
+        myUserId={me.id}
       />
     </div>
   );

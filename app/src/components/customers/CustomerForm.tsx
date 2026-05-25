@@ -4,7 +4,7 @@ import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Phone, Star } from "lucide-react";
 import {
   CustomerSchema,
   type CustomerInput,
@@ -51,6 +51,12 @@ const emptyAddress = {
   is_default: true,
 };
 
+const emptyPhone = {
+  phone: "",
+  label: "",
+  is_primary: false,
+};
+
 const emptyMachine = {
   type: "washing_machine" as const,
   brand: "",
@@ -86,25 +92,64 @@ export function CustomerForm({
     control,
     handleSubmit,
     watch,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<CustomerInput>({
     resolver: zodResolver(CustomerSchema),
     defaultValues: initial ?? {
       code: "",
       name: "",
-      phone: "",
       source_id: null,
       referrer_id: null,
       note: "",
       joined_at: "",
+      phones: [{ phone: "", label: "", is_primary: true }],
       addresses: [emptyAddress],
       machines: [],
     },
   });
 
+  const phoneArr = useFieldArray({ control, name: "phones" });
   const addressArr = useFieldArray({ control, name: "addresses" });
   const machineArr = useFieldArray({ control, name: "machines" });
   const watchedAddresses = watch("addresses");
+  const watchedPhones = watch("phones");
+
+  // 點選某筆「設為主要」 → 把其他 phone 全部設為 false
+  const setPrimary = useCallback(
+    (idx: number) => {
+      const cur = getValues("phones");
+      setValue(
+        "phones",
+        cur.map((p, i) => ({ ...p, is_primary: i === idx })),
+        { shouldDirty: true, shouldValidate: true },
+      );
+    },
+    [getValues, setValue],
+  );
+
+  const removePhone = useCallback(
+    (idx: number) => {
+      const cur = getValues("phones");
+      const wasPrimary = cur[idx]?.is_primary;
+      phoneArr.remove(idx);
+      // 如果刪掉的是主電話，把第一支補成主
+      if (wasPrimary) {
+        setTimeout(() => {
+          const after = getValues("phones");
+          if (after.length > 0 && !after.some((p) => p.is_primary)) {
+            setValue(
+              "phones",
+              after.map((p, i) => ({ ...p, is_primary: i === 0 })),
+              { shouldDirty: true },
+            );
+          }
+        }, 0);
+      }
+    },
+    [getValues, phoneArr, setValue],
+  );
 
   const onSubmit = (values: CustomerInput) => {
     setServerError(null);
@@ -135,9 +180,6 @@ export function CustomerForm({
           </Field>
           <Field label="姓名" error={errors.name?.message}>
             <Input {...register("name")} placeholder="王小明" />
-          </Field>
-          <Field label="電話" error={errors.phone?.message}>
-            <Input {...register("phone")} placeholder="0912345678" />
           </Field>
           <Field label="客戶來源">
             <Select {...register("source_id")} defaultValue="">
@@ -172,6 +214,85 @@ export function CustomerForm({
           <Field label="備註" className="md:col-span-2">
             <Textarea {...register("note")} placeholder="特殊狀況、要注意的事項…" />
           </Field>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle>聯絡電話（可多筆）</CardTitle>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => phoneArr.append({ ...emptyPhone })}
+          >
+            <Plus className="h-4 w-4" /> 新增電話
+          </Button>
+        </CardHeader>
+        <CardBody className="space-y-3">
+          {phoneArr.fields.map((field, idx) => {
+            const isPrimary = watchedPhones?.[idx]?.is_primary ?? false;
+            return (
+              <div
+                key={field.id}
+                className={`flex flex-wrap items-end gap-2 rounded-lg border p-3 ${
+                  isPrimary ? "border-brand-300 bg-brand-50/40" : "border-zinc-200"
+                }`}
+              >
+                <Field
+                  label={`電話 #${idx + 1}`}
+                  error={errors.phones?.[idx]?.phone?.message}
+                  className="min-w-[180px] flex-1"
+                >
+                  <Input
+                    {...register(`phones.${idx}.phone`)}
+                    placeholder="0912345678"
+                    inputMode="tel"
+                  />
+                </Field>
+                <Field label="標籤（選填）" className="min-w-[160px] flex-1">
+                  <Input
+                    {...register(`phones.${idx}.label`)}
+                    placeholder="例：本人 / 老公 / 公司"
+                  />
+                </Field>
+                <div className="flex items-center gap-2">
+                  {isPrimary ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-1 text-xs font-medium text-brand-800">
+                      <Star className="h-3.5 w-3.5 fill-current" /> 主要
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPrimary(idx)}
+                      className="rounded-full border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700"
+                    >
+                      設為主要
+                    </button>
+                  )}
+                  {phoneArr.fields.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePhone(idx)}
+                      className="text-red-600 hover:text-red-700"
+                      aria-label="刪除此電話"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {errors.phones && !Array.isArray(errors.phones) && (
+            <p className="text-sm text-red-600">
+              {(errors.phones as { message?: string }).message}
+            </p>
+          )}
+          <p className="text-xs text-zinc-500">
+            <Phone className="mr-1 inline h-3 w-3" />
+            主要電話會顯示在客戶清單；副電話含標籤（本人/老公/公司…）可在客戶頁查到
+          </p>
         </CardBody>
       </Card>
 

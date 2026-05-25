@@ -1,0 +1,22 @@
+{
+  "_comment": "舊系統 csv 服務人員 → 上線後員工帳號的對應表。匯入時 build.py 讀此檔把 staff_name 轉成 technician_id (user_profile.id)。",
+  "_pending_decisions": [
+    "鈞瑞、孟銓、允文、彥嘉 4 人不在現職 5 師傅名單。",
+    "如何處理？",
+    "  A. 建 inactive 帳號（保留歷史）",
+    "  B. 共用 placeholder 帳號 '已離職師傅'",
+    "  C. 訂單 technician_id 留空"
+  ],
+  "active_staff": {
+    "阿翰":   "1227@jingxin.local",
+    "祥瑋":   "5785@jingxin.local",
+    "阿辰":   "5357@jingxin.local",
+    "昶志":   "201314@jingxin.local"
+  },
+  "未對應": {
+    "鈞瑞":   "TODO: 離職?",
+    "孟銓":   "TODO: 離職?",
+    "允文":   "TODO: 離職?",
+    "彥嘉":   "TODO: 離職?"
+  }
+}

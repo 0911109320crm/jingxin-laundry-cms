@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/dal";
 import { PhoneFrame } from "./PhoneFrame";
 
 export const metadata = {
-  title: "師傅 PWA 示範 — 淨新洗衣",
+  title: "師傅 PWA 示範 — 淨新清潔工坊",
 };
 
 export default async function DemoPWAPage() {

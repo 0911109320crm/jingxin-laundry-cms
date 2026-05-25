@@ -34,7 +34,7 @@ export default async function EditOrderPage({
       .from("orders")
       .select(
         `id, order_code, customer_id, address_id, scheduled_at, scheduled_end_at,
-         service_at, status, payment_method, note, source,
+         service_at, duration_minutes, status, payment_method, note, source,
          items:order_items(id, machine_id, service_item_id, technician_id,
                            quantity, unit_price, tag, note),
          adjustments:order_adjustments(id, adjustment_item_id, name_snapshot,
@@ -73,6 +73,7 @@ export default async function EditOrderPage({
         scheduled_at: string | null;
         scheduled_end_at: string | null;
         service_at: string | null;
+        duration_minutes: number | null;
         status: OrderInput["status"];
         payment_method: OrderInput["payment_method"];
         note: string | null;
@@ -131,6 +132,7 @@ export default async function EditOrderPage({
     scheduled_at: toLocalInput(o.scheduled_at),
     scheduled_end_at: toLocalInput(o.scheduled_end_at),
     service_at: toLocalInput(o.service_at),
+    duration_minutes: o.duration_minutes ?? 90,
     status: o.status,
     payment_method: o.payment_method,
     note: o.note ?? "",

@@ -17,6 +17,7 @@ export type Adjustment = {
   type: "discount" | "addon";
   default_amount: number;
   active: boolean;
+  affects_commission: boolean;
 };
 
 export function AdjustmentRow({ adjustment }: { adjustment: Adjustment }) {
@@ -43,7 +44,7 @@ export function AdjustmentRow({ adjustment }: { adjustment: Adjustment }) {
     return (
       <form
         action={onSave}
-        className="grid grid-cols-[1fr_120px_120px_80px_auto] items-center gap-2 px-5 py-3"
+        className="grid grid-cols-[1fr_110px_110px_110px_70px_auto] items-center gap-2 px-5 py-3"
       >
         <Input name="name" defaultValue={adjustment.name} required />
         <Select name="type" defaultValue={adjustment.type}>
@@ -55,6 +56,15 @@ export function AdjustmentRow({ adjustment }: { adjustment: Adjustment }) {
           type="number"
           defaultValue={adjustment.default_amount}
         />
+        <label className="flex items-center gap-1.5 text-xs text-zinc-600">
+          <input
+            type="checkbox"
+            name="affects_commission"
+            defaultChecked={adjustment.affects_commission}
+            className="h-4 w-4"
+          />
+          進薪資
+        </label>
         <label className="flex items-center gap-1 text-sm text-zinc-600">
           <input
             type="checkbox"
@@ -81,7 +91,7 @@ export function AdjustmentRow({ adjustment }: { adjustment: Adjustment }) {
   }
 
   return (
-    <div className="grid grid-cols-[1fr_120px_120px_80px_auto] items-center gap-2 px-5 py-3 text-sm">
+    <div className="grid grid-cols-[1fr_110px_110px_110px_70px_auto] items-center gap-2 px-5 py-3 text-sm">
       <div className="font-medium text-zinc-900">{adjustment.name}</div>
       <div>
         {adjustment.type === "addon" ? (
@@ -94,7 +104,20 @@ export function AdjustmentRow({ adjustment }: { adjustment: Adjustment }) {
           </span>
         )}
       </div>
-      <div className="text-zinc-600">{formatNTD(adjustment.default_amount)}</div>
+      <div className="text-zinc-600">
+        {formatNTD(adjustment.default_amount)}
+      </div>
+      <div>
+        {adjustment.affects_commission ? (
+          <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+            ✓ 進薪資
+          </span>
+        ) : (
+          <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
+            不進薪資
+          </span>
+        )}
+      </div>
       <div>
         {adjustment.active ? (
           <span className="rounded bg-green-50 px-2 py-0.5 text-xs text-green-700">

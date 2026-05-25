@@ -21,6 +21,12 @@ type Row = {
   note: string | null;
   joined_at: string | null;
   source: { name: string } | null;
+  phones: {
+    phone: string;
+    label: string | null;
+    is_primary: boolean;
+    sort_order: number;
+  }[];
   addresses: {
     county: string;
     district: string;
@@ -60,6 +66,7 @@ export async function GET(req: NextRequest) {
     .select(
       `id, code, name, phone, note, joined_at,
        source:customer_sources(name),
+       phones:customer_phones(phone, label, is_primary, sort_order),
        addresses:customer_addresses(county, district, address, is_default),
        machines(type, brand, model, sub_type)`,
     )
@@ -68,9 +75,31 @@ export async function GET(req: NextRequest) {
 
   if (q) {
     const like = `%${q}%`;
-    query = query.or(
-      `name.ilike.${like},phone.ilike.${like},code.ilike.${like},note.ilike.${like}`,
-    );
+    // 同清單頁：含數字 → 也查 customer_phones
+    const digits = q.replace(/\D/g, "");
+    let extraIds: string[] = [];
+    if (digits.length >= 4) {
+      const { data: phoneHits } = await supabase
+        .from("customer_phones")
+        .select("customer_id")
+        .ilike("phone", `%${digits}%`)
+        .limit(500);
+      extraIds = Array.from(
+        new Set(
+          ((phoneHits as { customer_id: string }[] | null) ?? []).map(
+            (r) => r.customer_id,
+          ),
+        ),
+      );
+    }
+    const orParts = [
+      `name.ilike.${like}`,
+      `phone.ilike.${like}`,
+      `code.ilike.${like}`,
+      `note.ilike.${like}`,
+    ];
+    if (extraIds.length > 0) orParts.push(`id.in.(${extraIds.join(",")})`);
+    query = query.or(orParts.join(","));
   }
 
   const { data } = await query;
@@ -89,7 +118,8 @@ export async function GET(req: NextRequest) {
   const header = [
     "編號",
     "姓名",
-    "電話",
+    "主要電話",
+    "副電話",
     "縣市",
     "鄉鎮市區",
     "詳細地址",
@@ -111,11 +141,19 @@ export async function GET(req: NextRequest) {
           }${m.model ? ` ${m.model}` : ""}${m.sub_type ? `(${m.sub_type})` : ""}`,
       )
       .join(" / ");
+    const sortedPhones = [...(c.phones ?? [])].sort(
+      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+    );
+    const extras = sortedPhones
+      .filter((p) => !p.is_primary)
+      .map((p) => `${p.phone}${p.label ? `（${p.label}）` : ""}`)
+      .join(" / ");
     lines.push(
       [
         c.code,
         c.name,
         c.phone,
+        extras,
         main?.county ?? "",
         main?.district ?? "",
         main?.address ?? "",
@@ -131,12 +169,12 @@ export async function GET(req: NextRequest) {
 
   const bom = "﻿";
   const body = bom + lines.join("\r\n");
-  const filename = `customers_${new Date().toISOString().slice(0, 10)}.csv`;
+  const filename = `客戶名單_${new Date().toISOString().slice(0, 10)}.csv`;
 
   return new Response(body, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
       "Cache-Control": "no-store",
     },
   });

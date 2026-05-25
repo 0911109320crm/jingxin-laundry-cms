@@ -105,7 +105,7 @@ export function Sidebar({ userName }: { userName: string }) {
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 lg:hidden">
         <div>
-          <p className="text-sm font-bold text-zinc-900">淨新洗衣</p>
+          <p className="text-sm font-bold text-zinc-900">淨新清潔工坊</p>
           <p className="text-xs text-zinc-500">{userName}</p>
         </div>
         <button
@@ -128,7 +128,7 @@ export function Sidebar({ userName }: { userName: string }) {
           <aside className="absolute left-0 top-0 flex h-full w-72 flex-col bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
               <div>
-                <p className="text-sm font-bold text-zinc-900">淨新洗衣</p>
+                <p className="text-sm font-bold text-zinc-900">淨新清潔工坊</p>
                 <p className="text-xs text-zinc-500">管理系統</p>
               </div>
               <button
@@ -149,7 +149,7 @@ export function Sidebar({ userName }: { userName: string }) {
       {/* Desktop sidebar */}
       <aside className="hidden h-screen w-60 shrink-0 flex-col border-r border-zinc-200 bg-white lg:flex">
         <div className="border-b border-zinc-200 px-5 py-4">
-          <p className="text-sm font-bold text-zinc-900">淨新洗衣</p>
+          <p className="text-sm font-bold text-zinc-900">淨新清潔工坊</p>
           <p className="text-xs text-zinc-500">管理系統</p>
         </div>
         {NavList}

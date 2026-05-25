@@ -3,20 +3,23 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Draggable } from "@fullcalendar/interaction";
-import { MapPin, Phone, ClipboardList, GripVertical, Clock } from "lucide-react";
+import { MapPin, ClipboardList, GripVertical, Clock } from "lucide-react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { PhoneList, type PhoneItem } from "@/components/customers/PhoneList";
 
 export type PendingOrder = {
   id: string;
   order_code: string;
   customer_name: string;
   customer_phone: string;
+  customer_phones?: PhoneItem[];
   address: string;
   service_summary: string;
   total: number;
   has_technician: boolean;
   scheduled_at: string | null;
   scheduled_end_at: string | null;
+  duration_minutes: number;
 };
 
 function formatTimeSlot(startIso: string | null, endIso: string | null): string | null {
@@ -43,11 +46,23 @@ export function PendingPanel({ orders }: { orders: PendingOrder[] }) {
       eventData: (el) => {
         const orderId = el.getAttribute("data-order-id") ?? "";
         const title = el.getAttribute("data-title") ?? "訂單";
+        const origStart = el.getAttribute("data-orig-start") || null;
+        const origEnd = el.getAttribute("data-orig-end") || null;
+        const durationStr = el.getAttribute("data-duration-min") || "90";
+        const dm = Math.max(15, parseInt(durationStr, 10) || 90);
+        const hh = String(Math.floor(dm / 60)).padStart(2, "0");
+        const mm = String(dm % 60).padStart(2, "0");
         return {
           title,
-          duration: "01:30",
+          duration: `${hh}:${mm}`,
           create: true,
-          extendedProps: { orderId, fromPending: true },
+          extendedProps: {
+            orderId,
+            fromPending: true,
+            origStart,
+            origEnd,
+            durationMinutes: dm,
+          },
         };
       },
     });
@@ -82,6 +97,9 @@ export function PendingPanel({ orders }: { orders: PendingOrder[] }) {
                     className="pending-draggable group relative cursor-grab select-none px-4 py-3 transition-colors hover:bg-amber-50 active:cursor-grabbing"
                     data-order-id={o.id}
                     data-title={o.customer_name}
+                    data-orig-start={o.scheduled_at ?? ""}
+                    data-orig-end={o.scheduled_end_at ?? ""}
+                    data-duration-min={String(o.duration_minutes)}
                     title="拖拉到月曆某日排定"
                   >
                     <GripVertical className="absolute right-2 top-3 h-4 w-4 text-zinc-300 group-hover:text-zinc-500" />
@@ -93,22 +111,31 @@ export function PendingPanel({ orders }: { orders: PendingOrder[] }) {
                         </span>
                       )}
                     </div>
-                    {slot ? (
-                      <p className="mt-1 inline-flex items-center gap-1 rounded bg-brand-50 px-1.5 py-0.5 text-xs font-semibold text-brand-700">
-                        <Clock className="h-3 w-3" />
-                        客戶預約 {slot}
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      {slot ? (
+                        <p className="inline-flex items-center gap-1 rounded bg-brand-50 px-1.5 py-0.5 text-xs font-semibold text-brand-700">
+                          <Clock className="h-3 w-3" />
+                          預約時段 {slot}
+                        </p>
+                      ) : (
+                        <p className="inline-flex items-center gap-1 rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-500">
+                          <Clock className="h-3 w-3" />
+                          未指定時段
+                        </p>
+                      )}
+                      <p className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
+                        預計 {o.duration_minutes} 分
                       </p>
-                    ) : (
-                      <p className="mt-1 inline-flex items-center gap-1 rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-500">
-                        <Clock className="h-3 w-3" />
-                        未指定時段
-                      </p>
-                    )}
+                    </div>
                     <p className="mt-1 text-sm font-semibold text-zinc-900">
                       {o.customer_name}
                     </p>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-zinc-500">
-                      <Phone className="h-3 w-3" /> {o.customer_phone}
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      <PhoneList
+                        primary={o.customer_phone}
+                        phones={o.customer_phones}
+                        mode="inline"
+                      />
                     </p>
                     <p className="mt-0.5 flex items-start gap-1 text-xs text-zinc-600">
                       <MapPin className="mt-0.5 h-3 w-3 shrink-0" />

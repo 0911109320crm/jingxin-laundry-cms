@@ -21,6 +21,13 @@ type EditData = {
   joined_at: string | null;
   source_id: string | null;
   referrer_id: string | null;
+  phones: {
+    id: string;
+    phone: string;
+    label: string | null;
+    is_primary: boolean;
+    sort_order: number;
+  }[];
   addresses: (AddressInput & { id: string })[];
   machines: (MachineInput & { id: string; type: MachineType; address_id: string | null })[];
 };
@@ -38,6 +45,7 @@ export default async function EditCustomerPage({
       .from("customers")
       .select(
         `id, code, name, phone, note, joined_at, source_id, referrer_id,
+         phones:customer_phones(id, phone, label, is_primary, sort_order),
          addresses:customer_addresses(id, county, district, address, label, is_default),
          machines(id, type, brand, model, sub_type, note, address_id)`,
       )
@@ -58,15 +66,29 @@ export default async function EditCustomerPage({
   const c = customer as EditData | null;
   if (!c) notFound();
 
+  // phones：依 sort_order 排序；若 DB 沒有任何 phone（理論上不會發生），fallback 用 customers.phone 補一筆
+  const sortedPhones = [...(c.phones ?? [])].sort(
+    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+  );
+  const phonesForForm =
+    sortedPhones.length > 0
+      ? sortedPhones.map((p) => ({
+          id: p.id,
+          phone: p.phone,
+          label: p.label ?? "",
+          is_primary: !!p.is_primary,
+        }))
+      : [{ phone: c.phone, label: "", is_primary: true }];
+
   const initial: CustomerInput & { id: string } = {
     id: c.id,
     code: c.code,
     name: c.name,
-    phone: c.phone,
     note: c.note ?? "",
     joined_at: c.joined_at ?? "",
     source_id: c.source_id,
     referrer_id: c.referrer_id ?? null,
+    phones: phonesForForm,
     addresses: c.addresses.map((a) => ({
       id: a.id,
       county: a.county,

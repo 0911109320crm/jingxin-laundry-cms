@@ -28,9 +28,9 @@ export function NewServiceForm({
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[110px_1fr_100px_140px_80px_70px_auto] items-center gap-2"
+      className="grid grid-cols-[100px_1fr_90px_120px_160px_56px_60px_auto] items-center gap-2"
     >
-      <Input name="code" placeholder="代碼（如 WV-S）" required />
+      <Input name="code" placeholder="代碼" required />
       <Input name="name" placeholder="名稱" required />
       <Input
         name="default_price"
@@ -46,6 +46,21 @@ export function NewServiceForm({
           </option>
         ))}
       </Select>
+      <div className="flex gap-1">
+        <Select name="commission_type" defaultValue="default" className="w-24">
+          <option value="default">預設</option>
+          <option value="percent">%</option>
+          <option value="amount">$</option>
+        </Select>
+        <Input
+          name="commission_value"
+          type="number"
+          min={0}
+          step="any"
+          defaultValue={0}
+          className="w-16"
+        />
+      </div>
       <Input
         name="sort_order"
         type="number"

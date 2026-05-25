@@ -58,6 +58,75 @@ function timeLabel(iso: string) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+/**
+ * 避免時段衝突：若 desiredStart 跟同一天同師傅的既有訂單重疊，
+ * 把開始時間往後挪到下一個空檔，直到無重疊或超過當天 22:00。
+ *
+ * @returns shifted=true 表示有挪動過、failed=true 表示挪不下（整天滿）
+ */
+function findFreeSlot(
+  desiredStart: Date,
+  durationMinutes: number,
+  existingOrders: CalendarOrder[],
+  technicianId: string | null,
+  excludeOrderId?: string,
+): { start: Date; shifted: boolean; failed: boolean } {
+  const sameDate = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  // 找出同日同師傅的既有訂單時段
+  const ranges = existingOrders
+    .filter((o) => {
+      if (excludeOrderId && o.id === excludeOrderId) return false;
+      const s = new Date(o.scheduled_at);
+      if (!sameDate(s, desiredStart)) return false;
+      // 月曆當下只看當前 tech tab 的訂單；同師傅才會衝突
+      if (technicianId && o.technician_id !== technicianId) return false;
+      return true;
+    })
+    .map((o) => {
+      const s = new Date(o.scheduled_at).getTime();
+      const e = o.scheduled_end_at
+        ? new Date(o.scheduled_end_at).getTime()
+        : s + 90 * 60_000;
+      return { start: s, end: e };
+    })
+    .sort((a, b) => a.start - b.start);
+
+  const cutoff = new Date(desiredStart);
+  cutoff.setHours(22, 0, 0, 0);
+  const cutoffMs = cutoff.getTime();
+
+  let startMs = desiredStart.getTime();
+  const initialMs = startMs;
+  let changed = true;
+  let guard = 0;
+  while (changed && guard < 50) {
+    changed = false;
+    guard++;
+    for (const r of ranges) {
+      const endMs = startMs + durationMinutes * 60_000;
+      if (endMs <= r.start) break; // 在這個之前，安全
+      if (startMs >= r.end) continue; // 在這個之後，繼續比下一個
+      // 重疊 → 挪到 r.end
+      startMs = r.end;
+      changed = true;
+      if (startMs + durationMinutes * 60_000 > cutoffMs) {
+        return { start: desiredStart, shifted: false, failed: true };
+      }
+      break;
+    }
+  }
+
+  return {
+    start: new Date(startMs),
+    shifted: startMs !== initialMs,
+    failed: false,
+  };
+}
+
 type ActionTarget = { id: string; customer: string };
 
 export function CalendarView({
@@ -142,9 +211,19 @@ export function CalendarView({
   });
 
   // Pre-aggregate daily totals (for day-cell badge)
+  // 用台灣時區計算「該訂單屬於哪一天」，避免 UTC slice 在跨日邊界誤判
+  const TW_TZ_FMT = new Intl.DateTimeFormat("sv-SE", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Taipei",
+  });
+  const taiwanDateKey = (iso: string | Date) =>
+    TW_TZ_FMT.format(typeof iso === "string" ? new Date(iso) : iso);
+
   const dailyTotals = new Map<string, number>();
   for (const o of orders) {
-    const date = o.scheduled_at.slice(0, 10);
+    const date = taiwanDateKey(o.scheduled_at);
     dailyTotals.set(date, (dailyTotals.get(date) ?? 0) + Number(o.total));
   }
 
@@ -163,7 +242,7 @@ export function CalendarView({
         }}
         buttonText={{ today: "本月", month: "月", week: "週" }}
         dayCellDidMount={(info) => {
-          const dateKey = info.date.toISOString().slice(0, 10);
+          const dateKey = taiwanDateKey(info.date);
           const sum = dailyTotals.get(dateKey);
           if (!sum) return;
           const top = info.el.querySelector(".fc-daygrid-day-top");
@@ -192,17 +271,46 @@ export function CalendarView({
           router.push(`/orders/new?date=${info.dateStr}T09:00&from=calendar`)
         }
         eventDrop={(info) => {
-          const newStart = info.event.start?.toISOString();
-          const newEnd = info.event.end?.toISOString();
-          if (!newStart) {
+          if (!info.event.start) {
             info.revert();
             return;
           }
+          const startDate = new Date(info.event.start);
+          const endDate = info.event.end
+            ? new Date(info.event.end)
+            : new Date(startDate.getTime() + 90 * 60_000);
+          const durationMinutes = Math.max(
+            15,
+            Math.round((endDate.getTime() - startDate.getTime()) / 60_000),
+          );
+          // 衝突防呆：排除本身、檢查同師傅同日
+          const techForSlot = techFilter === "all" ? null : techFilter;
+          const slot = findFreeSlot(
+            startDate,
+            durationMinutes,
+            orders,
+            techForSlot,
+            info.event.id,
+          );
+          if (slot.failed) {
+            alert(`當天該師傅時段已排滿，無法移到此日。`);
+            info.revert();
+            return;
+          }
+          if (slot.shifted) {
+            const pad = (n: number) => String(n).padStart(2, "0");
+            const t = `${pad(slot.start.getHours())}:${pad(slot.start.getMinutes())}`;
+            alert(`目標時段已被佔用，自動順延到 ${t}`);
+          }
+          const finalEnd = new Date(slot.start);
+          finalEnd.setMinutes(finalEnd.getMinutes() + durationMinutes);
+          const newStartIso = slot.start.toISOString();
+          const newEndIso = finalEnd.toISOString();
           startTransition(async () => {
             const res = await rescheduleOrderAction(
               info.event.id,
-              newStart,
-              newEnd,
+              newStartIso,
+              newEndIso,
             );
             if (!res.ok) {
               alert(`移動失敗：${res.error}`);
@@ -220,26 +328,78 @@ export function CalendarView({
             info.event.remove();
             return;
           }
-          const start = info.event.start
+          const dropTarget = info.event.start
             ? new Date(info.event.start)
             : null;
-          if (!start) {
+          if (!dropTarget) {
             info.event.remove();
             return;
           }
-          // Always default to 09:00 when dispatching from pending panel.
-          // dayGridMonth drops set allDay=false with time=midnight, which would
-          // store the previous day in UTC (Taiwan is UTC+8).
-          start.setHours(9, 0, 0, 0);
-          const end = new Date(start);
-          end.setMinutes(end.getMinutes() + 90);
+          // 客戶原始預約時段（若有）— 保留時段、只換日期
+          const origStart = info.event.extendedProps.origStart as
+            | string
+            | null
+            | undefined;
+          const origEnd = info.event.extendedProps.origEnd as
+            | string
+            | null
+            | undefined;
+          // 訂單預計時長（永遠存在，預設 90）
+          const orderDurationMin =
+            (info.event.extendedProps.durationMinutes as number | undefined) ??
+            90;
+
+          const desired = new Date(dropTarget);
+          let durationMinutes = orderDurationMin;
+          if (origStart) {
+            const os = new Date(origStart);
+            if (!Number.isNaN(os.getTime())) {
+              desired.setHours(os.getHours(), os.getMinutes(), 0, 0);
+              if (origEnd) {
+                const oe = new Date(origEnd);
+                if (!Number.isNaN(oe.getTime()) && oe > os) {
+                  durationMinutes = Math.round(
+                    (oe.getTime() - os.getTime()) / 60000,
+                  );
+                }
+              }
+            } else {
+              desired.setHours(9, 0, 0, 0);
+            }
+          } else {
+            // 沒有原始預約時間 → 預設 09:00（避免 dayGrid 拖曳成午夜被 UTC 偏移）
+            desired.setHours(9, 0, 0, 0);
+          }
+
+          // 衝突防呆：找空檔（同師傅同日）
+          const techForSlot = techFilter === "all" ? null : techFilter;
+          const slot = findFreeSlot(
+            desired,
+            durationMinutes,
+            orders,
+            techForSlot,
+          );
           info.event.remove();
+          if (slot.failed) {
+            alert(
+              `當天時段已排滿（22:00 前找不到 ${durationMinutes} 分鐘的空檔），請改派其他日期或師傅。`,
+            );
+            return;
+          }
+          if (slot.shifted) {
+            const pad = (n: number) => String(n).padStart(2, "0");
+            const t = `${pad(slot.start.getHours())}:${pad(slot.start.getMinutes())}`;
+            alert(`原預設時段已被佔用，自動順延到 ${t}`);
+          }
+          const start = slot.start;
+          const end = new Date(start);
+          end.setMinutes(end.getMinutes() + durationMinutes);
           startTransition(async () => {
             const res = await quickScheduleAction({
               orderId,
               startIso: start.toISOString(),
               endIso: end.toISOString(),
-              technicianId: techFilter === "all" ? null : techFilter,
+              technicianId: techForSlot,
             });
             if (!res.ok) {
               alert(`派工失敗：${res.error}`);

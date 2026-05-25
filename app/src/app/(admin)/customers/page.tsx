@@ -24,6 +24,7 @@ type CustomerRow = {
   joined_at: string | null;
   source: { name: string } | null;
   addresses: { county: string; district: string; address: string }[];
+  phones: { id: string; phone: string; label: string | null; is_primary: boolean }[];
 };
 
 export default async function CustomersPage({
@@ -40,7 +41,8 @@ export default async function CustomersPage({
     .select(
       `id, code, name, phone, note, joined_at,
        source:customer_sources(name),
-       addresses:customer_addresses(county, district, address)`,
+       addresses:customer_addresses(county, district, address),
+       phones:customer_phones(id, phone, label, is_primary)`,
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -48,12 +50,32 @@ export default async function CustomersPage({
 
   const term = q.trim();
   if (term) {
-    // multi-column fuzzy search using ilike (works fine on small data;
-    // GIN trgm indexes will kick in via OR planner)
     const like = `%${term}%`;
-    query = query.or(
-      `name.ilike.${like},phone.ilike.${like},code.ilike.${like},note.ilike.${like}`,
-    );
+    // 若關鍵字包含數字 → 也去 customer_phones 查副電話
+    const digits = term.replace(/\D/g, "");
+    let extraIds: string[] = [];
+    if (digits.length >= 4) {
+      const { data: phoneHits } = await supabase
+        .from("customer_phones")
+        .select("customer_id")
+        .ilike("phone", `%${digits}%`)
+        .limit(200);
+      extraIds = Array.from(
+        new Set(
+          ((phoneHits as { customer_id: string }[] | null) ?? []).map(
+            (r) => r.customer_id,
+          ),
+        ),
+      );
+    }
+    const orParts = [
+      `name.ilike.${like}`,
+      `phone.ilike.${like}`,
+      `code.ilike.${like}`,
+      `note.ilike.${like}`,
+    ];
+    if (extraIds.length > 0) orParts.push(`id.in.(${extraIds.join(",")})`);
+    query = query.or(orParts.join(","));
   }
 
   const { data, error } = await query;
@@ -166,7 +188,7 @@ export default async function CustomersPage({
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">顧客管理</h1>
           <p className="text-sm text-zinc-500">
-            支援姓名 / 電話 / 編號 / 備註全域搜尋，可按縣市鄉鎮篩選
+            支援姓名 / 電話（含副電話）/ 編號 / 備註全域搜尋，可按縣市鄉鎮篩選
           </p>
         </div>
         <div className="flex gap-2">
@@ -256,7 +278,7 @@ export default async function CustomersPage({
               <Input
                 name="q"
                 defaultValue={q}
-                placeholder="搜尋姓名 / 電話 / 編號 / 備註"
+                placeholder="搜尋姓名 / 電話（含副電話）/ 編號 / 備註"
                 className="pl-9"
               />
             </div>
@@ -322,6 +344,17 @@ export default async function CustomersPage({
                         <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
                           <span className="inline-flex items-center gap-1">
                             <Phone className="h-3 w-3" /> {c.phone}
+                            {c.phones && c.phones.length > 1 && (
+                              <span
+                                className="ml-1 rounded bg-zinc-100 px-1 text-[10px] text-zinc-600"
+                                title={c.phones
+                                  .filter((p) => !p.is_primary)
+                                  .map((p) => `${p.phone}${p.label ? `（${p.label}）` : ""}`)
+                                  .join("、")}
+                              >
+                                +{c.phones.length - 1}
+                              </span>
+                            )}
                           </span>
                           {main && (
                             <span className="inline-flex items-center gap-1">

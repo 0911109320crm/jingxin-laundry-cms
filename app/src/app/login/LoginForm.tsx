@@ -19,14 +19,18 @@ export function LoginForm({ next }: { next: string }) {
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="next" value={next} />
           <div className="space-y-1.5">
-            <Label htmlFor="email">電子郵件</Label>
+            <Label htmlFor="account">帳號</Label>
             <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
+              id="account"
+              name="account"
+              type="text"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               required
               disabled={pending}
+              placeholder="請輸入帳號"
             />
           </div>
           <div className="space-y-1.5">

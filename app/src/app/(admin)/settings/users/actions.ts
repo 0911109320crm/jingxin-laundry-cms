@@ -5,9 +5,15 @@ import { z } from "zod";
 import { requireRole } from "@/lib/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit";
+import { usernameToEmail } from "@/lib/auth-username";
 
 const CreateUserSchema = z.object({
-  email: z.string().email("Email 格式錯誤"),
+  // 帳號可填純字串（會自動補 @jingxin.local）或完整 email
+  account: z
+    .string()
+    .min(1, "請填帳號")
+    .max(60)
+    .regex(/^[A-Za-z0-9._+\-@]+$/, "帳號只能用英數、 . _ + - @"),
   password: z.string().min(6, "密碼至少 6 字"),
   name: z.string().min(1, "請填姓名").max(40),
   phone: z.string().max(20).optional().nullable(),
@@ -25,15 +31,18 @@ export type Res = { ok: true } | { ok: false; error: string };
 
 export async function createUser(fd: FormData): Promise<Res> {
   await requireRole(["owner"]);
+  // 表單欄位先試 "account" 再 fallback "email"（向後相容）
+  const accountRaw = String(fd.get("account") ?? fd.get("email") ?? "").trim();
   const parsed = CreateUserSchema.safeParse({
-    email: fd.get("email"),
+    account: accountRaw,
     password: fd.get("password") || "admin1234",
     name: fd.get("name"),
     phone: fd.get("phone") || null,
     role: fd.get("role"),
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
-  const { email, password, name, phone, role } = parsed.data;
+  const { account, password, name, phone, role } = parsed.data;
+  const email = usernameToEmail(account);
 
   const admin = createAdminClient();
   const { data: created, error: authErr } = await admin.auth.admin.createUser({
@@ -63,7 +72,7 @@ export async function createUser(fd: FormData): Promise<Res> {
     action: "user.create",
     target_type: "user",
     target_id: created.user.id,
-    payload: { email, name, role },
+    payload: { account, email, name, role },
   });
 
   revalidatePath("/settings/users");

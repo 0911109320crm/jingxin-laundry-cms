@@ -659,7 +659,7 @@ async function summary() {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log("=== 淨新洗衣 CMS - Demo Seed (expanded) ===");
+  console.log("=== 淨新清潔工坊 CMS - Demo Seed (expanded) ===");
   console.log(`計畫寫入 ${ORDERS.length} 筆訂單 / ${CUSTOMERS.length} 位客戶\n`);
 
   if (RESET) await reset();

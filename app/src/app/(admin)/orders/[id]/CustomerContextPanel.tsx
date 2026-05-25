@@ -30,6 +30,14 @@ export type CustomerStatsOrder = {
   total: number;
 };
 
+export type CustomerPhone = {
+  id: string;
+  phone: string;
+  label: string | null;
+  is_primary: boolean;
+  sort_order?: number;
+};
+
 type Props = {
   customer: {
     id: string;
@@ -38,6 +46,7 @@ type Props = {
     phone: string;
     source?: string | null;
     note?: string | null;
+    phones?: CustomerPhone[];
   };
   address?: { county: string; district: string; address: string } | null;
   statsOrders: CustomerStatsOrder[];
@@ -77,12 +86,40 @@ export function CustomerContextPanel({
               {customer.code}
             </span>
           </div>
-          <a
-            href={`tel:${customer.phone}`}
-            className="flex items-center gap-1.5 text-sm text-brand-700"
-          >
-            <Phone className="h-3.5 w-3.5" /> {customer.phone}
-          </a>
+          {(() => {
+            const sortedPhones = customer.phones
+              ? [...customer.phones].sort(
+                  (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+                )
+              : [{
+                  id: "fallback",
+                  phone: customer.phone,
+                  label: null,
+                  is_primary: true,
+                }];
+            return (
+              <div className="space-y-0.5">
+                {sortedPhones.map((p) => (
+                  <a
+                    key={p.id}
+                    href={`tel:${p.phone}`}
+                    className={`flex items-center gap-1.5 text-sm ${
+                      p.is_primary
+                        ? "font-medium text-brand-700"
+                        : "text-zinc-600"
+                    }`}
+                  >
+                    <Phone className="h-3.5 w-3.5" /> {p.phone}
+                    {p.label && (
+                      <span className="text-xs text-zinc-500">
+                        ({p.label})
+                      </span>
+                    )}
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
           {customer.source && (
             <p className="text-xs text-zinc-500">來源：{customer.source}</p>
           )}

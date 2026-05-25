@@ -23,7 +23,7 @@ export function NewAdjustmentForm() {
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[1fr_120px_120px_80px_auto] items-center gap-2"
+      className="grid grid-cols-[1fr_110px_110px_110px_70px_auto] items-center gap-2"
     >
       <Input name="name" placeholder="項目名稱" required />
       <Select name="type" defaultValue="addon">
@@ -36,6 +36,15 @@ export function NewAdjustmentForm() {
         defaultValue={0}
         placeholder="預設金額"
       />
+      <label className="flex items-center gap-1.5 text-xs text-zinc-600">
+        <input
+          type="checkbox"
+          name="affects_commission"
+          defaultChecked
+          className="h-4 w-4"
+        />
+        進薪資
+      </label>
       <label className="flex items-center gap-1 text-sm text-zinc-600">
         <input
           type="checkbox"

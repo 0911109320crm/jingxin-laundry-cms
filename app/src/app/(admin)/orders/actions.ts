@@ -136,6 +136,8 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
 
   const order_code = await nextOrderCode(supabase);
 
+  // 新訂單一律進「待派工」狀態，等老闆娘到月曆拖曳指派師傅
+  // （師傅也強制清空，避免從 clone 或 API 帶入舊指派）
   const { data: order, error: orderErr } = await supabase
     .from("orders")
     .insert({
@@ -145,7 +147,8 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
       scheduled_at: data.scheduled_at || null,
       scheduled_end_at: data.scheduled_end_at || null,
       service_at: data.service_at || null,
-      status: data.status,
+      duration_minutes: data.duration_minutes,
+      status: "pending",
       payment_method: data.payment_method ?? null,
       note: data.note ?? null,
       source: data.source ?? null,
@@ -163,9 +166,11 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
     const { error } = await supabase.from("order_items").insert(
       data.items.map((it) => ({
         order_id: orderRow.id,
-        machine_id: it.machine_id ?? null,
+        // 機器資訊改由師傅到現場補填
+        machine_id: null,
         service_item_id: it.service_item_id,
-        technician_id: it.technician_id ?? null,
+        // 新訂單一律未指派師傅（即使表單帶值也清掉），等月曆拖曳指派
+        technician_id: null,
         quantity: it.quantity,
         unit_price: it.unit_price,
         subtotal: it.quantity * it.unit_price,
@@ -215,6 +220,7 @@ export async function updateOrderAction(
       scheduled_at: data.scheduled_at || null,
       scheduled_end_at: data.scheduled_end_at || null,
       service_at: data.service_at || null,
+      duration_minutes: data.duration_minutes,
       status: data.status,
       payment_method: data.payment_method ?? null,
       note: data.note ?? null,
@@ -271,7 +277,8 @@ export async function deleteOrderAction(id: string): Promise<Res> {
   await logAudit({ action: "order.delete", target_type: "order", target_id: id });
   revalidatePath("/orders");
   revalidatePath("/calendar");
-  redirect("/orders");
+  // 不再 redirect，交給呼叫端決定（編輯頁要跳列表、列表頁要保持當前 filter）
+  return { ok: true };
 }
 
 /**
@@ -442,7 +449,7 @@ export async function addOrderPromotionAction(
   promotionTypeId: string,
   creditedTo: string | null,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  const me = await requireRole(["owner", "manager", "technician"]);
   const supabase = await createClient();
 
   // 取目前分值
@@ -455,9 +462,11 @@ export async function addOrderPromotionAction(
   if (!(pt as { active: boolean }).active)
     return { ok: false, error: "此促銷類型已停用" };
 
-  // 決定歸屬師傅
+  // 決定歸屬師傅：技師強制歸屬自己（RLS 也會擋）；管理者可指定
   let credit = creditedTo;
-  if (!credit) {
+  if (me.profile.role === "technician") {
+    credit = me.id;
+  } else if (!credit) {
     const { data: items } = await supabase
       .from("order_items")
       .select("technician_id, created_at")
@@ -493,11 +502,11 @@ export async function addOrderPromotionAction(
   return { ok: true };
 }
 
-/** 移除一筆促銷積分紀錄 */
+/** 移除一筆促銷積分紀錄（technician 只能刪自己的，由 RLS 強制） */
 export async function removeOrderPromotionAction(
   orderPromotionId: string,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireRole(["owner", "manager", "technician"]);
   const supabase = await createClient();
   // 取 order_id 給 revalidate
   const { data: row } = await supabase

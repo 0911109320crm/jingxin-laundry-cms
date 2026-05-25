@@ -11,12 +11,12 @@ const notoTC = Noto_Sans_TC({
 });
 
 export const metadata: Metadata = {
-  title: "淨新洗衣管理系統",
-  description: "淨新洗衣機清潔工坊後台管理系統",
+  title: "淨新清潔工坊管理系統",
+  description: "淨新清潔工坊後台管理系統",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "淨新洗衣",
+    title: "淨新清潔工坊",
     statusBarStyle: "default",
   },
 };

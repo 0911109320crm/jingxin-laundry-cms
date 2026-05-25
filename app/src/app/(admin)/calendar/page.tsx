@@ -28,7 +28,12 @@ type PendingRaw = {
   total: number;
   scheduled_at: string | null;
   scheduled_end_at: string | null;
-  customer: { name: string; phone: string } | null;
+  duration_minutes: number | null;
+  customer: {
+    name: string;
+    phone: string;
+    phones: { id: string; phone: string; label: string | null; is_primary: boolean }[];
+  } | null;
   address: {
     county: string;
     district: string;
@@ -76,8 +81,9 @@ export default async function CalendarPage({
     supabase
       .from("orders")
       .select(
-        `id, order_code, total, scheduled_at, scheduled_end_at,
-         customer:customers(name, phone),
+        `id, order_code, total, scheduled_at, scheduled_end_at, duration_minutes,
+         customer:customers(name, phone,
+                            phones:customer_phones(id, phone, label, is_primary)),
          address:customer_addresses(county, district, address),
          items:order_items(technician_id, service:service_items(name))`,
       )
@@ -141,6 +147,7 @@ export default async function CalendarPage({
         order_code: o.order_code,
         customer_name: o.customer?.name ?? "—",
         customer_phone: o.customer?.phone ?? "—",
+        customer_phones: o.customer?.phones ?? undefined,
         address: o.address
           ? `${o.address.county} ${o.address.district} ${o.address.address}`
           : "—",
@@ -152,6 +159,7 @@ export default async function CalendarPage({
         has_technician: o.items.some((it) => it.technician_id),
         scheduled_at: o.scheduled_at,
         scheduled_end_at: o.scheduled_end_at,
+        duration_minutes: o.duration_minutes ?? 90,
       };
     },
   );
@@ -162,17 +170,15 @@ export default async function CalendarPage({
 
   return (
     <div className="p-6 space-y-4">
-      <header className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900">月曆排案</h1>
-          <p className="text-sm text-zinc-500">{subtitle}</p>
-        </div>
-        <TechTabs current={techFilter} techs={techs} />
+      <header>
+        <h1 className="text-2xl font-bold text-zinc-900">月曆排案</h1>
+        <p className="text-sm text-zinc-500">{subtitle}</p>
       </header>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
         <PendingPanel orders={pending} />
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm space-y-3">
+          <TechTabs current={techFilter} techs={techs} />
           <CalendarView
             orders={orders}
             technicianIds={technicianIds}

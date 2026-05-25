@@ -10,6 +10,7 @@ const AdjustmentSchema = z.object({
   type: z.enum(["discount", "addon"]),
   default_amount: z.coerce.number().min(0, "金額不可為負"),
   active: z.coerce.boolean().default(true),
+  affects_commission: z.coerce.boolean().default(true),
 });
 
 export type Res = { ok: true } | { ok: false; error: string };
@@ -21,6 +22,7 @@ export async function createAdjustment(fd: FormData): Promise<Res> {
     type: fd.get("type"),
     default_amount: fd.get("default_amount") ?? 0,
     active: fd.get("active") === "on",
+    affects_commission: fd.get("affects_commission") === "on",
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const supabase = await createClient();
@@ -37,6 +39,7 @@ export async function updateAdjustment(id: string, fd: FormData): Promise<Res> {
     type: fd.get("type"),
     default_amount: fd.get("default_amount") ?? 0,
     active: fd.get("active") === "on",
+    affects_commission: fd.get("affects_commission") === "on",
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const supabase = await createClient();

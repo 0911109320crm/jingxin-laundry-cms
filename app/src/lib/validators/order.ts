@@ -86,6 +86,7 @@ export const OrderSchema = z.object({
   scheduled_at: z.string().optional().nullable(),
   scheduled_end_at: z.string().optional().nullable(),
   service_at: z.string().optional().nullable(),
+  duration_minutes: z.number().int().min(0).max(720),
   status: z.string(),
   payment_method: z.enum(PAYMENT_METHODS),
   note: z.string().optional().nullable(),

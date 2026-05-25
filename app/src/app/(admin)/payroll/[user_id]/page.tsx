@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Calendar,
-  Sparkles,
   ArrowRight,
   ClipboardList,
 } from "lucide-react";
@@ -21,6 +20,8 @@ import { fetchPayroll } from "@/lib/payroll";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatDate, formatNTD } from "@/lib/utils";
+import { MonthlyAdjustmentsPanel } from "./MonthlyAdjustmentsPanel";
+import { FinalizeButtons } from "./FinalizeButtons";
 
 type Params = Promise<{ user_id: string }>;
 type SP = Promise<{ month?: string }>;
@@ -66,7 +67,8 @@ export default async function TechnicianPayrollPage({
   params: Params;
   searchParams: SP;
 }) {
-  await requireRole(["owner", "manager"]);
+  const me = await requireRole(["owner", "manager"]);
+  const isOwner = me.profile.role === "owner";
   const { user_id } = await params;
   const sp = await searchParams;
   const month = sp.month ?? currentMonth();
@@ -180,8 +182,21 @@ export default async function TechnicianPayrollPage({
               <Download className="h-4 w-4" /> 匯出 Excel
             </Button>
           </a>
+          <FinalizeButtons
+            technicianId={user_id}
+            month={month}
+            techName={data.technician.name}
+            finalized={data.finalized}
+            isOwner={isOwner}
+          />
         </div>
       </div>
+
+      {data.finalized && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+          ✓ 此月份已於結算當下凍結快照。改抽成設定不影響此頁數字。
+        </div>
+      )}
 
       {/* Hero: 本月實領大字 + 月份切換 */}
       <Card>
@@ -222,10 +237,10 @@ export default async function TechnicianPayrollPage({
         <Card>
           <CardBody className="py-3">
             <p className="flex items-center gap-1 text-xs text-zinc-500">
-              <Wallet className="h-3.5 w-3.5" /> 基本計件
+              <Wallet className="h-3.5 w-3.5" /> 計件抽成
             </p>
             <p className="font-mono text-lg font-bold text-zinc-900">
-              {formatNTD(data.monthTotal - netAddon)}
+              {formatNTD(data.monthBaseCommission)}
             </p>
             <p className="text-xs text-zinc-400">{data.totalItems} 件項目</p>
           </CardBody>
@@ -233,7 +248,7 @@ export default async function TechnicianPayrollPage({
         <Card>
           <CardBody className="py-3">
             <p className="flex items-center gap-1 text-xs text-zinc-500">
-              <TrendingUp className="h-3.5 w-3.5" /> 加減項淨額
+              <TrendingUp className="h-3.5 w-3.5" /> 加減項（進薪資）
             </p>
             <p
               className={`font-mono text-lg font-bold ${
@@ -373,19 +388,14 @@ export default async function TechnicianPayrollPage({
         </CardBody>
       </Card>
 
-      {/* 獎金預留 */}
-      <Card className="border-dashed">
-        <CardBody className="flex items-center gap-3 py-3">
-          <Sparkles className="h-5 w-5 text-zinc-400" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-zinc-700">獎金</p>
-            <p className="text-xs text-zinc-500">
-              老闆娘尚未設定獎金政策（達標獎金、現金回饋⋯⋯）
-            </p>
-          </div>
-          <span className="font-mono text-zinc-400">—</span>
-        </CardBody>
-      </Card>
+      <MonthlyAdjustmentsPanel
+        technicianId={user_id}
+        month={month}
+        adjustments={data.monthlyAdjustments}
+        bonusTotal={data.monthBonus}
+        deductionTotal={data.monthDeduction}
+        finalized={data.finalized}
+      />
 
       {/* 待回繳訂單區塊 */}
       {myPending.length > 0 && (
@@ -453,7 +463,7 @@ export default async function TechnicianPayrollPage({
             {data.rows
               .filter((row) => row.items.length > 0)
               .map((row) => {
-                const dayNet = row.dayTotal + row.addonTotal - row.discountTotal;
+                const dayNet = row.dayCommission + row.dayAddon - row.dayDiscount;
                 return (
                   <li key={row.day}>
                     <details className="group">
@@ -463,14 +473,14 @@ export default async function TechnicianPayrollPage({
                         </span>
                         <span className="text-xs text-zinc-500">
                           {row.items.length} 件
-                          {row.addonTotal > 0 && (
+                          {row.dayAddon > 0 && (
                             <span className="ml-2 text-emerald-700">
-                              +{formatNTD(row.addonTotal)}
+                              +{formatNTD(row.dayAddon)}
                             </span>
                           )}
-                          {row.discountTotal > 0 && (
+                          {row.dayDiscount > 0 && (
                             <span className="ml-2 text-rose-700">
-                              -{formatNTD(row.discountTotal)}
+                              -{formatNTD(row.dayDiscount)}
                             </span>
                           )}
                           {row.transferredCount > 0 && (
@@ -484,33 +494,61 @@ export default async function TechnicianPayrollPage({
                         </span>
                       </summary>
                       <div className="bg-zinc-50/60 px-5 py-2">
-                        <ul className="space-y-1">
+                        <ul className="space-y-1.5">
                           {row.items.map((it) => (
                             <li
                               key={it.id}
-                              className="grid grid-cols-[1fr_auto] items-center gap-2 text-xs"
+                              className="space-y-0.5 text-xs"
                             >
-                              <Link
-                                href={`/orders/${it.order_id}`}
-                                className="flex items-center gap-2 text-zinc-700 hover:text-brand-700 hover:underline"
-                              >
-                                <span className="font-mono text-zinc-400">
-                                  {it.order_code}
+                              <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+                                <Link
+                                  href={`/orders/${it.order_id}`}
+                                  className="flex items-center gap-2 text-zinc-700 hover:text-brand-700 hover:underline"
+                                >
+                                  <span className="font-mono text-zinc-400">
+                                    {it.order_code}
+                                  </span>
+                                  <span className="font-medium">
+                                    {it.customer_name}
+                                  </span>
+                                  <span className="text-zinc-500">
+                                    {it.service_name ?? "—"}
+                                    {it.tag ? ` · ${it.tag}` : ""}
+                                  </span>
+                                  <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-600">
+                                    {PAYMENT_LABEL[it.payment_method] ?? it.payment_method}
+                                  </span>
+                                </Link>
+                                <span className="text-right">
+                                  <span className="font-mono font-semibold text-zinc-900">
+                                    {formatNTD(it.commission_amount)}
+                                  </span>
+                                  <span className="ml-1 text-zinc-400">
+                                    ({it.commission_label} of {formatNTD(it.subtotal)})
+                                  </span>
                                 </span>
-                                <span className="font-medium">
-                                  {it.customer_name}
-                                </span>
-                                <span className="text-zinc-500">
-                                  {it.service_name ?? "—"}
-                                  {it.tag ? ` · ${it.tag}` : ""}
-                                </span>
-                                <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-zinc-600">
-                                  {PAYMENT_LABEL[it.payment_method] ?? it.payment_method}
-                                </span>
-                              </Link>
-                              <span className="font-mono text-zinc-900">
-                                {formatNTD(it.unit_price)}
-                              </span>
+                              </div>
+                              {(it.order_addons_detail.length > 0 ||
+                                it.order_discount_detail.length > 0) && (
+                                <div className="ml-2 flex flex-wrap gap-1.5 pl-4 border-l-2 border-zinc-200">
+                                  {it.order_addons_detail.map((a, i) => (
+                                    <span
+                                      key={`a-${i}`}
+                                      className="inline-flex items-center rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700"
+                                    >
+                                      {a.name} +{formatNTD(a.amount)}
+                                    </span>
+                                  ))}
+                                  {it.order_discount_detail.map((d, i) => (
+                                    <span
+                                      key={`d-${i}`}
+                                      className="inline-flex items-center rounded bg-rose-50 px-1.5 py-0.5 text-rose-700"
+                                    >
+                                      {d.name} -{formatNTD(d.amount)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </li>
                           ))}
                         </ul>

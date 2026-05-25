@@ -14,6 +14,9 @@ export function formatNTD(amount: number | null | undefined): string {
   }).format(Number(amount));
 }
 
+// 全站日期 / 時間顯示一律台灣時區（無論 server / client）
+const TW_TZ = "Asia/Taipei";
+
 export function formatDate(date: string | Date | null | undefined): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
@@ -22,6 +25,7 @@ export function formatDate(date: string | Date | null | undefined): string {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    timeZone: TW_TZ,
   }).format(d);
 }
 
@@ -36,5 +40,20 @@ export function formatDateTime(date: string | Date | null | undefined): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: TW_TZ,
+  }).format(d);
+}
+
+/** 取 Taiwan 時區下的 "YYYY-MM-DD" */
+export function formatTaiwanDate(date: string | Date | null | undefined): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "";
+  // sv-SE locale 輸出 ISO 風格 "YYYY-MM-DD"
+  return new Intl.DateTimeFormat("sv-SE", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: TW_TZ,
   }).format(d);
 }
