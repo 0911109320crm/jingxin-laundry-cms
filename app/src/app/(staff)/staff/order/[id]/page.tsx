@@ -15,6 +15,7 @@ import { formatDateTime, formatNTD } from "@/lib/utils";
 import type { OrderInput } from "@/lib/validators/order";
 import { OrderWorkflow } from "./OrderWorkflow";
 import { MachineEditor } from "./MachineEditor";
+import { ServiceItemSwapper } from "./ServiceItemSwapper";
 
 type Detail = {
   id: string;
@@ -27,6 +28,7 @@ type Detail = {
   subtotal: number;
   adjustments_total: number;
   total: number;
+  estimated_total: number | null;
   note: string | null;
   service_tags: string[] | null;
   service_notes: string | null;
@@ -39,6 +41,7 @@ type Detail = {
   address: { county: string; district: string; address: string } | null;
   items: {
     id: string;
+    service_item_id: string;
     quantity: number;
     unit_price: number;
     subtotal: number;
@@ -83,12 +86,12 @@ export default async function StaffOrderPage({
     .from("orders")
     .select(
       `id, order_code, status, payment_method, settlement_status,
-       scheduled_at, service_at, subtotal, adjustments_total, total, note,
+       scheduled_at, service_at, subtotal, adjustments_total, total, estimated_total, note,
        service_tags, service_notes, customer_id,
        customer:customers(name, phone,
                           phones:customer_phones(id, phone, label, is_primary)),
        address:customer_addresses(county, district, address),
-       items:order_items(id, quantity, unit_price, subtotal, tag, note,
+       items:order_items(id, service_item_id, quantity, unit_price, subtotal, tag, note,
                          technician_id,
                          service:service_items(code, name, category),
                          machine:machines(id, type, brand, model, code)),
@@ -137,6 +140,21 @@ export default async function StaffOrderPage({
       name: string;
       type: "addon" | "discount";
       default_amount: number;
+    }[] | null) ?? [];
+
+  // 全部 active service_items (含非 basic_choice) — 給師傅換實際品項用
+  const { data: allServicesData } = await supabase
+    .from("service_items")
+    .select("id, code, name, category, default_price")
+    .eq("active", true)
+    .order("sort_order");
+  const allServices =
+    (allServicesData as {
+      id: string;
+      code: string;
+      name: string;
+      category: string | null;
+      default_price: number;
     }[] | null) ?? [];
 
   // 促銷積分：取 active 類型清單 + 本訂單已歸屬給我的紀錄
@@ -227,6 +245,13 @@ export default async function StaffOrderPage({
         <CardHeader>
           <CardTitle>服務項目（{o.items.length}）</CardTitle>
         </CardHeader>
+        {o.estimated_total != null && o.estimated_total !== Number(o.total) && (
+          <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-1.5 text-xs text-zinc-600">
+            老闆娘暫估：<span className="font-mono">{formatNTD(o.estimated_total)}</span>
+            <span className="mx-1">→</span>
+            目前實際：<span className="font-mono font-medium text-zinc-900">{formatNTD(o.total)}</span>
+          </div>
+        )}
         <CardBody className="p-0">
           <ul className="divide-y divide-zinc-200">
             {o.items.map((it) => (
@@ -244,6 +269,14 @@ export default async function StaffOrderPage({
                     {formatNTD(it.subtotal)}
                   </span>
                 </div>
+                <ServiceItemSwapper
+                  orderId={o.id}
+                  orderItemId={it.id}
+                  currentServiceId={it.service_item_id}
+                  currentServiceCategory={it.service?.category ?? null}
+                  currentQuantity={it.quantity}
+                  services={allServices}
+                />
                 <MachineEditor
                   orderId={o.id}
                   orderItemId={it.id}

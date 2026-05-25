@@ -34,10 +34,13 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
       .select("id, code, name, phone")
       .order("name")
       .limit(500),
+    // 建單只列各 category 的「基本價代表」(is_basic_choice=true)
+    // 老闆娘電話接單時不知道機型/品牌/容量，先選大類基本價，師傅現場補實際
     supabase
       .from("service_items")
       .select("id, code, name, default_price")
       .eq("active", true)
+      .eq("is_basic_choice", true)
       .order("sort_order"),
     supabase
       .from("adjustment_items")

@@ -136,6 +136,13 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
 
   const order_code = await nextOrderCode(supabase);
 
+  // 老闆娘建單時的暫估金額（用基本價算）。實際金額由 trigger refresh_order_totals
+  // 在 order_items 寫入後自動算到 orders.total；estimated_total 保留作對比。
+  const estimatedTotal = data.items.reduce(
+    (s, it) => s + (it.quantity || 0) * (it.unit_price || 0),
+    0,
+  );
+
   // 新訂單一律進「待派工」狀態，等老闆娘到月曆拖曳指派師傅
   // （師傅也強制清空，避免從 clone 或 API 帶入舊指派）
   const { data: order, error: orderErr } = await supabase
@@ -152,6 +159,7 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
       payment_method: data.payment_method ?? null,
       note: data.note ?? null,
       source: data.source ?? null,
+      estimated_total: estimatedTotal,
       created_by: me?.id ?? null,
     })
     .select("id")

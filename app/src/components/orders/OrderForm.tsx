@@ -490,8 +490,9 @@ export function OrderForm({
           </Button>
         </CardHeader>
         {mode === "create" && (
-          <div className="border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs text-amber-800">
-            💡 新建訂單一律進「待派工」，請到月曆頁拖曳指派師傅。
+          <div className="border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs text-amber-800 space-y-0.5">
+            <p>💡 新建訂單只需選機型大類（含基本價），實際品牌/容量/加減項由師傅現場補。</p>
+            <p>單價暫定為基本價，師傅換成實際品項後總額會自動更新。新訂單一律進「待派工」，請到月曆頁拖曳指派師傅。</p>
           </div>
         )}
         <CardBody className="space-y-3">
@@ -565,10 +566,12 @@ export function OrderForm({
                     {...register(`items.${idx}.quantity`, { valueAsNumber: true })}
                   />
                 </Field>
-                <Field label="單價">
+                <Field label={mode === "create" ? "基本價（鎖定）" : "單價"}>
                   <Input
                     type="number"
                     min={0}
+                    readOnly={mode === "create"}
+                    className={mode === "create" ? "bg-zinc-100 text-zinc-500" : ""}
                     {...register(`items.${idx}.unit_price`, { valueAsNumber: true })}
                   />
                 </Field>
@@ -764,7 +767,9 @@ export function OrderForm({
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-zinc-500">應收總額</p>
+            <p className="text-xs text-zinc-500">
+              {mode === "create" ? "暫估總額（師傅補實際品項後更新）" : "應收總額"}
+            </p>
             <p className="text-2xl font-bold text-brand-700">
               {formatNTD(total)}
             </p>
