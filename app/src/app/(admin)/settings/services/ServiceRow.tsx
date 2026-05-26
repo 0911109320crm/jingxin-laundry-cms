@@ -24,6 +24,7 @@ export type Service = {
   active: boolean;
   commission_type: CommissionType;
   commission_value: number;
+  is_basic_choice: boolean;
 };
 
 function CommissionDisplay({
@@ -76,7 +77,7 @@ export function ServiceRow({ service }: { service: Service }) {
     return (
       <form
         action={onSave}
-        className={"grid grid-cols-[100px_1fr_90px_120px_160px_56px_60px_auto] items-center gap-2 px-5 py-3"}
+        className={"grid grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] items-center gap-2 px-5 py-3"}
       >
         <Input name="code" defaultValue={service.code} required />
         <Input name="name" defaultValue={service.name} required />
@@ -121,6 +122,14 @@ export function ServiceRow({ service }: { service: Service }) {
           type="number"
           defaultValue={service.sort_order}
         />
+        <label className="flex items-center justify-center gap-1 text-sm text-zinc-600">
+          <input
+            type="checkbox"
+            name="is_basic_choice"
+            defaultChecked={service.is_basic_choice}
+            className="h-4 w-4 accent-amber-500"
+          />
+        </label>
         <label className="flex items-center gap-1 text-sm text-zinc-600">
           <input
             type="checkbox"
@@ -148,7 +157,7 @@ export function ServiceRow({ service }: { service: Service }) {
 
   return (
     <div
-      className="grid grid-cols-[100px_1fr_90px_120px_160px_56px_60px_auto] items-center gap-2 px-5 py-3 text-sm"
+      className="grid grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] items-center gap-2 px-5 py-3 text-sm"
     >
       <code className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-mono">
         {service.code}
@@ -165,6 +174,15 @@ export function ServiceRow({ service }: { service: Service }) {
         value={Number(service.commission_value)}
       />
       <div className="text-zinc-400 text-xs">#{service.sort_order}</div>
+      <div className="text-center">
+        {service.is_basic_choice ? (
+          <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+            ⭐ 基本
+          </span>
+        ) : (
+          <span className="text-zinc-300">—</span>
+        )}
+      </div>
       <div>
         {service.active ? (
           <span className="rounded bg-green-50 px-2 py-0.5 text-xs text-green-700">

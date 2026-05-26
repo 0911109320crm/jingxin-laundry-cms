@@ -31,6 +31,7 @@ function inferMachineType(
   if (!serviceCategory) return null;
   if (
     serviceCategory === "washing_vertical" ||
+    serviceCategory === "washing_twin_tub" ||
     serviceCategory === "washing_drum"
   )
     return "washing_machine";

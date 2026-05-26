@@ -26,6 +26,7 @@ type Props = {
 
 const CATEGORY_LABEL: Record<string, string> = {
   washing_vertical: "直立式洗衣機",
+  washing_twin_tub: "雙槽式洗衣機",
   washing_drum: "滾筒洗衣機",
   sofa: "沙發",
   mattress: "床墊",

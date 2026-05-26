@@ -28,7 +28,7 @@ export function NewServiceForm({
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[100px_1fr_90px_120px_160px_56px_60px_auto] items-center gap-2"
+      className="grid grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] items-center gap-2"
     >
       <Input name="code" placeholder="代碼" required />
       <Input name="name" placeholder="名稱" required />
@@ -67,6 +67,13 @@ export function NewServiceForm({
         defaultValue={999}
         placeholder="排序"
       />
+      <label className="flex items-center justify-center gap-1 text-sm text-zinc-600" title="老闆娘建單頁顯示">
+        <input
+          type="checkbox"
+          name="is_basic_choice"
+          className="h-4 w-4 accent-amber-500"
+        />
+      </label>
       <label className="flex items-center gap-1 text-sm text-zinc-600">
         <input
           type="checkbox"

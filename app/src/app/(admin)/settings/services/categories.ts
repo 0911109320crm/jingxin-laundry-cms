@@ -1,6 +1,7 @@
 // service_items.category 標準值（與 machine_brands / service_tag_presets 同步）
 export const SERVICE_CATEGORIES = [
   { key: "washing_vertical", label: "直立式洗衣機" },
+  { key: "washing_twin_tub", label: "雙槽式洗衣機" },
   { key: "washing_drum", label: "滾筒洗衣機" },
   { key: "sofa", label: "沙發" },
   { key: "mattress", label: "床墊" },

@@ -4,7 +4,8 @@
  *
  * 用法:
  *   node import.mjs --dry-run         只統計、不寫入
- *   node import.mjs                   實際匯入
+ *   node import.mjs                   實際匯入（讀 migrate/out/）
+ *   node import.mjs --clean           讀 migrate/out/clean/（10,891 筆可信客戶，第一批用這個）
  *   node import.mjs --reset           先刪除所有 OLD- 前綴客戶與訂單，再匯入
  *
  * 環境變數從 ../app/.env.local 讀取（SUPABASE_URL, SERVICE_ROLE_KEY）。
@@ -25,8 +26,11 @@ import { dirname, resolve } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // app/scripts/ → app/.env.local
 const envPath = resolve(__dirname, "..", ".env.local");
-// app/scripts/ → ../../migrate/out/
-const MIGRATE_OUT = resolve(__dirname, "..", "..", "migrate", "out");
+// app/scripts/ → ../../migrate/out/  或 ../../migrate/out/clean/
+const USE_CLEAN = process.argv.includes("--clean");
+const MIGRATE_OUT = USE_CLEAN
+  ? resolve(__dirname, "..", "..", "migrate", "out", "clean")
+  : resolve(__dirname, "..", "..", "migrate", "out");
 if (!existsSync(envPath)) {
   console.error(`找不到 ${envPath}`);
   process.exit(1);
@@ -47,6 +51,7 @@ const supabase = createClient(
 const DRY_RUN = process.argv.includes("--dry-run");
 const RESET = process.argv.includes("--reset");
 const OUT = MIGRATE_OUT;
+console.log(`讀取目錄: ${OUT}${USE_CLEAN ? " (clean 批，已過濾 126 筆問題客戶)" : ""}`);
 // --sample N：只匯前 N 個客戶（及其關聯資料）
 const sampleArg = process.argv.find(a => a.startsWith("--sample="));
 const SAMPLE_N = sampleArg ? parseInt(sampleArg.split("=")[1], 10) : null;
@@ -77,6 +82,23 @@ function parseCSV(path) {
   return rows.slice(1).filter(r => r.length === headers.length).map(r =>
     Object.fromEntries(r.map((v, i) => [headers[i], v]))
   );
+}
+
+// ─── legacy_code 清洗規則 ─────────────────────────────────────────────────────
+// 老闆娘 2026-05-26 決策：
+//   1. 民國年開頭（111-115，含各種 dash 變體 -/–/ー）→ 保留為 legacy_code
+//   2. 英文字母前綴 (N/M/V/T/G/U/F/H/L/W/Q/I/WD...) → 舊版編碼系統，清掉
+//   3. 其他（中文「拆不起/乾淨不洗/拆後背板/無」、數字怪格式 22-/21- 等）
+//      → legacy_code 設 null，但把原值移到 order.note 保留資訊
+const YEAR_PREFIX_RE = /^1[012]\d/;        // 民國 100-129 開頭
+const LETTER_PREFIX_RE = /^[A-Za-z]/;       // 英文字母開頭
+function classifyLegacyCode(raw) {
+  const code = (raw || "").trim();
+  if (!code) return { legacy_code: null, extra_note: "" };
+  if (YEAR_PREFIX_RE.test(code)) return { legacy_code: code, extra_note: "" };
+  if (LETTER_PREFIX_RE.test(code)) return { legacy_code: null, extra_note: "" };
+  // 中文 / 數字怪格式 → 移到備註
+  return { legacy_code: null, extra_note: `舊清洗編號欄: ${code}` };
 }
 
 // ─── Batch insert helper ─────────────────────────────────────────────────────
@@ -243,22 +265,36 @@ async function main() {
   //   2. 歷史訂單都已完成，settlement_status 強制設 'settled'，否則 init_settlement
   //      trigger 會根據 cash → 設成 'pending'（待回繳），出現在師傅待回繳清單。
   console.log("\n4) orders");
-  await insertBatch("orders", orders.map(o => ({
-    id: o.id,
-    order_code: o.order_code,
-    customer_id: o.customer_id,
-    address_id: o.address_id,
-    scheduled_at: o.scheduled_at || null,
-    service_at: o.service_at || null,
-    status: o.status,
-    payment_method: o.payment_method || null,
-    settlement_status: "settled",
-    subtotal: parseFloat(o.subtotal),
-    adjustments_total: parseFloat(o.adjustments_total),
-    total: parseFloat(o.total),
-    source: o.source || null,
-    note: o.note || null,
-  })));
+  // legacy_code 清洗統計
+  let n_keep = 0, n_drop_letter = 0, n_moved_to_note = 0;
+  const orderRows = orders.map(o => {
+    const { legacy_code, extra_note } = classifyLegacyCode(o.legacy_code);
+    if (o.legacy_code) {
+      if (legacy_code) n_keep++;
+      else if (extra_note) n_moved_to_note++;
+      else n_drop_letter++;
+    }
+    const finalNote = [o.note, extra_note].filter(Boolean).join(" | ");
+    return {
+      id: o.id,
+      order_code: o.order_code,
+      customer_id: o.customer_id,
+      address_id: o.address_id,
+      scheduled_at: o.scheduled_at || null,
+      service_at: o.service_at || null,
+      status: o.status,
+      payment_method: o.payment_method || null,
+      settlement_status: "settled",
+      subtotal: parseFloat(o.subtotal),
+      adjustments_total: parseFloat(o.adjustments_total),
+      total: parseFloat(o.total),
+      source: o.source || null,
+      note: finalNote || null,
+      legacy_code,
+    };
+  });
+  console.log(`   legacy_code 清洗: 保留 ${n_keep} / 清字母前綴 ${n_drop_letter} / 移到 note ${n_moved_to_note}`);
+  await insertBatch("orders", orderRows);
 
   // order_items
   console.log("\n5) order_items");

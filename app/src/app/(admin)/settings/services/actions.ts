@@ -16,6 +16,7 @@ const ServiceSchema = z.object({
   category: z.string().optional().nullable(),
   sort_order: z.coerce.number().int().default(0),
   active: z.coerce.boolean().default(true),
+  is_basic_choice: z.coerce.boolean().default(false),
   commission_type: z.enum(["default", "percent", "amount"]).default("default"),
   commission_value: z.coerce.number().min(0, "抽成數值不可為負").default(0),
 });
@@ -31,6 +32,7 @@ export async function createService(fd: FormData): Promise<Res> {
     category: fd.get("category") || null,
     sort_order: fd.get("sort_order") ?? 0,
     active: fd.get("active") === "on",
+    is_basic_choice: fd.get("is_basic_choice") === "on",
     commission_type: fd.get("commission_type") ?? "default",
     commission_value: fd.get("commission_value") ?? 0,
   });
@@ -51,6 +53,7 @@ export async function updateService(id: string, fd: FormData): Promise<Res> {
     category: fd.get("category") || null,
     sort_order: fd.get("sort_order") ?? 0,
     active: fd.get("active") === "on",
+    is_basic_choice: fd.get("is_basic_choice") === "on",
     commission_type: fd.get("commission_type") ?? "default",
     commission_value: fd.get("commission_value") ?? 0,
   });
