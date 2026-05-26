@@ -12,8 +12,6 @@ import {
 import { formatNTD } from "@/lib/utils";
 import type { OrderInput } from "@/lib/validators/order";
 
-type SP = Promise<{ date?: string }>;
-
 type StaffOrder = {
   id: string;
   order_code: string;
@@ -31,30 +29,53 @@ type StaffOrder = {
   items: { quantity: number; service: { name: string } | null }[];
 };
 
-function dateRange(dateStr?: string) {
-  const target = dateStr ? new Date(`${dateStr}T00:00:00`) : new Date();
-  if (Number.isNaN(target.getTime())) {
-    return dateRange();
-  }
-  const start = new Date(target.getFullYear(), target.getMonth(), target.getDate());
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { startIso: start.toISOString(), endIso: end.toISOString(), label: start };
+// 用台灣時區把 ISO 轉成 yyyy-mm-dd，避免跨日邊界誤判
+const TW_DATE_FMT = new Intl.DateTimeFormat("sv-SE", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "Asia/Taipei",
+});
+
+function taiwanDateKey(iso: string): string {
+  return TW_DATE_FMT.format(new Date(iso));
 }
 
-export default async function StaffHome({ searchParams }: { searchParams: SP }) {
+function formatDateHeader(dateKey: string): { main: string; isToday: boolean; isTomorrow: boolean } {
+  const today = TW_DATE_FMT.format(new Date());
+  const tomorrowD = new Date();
+  tomorrowD.setDate(tomorrowD.getDate() + 1);
+  const tomorrow = TW_DATE_FMT.format(tomorrowD);
+
+  const d = new Date(`${dateKey}T00:00:00`);
+  const main = new Intl.DateTimeFormat("zh-TW", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  }).format(d);
+
+  return {
+    main,
+    isToday: dateKey === today,
+    isTomorrow: dateKey === tomorrow,
+  };
+}
+
+export default async function StaffHome() {
   const me = await getCurrentUser();
   if (!me) redirect("/login");
-  const sp = await searchParams;
-  const { startIso, endIso, label } = dateRange(sp.date);
 
-  // 本月積分查詢區間（calendar month）
+  // 本月積分查詢區間
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
+  // 顯示範圍：往前 7 天 + 未來所有未完成 (避免載入過多歷史)
+  const startWindow = new Date();
+  startWindow.setDate(startWindow.getDate() - 7);
+
   const supabase = await createClient();
-  // RLS scopes to orders where this user has any order_item
+  // RLS scopes orders to ones where this user has any order_item
   const [
     { data },
     { data: pendingCashRows },
@@ -69,8 +90,9 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
          address:customer_addresses(county, district, address),
          items:order_items(quantity, service:service_items(name))`,
       )
-      .gte("scheduled_at", startIso)
-      .lt("scheduled_at", endIso)
+      .not("scheduled_at", "is", null)
+      .gte("scheduled_at", startWindow.toISOString())
+      .not("status", "in", "(cancelled)")
       .order("scheduled_at"),
     supabase
       .from("orders")
@@ -103,24 +125,15 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
       0,
     );
   const pendingCashCount = (pendingCashRows as unknown[] | null)?.length ?? 0;
-  const dateLabel = new Intl.DateTimeFormat("zh-TW", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-  }).format(label);
 
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const fmtLocal = (d: Date) =>
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const todayStr = fmtLocal(new Date());
-  const currentStr = sp.date ?? todayStr;
-  const prev = new Date(`${currentStr}T00:00:00`);
-  prev.setDate(prev.getDate() - 1);
-  const next = new Date(`${currentStr}T00:00:00`);
-  next.setDate(next.getDate() + 1);
-  const prevStr = fmtLocal(prev);
-  const nextStr = fmtLocal(next);
+  // 依台灣日期 group orders（已 ORDER BY scheduled_at ASC）
+  const groups: { dateKey: string; orders: StaffOrder[] }[] = [];
+  for (const o of orders) {
+    const key = taiwanDateKey(o.scheduled_at);
+    const last = groups[groups.length - 1];
+    if (last && last.dateKey === key) last.orders.push(o);
+    else groups.push({ dateKey: key, orders: [o] });
+  }
 
   return (
     <div className="p-4 space-y-4">
@@ -183,119 +196,123 @@ export default async function StaffHome({ searchParams }: { searchParams: SP }) 
         </Card>
       </Link>
 
-      <header className="flex items-center justify-between">
-        <Link
-          href={`/staff?date=${prevStr}`}
-          className="rounded-lg bg-white px-3 py-1.5 text-sm shadow-sm"
-        >
-          ◀ 前一天
-        </Link>
-        <div className="text-center">
-          <p className="text-base font-semibold text-zinc-900">{dateLabel}</p>
-          {sp.date && sp.date !== todayStr && (
-            <Link
-              href="/staff"
-              className="text-xs text-brand-600 hover:underline"
-            >
-              回今天
-            </Link>
-          )}
-        </div>
-        <Link
-          href={`/staff?date=${nextStr}`}
-          className="rounded-lg bg-white px-3 py-1.5 text-sm shadow-sm"
-        >
-          後一天 ▶
-        </Link>
-      </header>
-
-      {orders.length === 0 ? (
+      {groups.length === 0 ? (
         <Card>
           <CardBody className="flex flex-col items-center gap-2 py-12">
             <CalendarDays className="h-10 w-10 text-zinc-300" />
-            <p className="text-sm text-zinc-500">今天沒有案件</p>
+            <p className="text-sm text-zinc-500">近期沒有案件</p>
+            <p className="text-xs text-zinc-400">（顯示 7 天前到未來所有未取消）</p>
           </CardBody>
         </Card>
       ) : (
-        <ul className="space-y-3">
-          {orders.map((o) => {
-            const t = new Date(o.scheduled_at);
-            const time = `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+        <div className="space-y-3">
+          {groups.map(({ dateKey, orders: groupOrders }) => {
+            const { main, isToday, isTomorrow } = formatDateHeader(dateKey);
             return (
-              <li key={o.id}>
-                <Link href={`/staff/order/${o.id}`}>
-                  <Card className="transition-shadow active:shadow-md">
-                    <CardBody className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-zinc-900">
-                            {time}
-                          </span>
-                          <span className="font-mono text-xs text-zinc-400">
-                            {o.order_code}
-                          </span>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-zinc-400" />
-                      </div>
-                      <div>
-                        <p className="text-base font-semibold text-zinc-900">
-                          {o.customer?.name ?? "—"}
-                        </p>
-                        <p className="text-sm text-zinc-500">
-                          {o.customer?.phone}
-                          {o.customer?.phones && o.customer.phones.length > 1 && (
-                            <span
-                              className="ml-1 rounded bg-zinc-100 px-1 text-[10px] text-zinc-600"
-                              title={o.customer.phones
-                                .filter((p) => !p.is_primary)
-                                .map((p) => `${p.phone}${p.label ? `（${p.label}）` : ""}`)
-                                .join("、")}
-                            >
-                              +{o.customer.phones.length - 1}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      {o.items.length > 0 && (
-                        <p className="text-sm text-zinc-700">
-                          {o.items
-                            .map((it) =>
-                              it.service?.name
-                                ? `${it.service.name}${it.quantity > 1 ? `×${it.quantity}` : ""}`
-                                : null,
-                            )
-                            .filter(Boolean)
-                            .join("、")}
-                        </p>
-                      )}
-                      {o.address && (
-                        <p className="flex items-start gap-1 text-sm text-zinc-600">
-                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
-                          <span>
-                            {o.address.county} {o.address.district}{" "}
-                            {o.address.address}
-                          </span>
-                        </p>
-                      )}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                        <div className="flex flex-wrap gap-1">
-                          <StatusBadge value={o.status} />
-                          <PaymentBadge value={o.payment_method} />
-                          {o.settlement_status !== "not_required" && (
-                            <SettlementBadge value={o.settlement_status} />
-                          )}
-                        </div>
-                        <span className="font-mono text-base font-semibold text-zinc-900">
-                          {formatNTD(o.total)}
-                        </span>
-                      </div>
-                    </CardBody>
-                  </Card>
-                </Link>
-              </li>
+              <section key={dateKey} className="space-y-2">
+                {/* 日期分隔列 */}
+                <div className="sticky top-0 z-10 -mx-4 border-y border-zinc-200 bg-zinc-100 px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-zinc-800">{main}</span>
+                    {isToday && (
+                      <span className="rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                        今天
+                      </span>
+                    )}
+                    {isTomorrow && (
+                      <span className="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                        明天
+                      </span>
+                    )}
+                    <span className="ml-auto text-xs text-zinc-500">
+                      {groupOrders.length} 件
+                    </span>
+                  </div>
+                </div>
+
+                <ul className="space-y-2">
+                  {groupOrders.map((o) => {
+                    const t = new Date(o.scheduled_at);
+                    const time = `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+                    return (
+                      <li key={o.id}>
+                        <Link href={`/staff/order/${o.id}`}>
+                          <Card className="transition-shadow active:shadow-md">
+                            <CardBody className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg font-bold text-zinc-900">
+                                    {time}
+                                  </span>
+                                  <span className="font-mono text-xs text-zinc-400">
+                                    {o.order_code}
+                                  </span>
+                                </div>
+                                <ChevronRight className="h-5 w-5 text-zinc-400" />
+                              </div>
+                              <div>
+                                <p className="text-base font-semibold text-zinc-900">
+                                  {o.customer?.name ?? "—"}
+                                </p>
+                                <p className="text-sm text-zinc-500">
+                                  {o.customer?.phone}
+                                  {o.customer?.phones && o.customer.phones.length > 1 && (
+                                    <span
+                                      className="ml-1 rounded bg-zinc-100 px-1 text-[10px] text-zinc-600"
+                                      title={o.customer.phones
+                                        .filter((p) => !p.is_primary)
+                                        .map((p) => `${p.phone}${p.label ? `（${p.label}）` : ""}`)
+                                        .join("、")}
+                                    >
+                                      +{o.customer.phones.length - 1}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                              {o.items.length > 0 && (
+                                <p className="text-sm text-zinc-700">
+                                  {o.items
+                                    .map((it) =>
+                                      it.service?.name
+                                        ? `${it.service.name}${it.quantity > 1 ? `×${it.quantity}` : ""}`
+                                        : null,
+                                    )
+                                    .filter(Boolean)
+                                    .join("、")}
+                                </p>
+                              )}
+                              {o.address && (
+                                <p className="flex items-start gap-1 text-sm text-zinc-600">
+                                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+                                  <span>
+                                    {o.address.county} {o.address.district}{" "}
+                                    {o.address.address}
+                                  </span>
+                                </p>
+                              )}
+                              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                                <div className="flex flex-wrap gap-1">
+                                  <StatusBadge value={o.status} />
+                                  <PaymentBadge value={o.payment_method} />
+                                  {o.settlement_status !== "not_required" && (
+                                    <SettlementBadge value={o.settlement_status} />
+                                  )}
+                                </div>
+                                <span className="font-mono text-base font-semibold text-zinc-900">
+                                  {formatNTD(o.total)}
+                                </span>
+                              </div>
+                            </CardBody>
+                          </Card>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
             );
           })}
-        </ul>
+        </div>
       )}
     </div>
   );
