@@ -22,12 +22,31 @@ type SP = Promise<{
   payment?: string;
   settlement?: string;
   tech?: string;
+  from?: string;
+  to?: string;
+  all?: string;
 }>;
 
 function currentMonthValue() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
+
+function toISODate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// 計算預設日期範圍：今天回推 3 個月 ~ 今天往後 1 個月
+function getDefaultDateRange() {
+  const today = new Date();
+  const from = new Date(today);
+  from.setMonth(from.getMonth() - 3);
+  const to = new Date(today);
+  to.setMonth(to.getMonth() + 1);
+  return { from: toISODate(from), to: toISODate(to) };
+}
+
+const ORDERS_LIMIT = 2000;
 
 type Row = {
   id: string;
@@ -66,6 +85,15 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
   const payment = sp.payment ?? "";
   const settlement = sp.settlement ?? "";
   const tech = sp.tech ?? "";
+
+  // 日期範圍篩選
+  // - all=1 → 不套用日期 filter（全部時間）
+  // - 沒帶 from/to → 預設「近 3 個月 ~ 未來 1 個月」
+  // - 待派工（scheduled_at IS NULL）永遠納入，不被日期 filter 過濾
+  const isAllTime = sp.all === "1";
+  const defaults = getDefaultDateRange();
+  const from = isAllTime ? "" : (sp.from ?? defaults.from);
+  const to = isAllTime ? "" : (sp.to ?? defaults.to);
 
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -108,11 +136,22 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
        address:customer_addresses(county, district)`,
     )
     .order("scheduled_at", { ascending: false, nullsFirst: false })
-    .limit(300);
+    .limit(ORDERS_LIMIT);
 
   if (status) query = query.eq("status", status);
   if (payment) query = query.eq("payment_method", payment);
   if (settlement) query = query.eq("settlement_status", settlement);
+
+  // 日期範圍：待派工（scheduled_at IS NULL）永遠納入
+  if (from && to) {
+    query = query.or(
+      `scheduled_at.is.null,and(scheduled_at.gte.${from},scheduled_at.lte.${to}T23:59:59)`,
+    );
+  } else if (from) {
+    query = query.or(`scheduled_at.is.null,scheduled_at.gte.${from}`);
+  } else if (to) {
+    query = query.or(`scheduled_at.is.null,scheduled_at.lte.${to}T23:59:59`);
+  }
   if (techOrderIds !== null) {
     if (techOrderIds.length === 0) {
       // 該師傅沒有任何訂單，直接限制成空結果
@@ -181,12 +220,71 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
       </div>
 
       <Card>
-        <CardBody>
+        <CardBody className="space-y-3">
+          {/* 日期範圍 + 快捷 */}
+          {(() => {
+            const today = new Date();
+            const todayStr = toISODate(today);
+            const monthStart = toISODate(new Date(today.getFullYear(), today.getMonth(), 1));
+            const threeMonAgo = toISODate(new Date(today.getFullYear(), today.getMonth() - 3, today.getDate()));
+            const sixMonAgo = toISODate(new Date(today.getFullYear(), today.getMonth() - 6, today.getDate()));
+            const yearStart = toISODate(new Date(today.getFullYear(), 0, 1));
+            const oneMonAhead = toISODate(new Date(today.getFullYear(), today.getMonth() + 1, today.getDate()));
+
+            const presets = [
+              { label: "本月", from: monthStart, to: todayStr, all: false },
+              { label: "近 3 個月", from: threeMonAgo, to: oneMonAhead, all: false },
+              { label: "近 6 個月", from: sixMonAgo, to: oneMonAhead, all: false },
+              { label: "今年", from: yearStart, to: oneMonAhead, all: false },
+              { label: "全部時間", from: "", to: "", all: true },
+            ];
+
+            const isPresetActive = (p: typeof presets[number]) => {
+              if (p.all) return isAllTime;
+              return !isAllTime && from === p.from && to === p.to;
+            };
+
+            const buildPresetHref = (p: typeof presets[number]) => {
+              const params = new URLSearchParams();
+              if (status) params.set("status", status);
+              if (payment) params.set("payment", payment);
+              if (settlement) params.set("settlement", settlement);
+              if (tech) params.set("tech", tech);
+              if (q) params.set("q", q);
+              if (p.all) params.set("all", "1");
+              else {
+                params.set("from", p.from);
+                params.set("to", p.to);
+              }
+              return `/orders?${params.toString()}`;
+            };
+
+            return (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-zinc-500">期間：</span>
+                {presets.map((p) => (
+                  <Link
+                    key={p.label}
+                    href={buildPresetHref(p)}
+                    className={cn(
+                      "rounded-full px-3 py-1 transition-colors",
+                      isPresetActive(p)
+                        ? "bg-brand-600 text-white"
+                        : "border border-zinc-300 text-zinc-700 hover:bg-zinc-100",
+                    )}
+                  >
+                    {p.label}
+                  </Link>
+                ))}
+              </div>
+            );
+          })()}
+
           <form className={cn(
             "grid grid-cols-1 gap-3",
             isCancelledTab
-              ? "md:grid-cols-[1fr_160px_auto]"
-              : "md:grid-cols-[1fr_140px_160px_160px_140px_auto]",
+              ? "md:grid-cols-[1fr_140px_140px_160px_auto]"
+              : "md:grid-cols-[1fr_140px_140px_140px_140px_140px_140px_auto]",
           )}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
@@ -197,6 +295,19 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                 className="pl-9"
               />
             </div>
+            {/* Date range inputs */}
+            <Input
+              type="date"
+              name="from"
+              defaultValue={isAllTime ? "" : from}
+              title="起始日期"
+            />
+            <Input
+              type="date"
+              name="to"
+              defaultValue={isAllTime ? "" : to}
+              title="結束日期"
+            />
             {/* Keep hidden status so tab selection survives form submit */}
             {status && <input type="hidden" name="status" value={status} />}
             {!isCancelledTab && (
@@ -245,12 +356,24 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
         </div>
       )}
 
+      {rows.length >= ORDERS_LIMIT && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          ⚠ 篩選結果達到 {ORDERS_LIMIT} 筆上限，可能有更舊的訂單沒列出。請縮短日期範圍或加上其他篩選條件。
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card>
           <CardBody>
             <p className="text-xs text-zinc-500">篩選結果</p>
             <p className="mt-1 text-2xl font-bold text-zinc-900">
               {rows.length} 筆
+              {!isAllTime && from && to && (
+                <span className="ml-2 text-xs font-normal text-zinc-500">（{from} ~ {to}）</span>
+              )}
+              {isAllTime && (
+                <span className="ml-2 text-xs font-normal text-zinc-500">（全部時間）</span>
+              )}
             </p>
           </CardBody>
         </Card>
