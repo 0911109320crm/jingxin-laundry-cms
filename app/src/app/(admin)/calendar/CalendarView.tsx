@@ -227,9 +227,17 @@ export function CalendarView({
     dailyTotals.set(date, (dailyTotals.get(date) ?? 0) + Number(o.total));
   }
 
+  // FullCalendar 是包過的 vanilla JS 庫，events prop 改變時不一定會自動重畫。
+  // 用 key 強制在 events 內容改變時 remount 整個 FullCalendar。
+  // 缺點是會 reset 到 initialView，但拖曳後使用者本來就期待看到結果，可接受。
+  const eventsKey = orders
+    .map((o) => `${o.id}-${o.scheduled_at}-${o.scheduled_end_at}-${o.technician_id}-${o.status}`)
+    .join("|");
+
   return (
     <div className="calendar-wrapper">
       <FullCalendar
+        key={eventsKey}
         plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         locale="zh-tw"

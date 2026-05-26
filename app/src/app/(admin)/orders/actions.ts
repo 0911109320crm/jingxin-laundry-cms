@@ -143,8 +143,13 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
     0,
   );
 
-  // 新訂單一律進「待派工」狀態，等老闆娘到月曆拖曳指派師傅
-  // （師傅也強制清空，避免從 clone 或 API 帶入舊指派）
+  // 訂單狀態判定（老闆娘 2026-05-27 需求調整）：
+  //   - 有 scheduled_at + 至少一個 item 有指派師傅 → 直接 'scheduled'（已排案）
+  //   - 否則 'pending'（待派工，等月曆拖曳）
+  const hasAssignedTech = data.items.some((it) => it.technician_id);
+  const hasScheduled = !!data.scheduled_at;
+  const orderStatus = hasScheduled && hasAssignedTech ? "scheduled" : "pending";
+
   const { data: order, error: orderErr } = await supabase
     .from("orders")
     .insert({
@@ -155,7 +160,7 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
       scheduled_end_at: data.scheduled_end_at || null,
       service_at: data.service_at || null,
       duration_minutes: data.duration_minutes,
-      status: "pending",
+      status: orderStatus,
       payment_method: data.payment_method ?? null,
       note: data.note ?? null,
       source: data.source ?? null,
@@ -177,8 +182,8 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
         // 機器資訊改由師傅到現場補填
         machine_id: null,
         service_item_id: it.service_item_id,
-        // 新訂單一律未指派師傅（即使表單帶值也清掉），等月曆拖曳指派
-        technician_id: null,
+        // 老闆娘 2026-05-27 起允許建單時直接指派師傅
+        technician_id: it.technician_id ?? null,
         quantity: it.quantity,
         unit_price: it.unit_price,
         subtotal: it.quantity * it.unit_price,

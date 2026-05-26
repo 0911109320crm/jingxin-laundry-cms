@@ -492,7 +492,8 @@ export function OrderForm({
         {mode === "create" && (
           <div className="border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs text-amber-800 space-y-0.5">
             <p>💡 新建訂單只需選機型大類（含基本價），實際品牌/容量/加減項由師傅現場補。</p>
-            <p>單價暫定為基本價，師傅換成實際品項後總額會自動更新。新訂單一律進「待派工」，請到月曆頁拖曳指派師傅。</p>
+            <p>單價暫定為基本價，師傅換成實際品項後總額會自動更新。</p>
+            <p>📅 若已知有師傅可接 → 在下方「指派師傅」直接選 + 預約日期填好，訂單會直接進「已排案」。否則留空 → 進「待派工」之後到月曆拖曳。</p>
           </div>
         )}
         <CardBody className="space-y-3">
@@ -547,18 +548,16 @@ export function OrderForm({
                     )}
                   />
                 </Field>
-                {mode === "edit" && (
-                  <Field label="指派師傅">
-                    <Select {...register(`items.${idx}.technician_id`)}>
-                      <option value="">— 未指派 —</option>
-                      {technicians.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                )}
+                <Field label="指派師傅（建單時若已知有空師傅可直接選）">
+                  <Select {...register(`items.${idx}.technician_id`)}>
+                    <option value="">— 未指派（自動進待派工）—</option>
+                    {technicians.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
                 <Field label="數量">
                   <Input
                     type="number"
