@@ -11,7 +11,12 @@
 
 [build]
   base    = "app"
-  command = "npm ci && npm run build"
+  # 為什麼要 explicit install lightningcss-linux-x64-gnu：
+  # Windows 機器 generate 的 package-lock.json 雖然有 lightningcss-linux-x64-gnu@1.32.0 條目，
+  # 但 npm ci 在 Linux 機器上會因 platform filtering 跳過該 optional dep（npm 的已知 bug）。
+  # 試過 npm rebuild lightningcss --update-binary、LIGHTNING_CSS_WASM=1 都救不回來。
+  # Explicit install 強制把 Linux native binary 裝起來。
+  command = "npm ci && npm install --no-save lightningcss-linux-x64-gnu@1.32.0 && npm run build"
   publish = ".next"
 
 [build.environment]
@@ -19,10 +24,6 @@
   NODE_VERSION = "22"
   # 全站台灣時區（也在 next.config.ts 設過，這裡 build-time 再保一層）
   TZ = "Asia/Taipei"
-  # 強制 lightningcss 用 WASM backend，跳過 platform-specific .node binary
-  # 動機：Windows lockfile 沒帶 Linux native binary，npm rebuild --update-binary
-  # 也救不回來（試過了還是炸）。WASM backend 是官方支援的可攜替代，輸出一致。
-  LIGHTNING_CSS_WASM = "1"
 
 # Next.js 在 Netlify 上跑需要這個 plugin（Edge/SSR/ISR 路由轉發）
 # Netlify 偵測到 Next.js 通常會自動安裝，這裡明寫保險
