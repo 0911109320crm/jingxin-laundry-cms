@@ -11,13 +11,15 @@
 
 [build]
   base    = "app"
-  # 為什麼不直接 npm run build：
-  # lightningcss / @swc/core 等套件有 platform-specific native bindings。
-  # package-lock.json 是 Windows 機器 generate 的，沒鎖到 Linux 平台版本，
-  # Netlify (linux-x64-gnu) build 時找不到 native binary 會炸。
-  # 已知 npm bug: https://github.com/npm/cli/issues/4828
-  # 解法：刪掉 lockfile 強制 fresh install，讓 Netlify 自己解 Linux 版本。
-  command = "rm -f package-lock.json && npm install && npm run build"
+  # 為什麼要 npm rebuild lightningcss --update-binary：
+  # lightningcss 有 platform-specific native binary (linux-x64-gnu.node)。
+  # Windows 機器 generate 的 package-lock.json 沒帶 Linux binary，
+  # Netlify (Linux) build 時找不到會炸。
+  # 解法（Netlify 官方建議）：
+  #   1. npm ci 用 lockfile 乾淨安裝（保留 reproducibility）
+  #   2. npm rebuild lightningcss --update-binary 強制重抓對應平台 native binary
+  #   3. 才跑 next build
+  command = "npm ci && npm rebuild lightningcss --update-binary && npm run build"
   publish = ".next"
 
 [build.environment]
