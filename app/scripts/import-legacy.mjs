@@ -52,9 +52,19 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const RESET = process.argv.includes("--reset");
 const OUT = MIGRATE_OUT;
 console.log(`讀取目錄: ${OUT}${USE_CLEAN ? " (clean 批，已過濾 126 筆問題客戶)" : ""}`);
-// --sample N：只匯前 N 個客戶（及其關聯資料）
-const sampleArg = process.argv.find(a => a.startsWith("--sample="));
-const SAMPLE_N = sampleArg ? parseInt(sampleArg.split("=")[1], 10) : null;
+// --sample N 或 --sample=N：只匯前 N 個客戶（及其關聯資料）
+function parseSample(argv) {
+  // --sample=10
+  const eq = argv.find(a => a.startsWith("--sample="));
+  if (eq) return parseInt(eq.split("=")[1], 10);
+  // --sample 10
+  const idx = argv.indexOf("--sample");
+  if (idx >= 0 && argv[idx + 1] && /^\d+$/.test(argv[idx + 1])) {
+    return parseInt(argv[idx + 1], 10);
+  }
+  return null;
+}
+const SAMPLE_N = parseSample(process.argv);
 
 // ─── CSV parser ──────────────────────────────────────────────────────────────
 function parseCSV(path) {
@@ -123,26 +133,42 @@ async function insertBatch(table, rows, batchSize = 500) {
 }
 
 // ─── 0. Reset ────────────────────────────────────────────────────────────────
+// 分批刪：PostgREST 的 .in() 把 ID 塞 URL，超過上限會 silently truncate
+async function deleteInBatches(table, ids, batchSize = 100) {
+  let ok = 0;
+  let fail = 0;
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const batch = ids.slice(i, i + batchSize);
+    const { error } = await supabase.from(table).delete().in("id", batch);
+    if (error) {
+      console.error(`\n  ${table} batch ${i}: ${error.message}`);
+      fail += batch.length;
+    } else {
+      ok += batch.length;
+    }
+    process.stdout.write(`\r  ${table}: ${ok}/${ids.length} (fail ${fail})`);
+  }
+  process.stdout.write("\n");
+  return ok;
+}
+
 async function reset() {
   console.log("Reset mode: deleting all OLD- data...");
-  // orders 用 order_code like 'OLD-%'
+  // orders by order_code prefix
   const { data: oldOrders } = await supabase
     .from("orders").select("id").like("order_code", "OLD-%");
   const orderIds = (oldOrders ?? []).map(o => o.id);
   if (orderIds.length) {
-    // order_items / order_adjustments cascade
-    const { error } = await supabase.from("orders").delete().in("id", orderIds);
-    if (error) console.error("  orders delete:", error.message);
-    else console.log(`  deleted ${orderIds.length} orders + cascades`);
+    console.log(`  刪 ${orderIds.length} orders (cascade order_items / adjustments)...`);
+    await deleteInBatches("orders", orderIds);
   }
+  // customers by code prefix
   const { data: oldCusts } = await supabase
     .from("customers").select("id").like("code", "OLD-%");
   const custIds = (oldCusts ?? []).map(c => c.id);
   if (custIds.length) {
-    // machines / addresses cascade
-    const { error } = await supabase.from("customers").delete().in("id", custIds);
-    if (error) console.error("  customers delete:", error.message);
-    else console.log(`  deleted ${custIds.length} customers + cascades`);
+    console.log(`  刪 ${custIds.length} customers (cascade phones / addresses / machines)...`);
+    await deleteInBatches("customers", custIds);
   }
   console.log("Reset done.\n");
 }
