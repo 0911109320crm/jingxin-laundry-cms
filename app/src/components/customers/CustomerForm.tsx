@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +27,7 @@ import {
   createCustomerAction,
   updateCustomerAction,
   checkDuplicateAddressAction,
+  nextCustomerCodeAction,
   type ActionResult,
   type DuplicateAddressResult,
 } from "@/app/(admin)/customers/actions";
@@ -113,6 +114,20 @@ export function CustomerForm({
   const phoneArr = useFieldArray({ control, name: "phones" });
   const addressArr = useFieldArray({ control, name: "addresses" });
   const machineArr = useFieldArray({ control, name: "machines" });
+
+  // 建單模式：mount 時自動帶入下個 C 流水編號（老闆娘仍可手動覆寫）
+  useEffect(() => {
+    if (mode !== "create") return;
+    if (getValues("code")) return; // 已有值不覆蓋（譬如複製單）
+    nextCustomerCodeAction()
+      .then((code) => {
+        if (!getValues("code")) setValue("code", code);
+      })
+      .catch(() => {
+        // 失敗就讓老闆娘自己填，不擋流程
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const watchedAddresses = watch("addresses");
   const watchedPhones = watch("phones");
 
@@ -175,8 +190,11 @@ export function CustomerForm({
           <CardTitle>基本資料</CardTitle>
         </CardHeader>
         <CardBody className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Field label="顧客編號" error={errors.code?.message}>
-            <Input {...register("code")} placeholder="例如 C0001" />
+          <Field
+            label={mode === "create" ? "顧客編號（已自動帶下個流水，可改）" : "顧客編號"}
+            error={errors.code?.message}
+          >
+            <Input {...register("code")} placeholder="C00001" />
           </Field>
           <Field label="姓名" error={errors.name?.message}>
             <Input {...register("name")} placeholder="王小明" />

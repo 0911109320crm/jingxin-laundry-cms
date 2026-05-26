@@ -10,6 +10,40 @@ import { logAudit } from "@/lib/audit";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+/**
+ * 產生下一個顧客編號（C00001、C00002...）。
+ *
+ * 規則：
+ *   - 只看 C 開頭 + 5 碼數字（C00001 ~ C99999）的既有編號
+ *   - 取最大流水 + 1，補零到 5 碼
+ *   - 不會跟 OLD-XXXXX 衝突（不同 prefix）
+ *
+ * 老闆娘建單時可改成任意自訂編號（譬如 VIP-001、STAFF-002），
+ * 此 action 只在建立新客戶時提供「下一個建議編號」。
+ */
+export async function nextCustomerCodeAction(): Promise<string> {
+  await requireAuth();
+  const supabase = await createClient();
+  // 撈所有 C 開頭的編號，client 端解析最大流水
+  const { data } = await supabase
+    .from("customers")
+    .select("code")
+    .like("code", "C_____") // C + 5 碼（PostgreSQL `_` 是單字元）
+    .order("code", { ascending: false })
+    .limit(1);
+  const rows = (data as { code: string }[] | null) ?? [];
+  let maxSeq = 0;
+  for (const r of rows) {
+    const m = r.code.match(/^C(\d{5})$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > maxSeq) maxSeq = n;
+    }
+  }
+  const next = (maxSeq + 1).toString().padStart(5, "0");
+  return `C${next}`;
+}
+
 /** 在訂單表單裡 inline 新增一筆地址，回傳新建的 address_id */
 const QuickAddressSchema = z.object({
   customer_id: z.string().uuid(),
