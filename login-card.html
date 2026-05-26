@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>淨新清潔工坊 — 員工登入卡</title>
+<style>
+  :root {
+    --brand: #1e7a5b; --brand-light: #d4f1e3;
+    --ink: #0a0a0a; --muted: #6b7280;
+    --line: #e5e7eb; --bg: #fafafa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg); color: var(--ink);
+    padding: 24px 16px; line-height: 1.5;
+  }
+  .container { max-width: 880px; margin: 0 auto; }
+  header {
+    text-align: center; margin-bottom: 24px;
+    padding-bottom: 20px; border-bottom: 2px solid var(--line);
+  }
+  h1 { margin: 0 0 8px; font-size: 24px; }
+  .subtitle { margin: 0; color: var(--muted); font-size: 14px; }
+  .warning {
+    background: #fef3c7; border: 1px solid #fde68a; color: #92400e;
+    padding: 12px 16px; border-radius: 10px; margin: 16px 0 24px; font-size: 14px;
+  }
+  .card-grid { display: grid; gap: 16px; }
+  @media (min-width: 640px) { .card-grid { grid-template-columns: 1fr 1fr; } }
+  .card {
+    background: white; border: 1px solid var(--line);
+    border-radius: 14px; padding: 20px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .card.owner { border-color: var(--brand); background: var(--brand-light); }
+  .card-title { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
+  .card-role {
+    display: inline-block; font-size: 12px;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--bg); color: var(--muted); margin-bottom: 12px;
+  }
+  .card.owner .card-role { background: var(--brand); color: white; }
+  .qr-box { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+  .qr-img {
+    width: 140px; height: 140px; flex-shrink: 0;
+    background: white; padding: 6px;
+    border-radius: 8px; border: 1px solid var(--line);
+    display: block;
+  }
+  .qr-hint { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .qr-hint strong { color: var(--ink); display: block; margin-bottom: 4px; font-size: 13px; }
+  .creds {
+    background: var(--bg); border-radius: 8px; padding: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px; margin-bottom: 8px;
+  }
+  .creds-row { display: flex; gap: 8px; padding: 2px 0; }
+  .creds-key { color: var(--muted); width: 50px; flex-shrink: 0; }
+  .creds-val { color: var(--ink); font-weight: 600; word-break: break-all; }
+  .desktop-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--brand); text-decoration: none;
+    font-size: 13px; font-weight: 500;
+    padding: 6px 10px; border: 1px solid var(--brand); border-radius: 6px;
+  }
+  .desktop-link:hover { background: var(--brand-light); }
+  .section-title {
+    margin: 32px 0 12px; font-size: 16px; font-weight: 700;
+    color: var(--muted); padding-left: 4px;
+  }
+  footer {
+    text-align: center; margin-top: 40px;
+    padding-top: 20px; border-top: 1px solid var(--line);
+    color: var(--muted); font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>淨新清潔工坊 — 員工登入卡</h1>
+    <p class="subtitle">手機請掃 QR Code（自動進入 PWA 行動版）／電腦請點藍色連結</p>
+  </header>
+
+  <div class="warning">
+    ⚠ 此頁面含所有員工帳號密碼，請勿轉發給外人。
+  </div>
+
+  <p class="section-title">👤 老闆娘</p>
+  <div class="card-grid">
+    <div class="card owner">
+      <h2 class="card-title">老闆娘</h2>
+      <span class="card-role">owner</span>
+      <div class="qr-box">
+        <img class="qr-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXIAAAFyAQAAAADAX2ykAAADEElEQVR4nO1cWYrjMBAtLdCfNswB+ijODeZIYW5mHaUP0GB/NsjUUIsVdwaUGGaCNa73YRRX0RR5qVVSO4Q9SH6XOoDp1+EfyO9h+nX48+nPTnHhN3MEXcEi71Z5PKb9u+BPqB+QwUxDev9yTC0LmG4YWD69yp498Lu04aT6TpwTArrrBIAjO/HsiGQCufjlwPY/D38y/Xj/IvUTAnRcduWIqQ8vtceb/r/7frovBwOF4dQDJeGA7tLlv/f3n4B/RmkD03/Gf7F8xtRP4IYPiszzj6wCdueZVvZ91uEPqL9IeQwwv6G7fmgmZrG7UH2VWN6/yp498Lu04XT6cc21hJmqZg7I5ZHe88a7j2e/N/2H/W+UJSdcbZKcczjSy2HiJphc3Py3wd8baOvbaYcrrfDY6QOKQJrg8Wj2e9OvA4W8KSAMmGFD7SBcZ5Uy08Zvg/k3U4BeHJXOPLDKDiBmTC5kSD8/uV1yB7Xfm34diBs3pdEVVVXcBA88kOScLEE6mP82GZ+DFMg48iR6pVbSsUbqrFKLzw3yC4VGekgm1tIKiFpZWf5tlF+8eeiWbuVcPJk4t/jcKL9ZPVQYpIRbvBaFbgncFp/b5BeVWoH0QrqrgCX/mv82fH4DCLrh25VaquM9/wj4q3+lPbvg96nDOeMzaurl+LxtkpBWenTD6ucG+Y20Dah7RQBlL39+I9cFeqfTaTym/d7060CdOufVV8tZq4G9livpMgex/rex3xuszQ+tJRZrEb0ZTAvJNn9ull8UQtf6+Qa4DTms/22VX1gnVELydhMJtbSy+Nwov3679Ttxk8SlFZ+PjaShow39eED7d8GfTB9uHrqGYV5rTkYZZ9n+b6v8RuIyl/4Ib50QwqwC5INZw3hE+73pP7c/GEoZ9W3PAS3//kf8ovS6Oo6eVpUSpK3/bV3fXdchJV84kkklg+40HN/+R/Cnvr+wRORrCukS6CZDyBSuSWj5t2F+l3JNkF2UuMTFIXSTHKtD6D7pptl0QPu96Vfh7P8zVOHr4j9g+nX4B/J7mD5U8RvEalS8fywmGQAAAABJRU5ErkJggg==" alt="QR">
+        <div class="qr-hint">
+          <strong>手機掃這個</strong>
+          自動開啟「老闆娘 PWA」<br>可看一周排案／待派案／今日回繳
+        </div>
+      </div>
+      <div class="creds">
+        <div class="creds-row"><span class="creds-key">帳號</span><span class="creds-val">ting201314</span></div>
+        <div class="creds-row"><span class="creds-key">密碼</span><span class="creds-val">ting751212</span></div>
+      </div>
+      <a class="desktop-link" href="https://jingxin-laundry-cms.vercel.app/login" target="_blank">🖥️ 電腦版（完整後台）→</a>
+    </div>
+  </div>
+
+  <p class="section-title">🔧 師傅（手機 PWA）</p>
+  <div class="card-grid">
+    <div class="card">
+      <h2 class="card-title">A — 陳昶志</h2>
+      <span class="card-role">technician</span>
+      <div class="qr-box">
+        <img class="qr-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXIAAAFyAQAAAADAX2ykAAADGklEQVR4nO1cUY6jMAx9DkjzSaUeoEdJbzbaI+0NylH2ACvBZ6Ugr+wkQGclBqTVTjLYHy1N3ofF4zl2cEqMI9a7Q3DA8NvmPpn/aIbfNnc+/EjJ7nJ1x0Q6hp5aoL8Aeb4t0/9D5k6GbwE0QS8pjowXAB2D/HAhoAPgHzpxLdB/Z/gd94eiOLsAfqBh9JeJ+IcQ7QeZj8Je8PvNGb6c+zPmgHwf3zhSq0H6q/zZYW4PaGWnxncB9M4B8PyM0ZofXfg6f3aY2wM6Mb7Vz6VI4j4tw0B/bwLF+NwJYPwf/jjD/3N+p0zpeGXywzVQvoKMBSTOG7v/1T2fbRKn2jgR97cgcn4SR8G+qLs8/53hP61/WxBdJiK6pbVWc2Wi25NYKqNYE8dMy+7ntrnC8GAeGlYatTTSn/DLWMesiVcaK81/Z/htY+YgJKdal8Xg41gzE5/ZN34re96QBCuEilZTQSSq9ZHfJupXiTd+6+SXk36FUCFZRQxlVTQ9R2rjt0J+WbMqpTbLdNY0lpgtmjZ+K+R3kK+YQb2stayLsC7HKnGLz9Xyy8qqEhqvVvlzyMux8VspvuFY8OobIonKSyUczf8iKtj/I+ZOhkdSbX41uJbzkDEpcFt9VC2/nJOs/DEXTsNSJFl+VSW/Q8qQk0JjJq0DIc/OhZPtb9THL+cMCi+5VK6Z1nsexm/F9REr0xKQU7nEmdrVdmVp/jvDbxvPoXnZv4qtOX4W8WoLxO7ntrnC8FhUm9IosSRiTtTG/Nnic538DlmhcS8yV0U5f9Yfc+JVmv/O8NvGK8sFUZx4qGDnmtj2J6s/v4C8IRmX3rFNnRz3OXCX6P8hc6c+vzDJgYVBmiibAM+p8Y6lMQv+5zWU578z/KHzC9CjR+ik/3l8k/gsjVkX0+93Ob/g5f3C+9Cw9tylXQ2pjvW4Stn+7zB3Mnz714i0PgOTNM7+brW/ndBNLTyX6L8z/P7zC51+h/kQQ8OptV2OI2mnu93PCp+3KabPy6nf9CZ40PisW5MT0V1X5xL9P2LuZHiy/2eoii9n+E1z29PfDv8HH6BI7XW5Z4kAAAAASUVORK5CYII=" alt="QR">
+        <div class="qr-hint">
+          <strong>掃完開啟師傅 PWA</strong>
+          看今日任務、改服務時間、回繳金額
+        </div>
+      </div>
+      <div class="creds">
+        <div class="creds-row"><span class="creds-key">帳號</span><span class="creds-val">201314</span></div>
+        <div class="creds-row"><span class="creds-key">密碼</span><span class="creds-val">010507230</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">C — 徐祥瑋</h2>
+      <span class="card-role">technician</span>
+      <div class="qr-box">
+        <img class="qr-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXIAAAFyAQAAAADAX2ykAAADGklEQVR4nO1cUY6jMAx9DkjzSaUeoEdJbzbaI+0NylH2ACvBZ6Ugr+wkQGclBqTVTjLYHy1N3ofF4zl2cEqMI9a7Q3DA8NvmPpn/aIbfNnc+/EjJ7nJ1x0Q6hp5aoL8Aeb4t0/9D5k6GbwE0QS8pjowXAB2D/HAhoAPgHzpxLdB/Z/gd94eiOLsAfqBh9JeJ+IcQ7QeZj8Je8PvNGb6c+zPmgHwf3zhSq0H6q/zZYW4PaGWnxncB9M4B8PyM0ZofXfg6f3aY2wM6Mb7Vz6VI4j4tw0B/bwLF+NwJYPwf/jjD/3N+p0zpeGXywzVQvoKMBSTOG7v/1T2fbRKn2jgR97cgcn4SR8G+qLs8/53hP61/WxBdJiK6pbVWc2Wi25NYKqNYE8dMy+7ntrnC8GAeGlYatTTSn/DLWMesiVcaK81/Z/htY+YgJKdal8Xg41gzE5/ZN34re96QBCuEilZTQSSq9ZHfJupXiTd+6+SXk36FUCFZRQxlVTQ9R2rjt0J+WbMqpTbLdNY0lpgtmjZ+K+R3kK+YQb2stayLsC7HKnGLz9Xyy8qqEhqvVvlzyMux8VspvuFY8OobIonKSyUczf8iKtj/I+ZOhkdSbX41uJbzkDEpcFt9VC2/nJOs/DEXTsNSJFl+VSW/Q8qQk0JjJq0DIc/OhZPtb9THL+cMCi+5VK6Z1nsexm/F9REr0xKQU7nEmdrVdmVp/jvDbxvPoXnZv4qtOX4W8WoLxO7ntrnC8FhUm9IosSRiTtTG/Nnic538DlmhcS8yV0U5f9Yfc+JVmv/O8NvGK8sFUZx4qGDnmtj2J6s/v4C8IRmX3rFNnRz3OXCX6P8hc6c+vzDJgYVBmiibAM+p8Y6lMQv+5zWU578z/KHzC9CjR+ik/3l8k/gsjVkX0+93Ob/g5f3C+9Cw9tylXQ2pjvW4Stn+7zB3Mnz714i0PgOTNM7+brW/ndBNLTyX6L8z/P7zC51+h/kQQ8OptV2OI2mnu93PCp+3KabPy6nf9CZ40PisW5MT0V1X5xL9P2LuZHiy/2eoii9n+E1z29PfDv8HH6BI7XW5Z4kAAAAASUVORK5CYII=" alt="QR">
+        <div class="qr-hint">
+          <strong>掃完開啟師傅 PWA</strong>
+          看今日任務、改服務時間、回繳金額
+        </div>
+      </div>
+      <div class="creds">
+        <div class="creds-row"><span class="creds-key">帳號</span><span class="creds-val">5785</span></div>
+        <div class="creds-row"><span class="creds-key">密碼</span><span class="creds-val">011202210</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">D — 羅允辰</h2>
+      <span class="card-role">technician</span>
+      <div class="qr-box">
+        <img class="qr-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXIAAAFyAQAAAADAX2ykAAADGklEQVR4nO1cUY6jMAx9DkjzSaUeoEdJbzbaI+0NylH2ACvBZ6Ugr+wkQGclBqTVTjLYHy1N3ofF4zl2cEqMI9a7Q3DA8NvmPpn/aIbfNnc+/EjJ7nJ1x0Q6hp5aoL8Aeb4t0/9D5k6GbwE0QS8pjowXAB2D/HAhoAPgHzpxLdB/Z/gd94eiOLsAfqBh9JeJ+IcQ7QeZj8Je8PvNGb6c+zPmgHwf3zhSq0H6q/zZYW4PaGWnxncB9M4B8PyM0ZofXfg6f3aY2wM6Mb7Vz6VI4j4tw0B/bwLF+NwJYPwf/jjD/3N+p0zpeGXywzVQvoKMBSTOG7v/1T2fbRKn2jgR97cgcn4SR8G+qLs8/53hP61/WxBdJiK6pbVWc2Wi25NYKqNYE8dMy+7ntrnC8GAeGlYatTTSn/DLWMesiVcaK81/Z/htY+YgJKdal8Xg41gzE5/ZN34re96QBCuEilZTQSSq9ZHfJupXiTd+6+SXk36FUCFZRQxlVTQ9R2rjt0J+WbMqpTbLdNY0lpgtmjZ+K+R3kK+YQb2stayLsC7HKnGLz9Xyy8qqEhqvVvlzyMux8VspvuFY8OobIonKSyUczf8iKtj/I+ZOhkdSbX41uJbzkDEpcFt9VC2/nJOs/DEXTsNSJFl+VSW/Q8qQk0JjJq0DIc/OhZPtb9THL+cMCi+5VK6Z1nsexm/F9REr0xKQU7nEmdrVdmVp/jvDbxvPoXnZv4qtOX4W8WoLxO7ntrnC8FhUm9IosSRiTtTG/Nnic538DlmhcS8yV0U5f9Yfc+JVmv/O8NvGK8sFUZx4qGDnmtj2J6s/v4C8IRmX3rFNnRz3OXCX6P8hc6c+vzDJgYVBmiibAM+p8Y6lMQv+5zWU578z/KHzC9CjR+ik/3l8k/gsjVkX0+93Ob/g5f3C+9Cw9tylXQ2pjvW4Stn+7zB3Mnz714i0PgOTNM7+brW/ndBNLTyX6L8z/P7zC51+h/kQQ8OptV2OI2mnu93PCp+3KabPy6nf9CZ40PisW5MT0V1X5xL9P2LuZHiy/2eoii9n+E1z29PfDv8HH6BI7XW5Z4kAAAAASUVORK5CYII=" alt="QR">
+        <div class="qr-hint">
+          <strong>掃完開啟師傅 PWA</strong>
+          看今日任務、改服務時間、回繳金額
+        </div>
+      </div>
+      <div class="creds">
+        <div class="creds-row"><span class="creds-key">帳號</span><span class="creds-val">5357</span></div>
+        <div class="creds-row"><span class="creds-key">密碼</span><span class="creds-val">011302190</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">E — 葉翰霖</h2>
+      <span class="card-role">technician</span>
+      <div class="qr-box">
+        <img class="qr-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXIAAAFyAQAAAADAX2ykAAADGklEQVR4nO1cUY6jMAx9DkjzSaUeoEdJbzbaI+0NylH2ACvBZ6Ugr+wkQGclBqTVTjLYHy1N3ofF4zl2cEqMI9a7Q3DA8NvmPpn/aIbfNnc+/EjJ7nJ1x0Q6hp5aoL8Aeb4t0/9D5k6GbwE0QS8pjowXAB2D/HAhoAPgHzpxLdB/Z/gd94eiOLsAfqBh9JeJ+IcQ7QeZj8Je8PvNGb6c+zPmgHwf3zhSq0H6q/zZYW4PaGWnxncB9M4B8PyM0ZofXfg6f3aY2wM6Mb7Vz6VI4j4tw0B/bwLF+NwJYPwf/jjD/3N+p0zpeGXywzVQvoKMBSTOG7v/1T2fbRKn2jgR97cgcn4SR8G+qLs8/53hP61/WxBdJiK6pbVWc2Wi25NYKqNYE8dMy+7ntrnC8GAeGlYatTTSn/DLWMesiVcaK81/Z/htY+YgJKdal8Xg41gzE5/ZN34re96QBCuEilZTQSSq9ZHfJupXiTd+6+SXk36FUCFZRQxlVTQ9R2rjt0J+WbMqpTbLdNY0lpgtmjZ+K+R3kK+YQb2stayLsC7HKnGLz9Xyy8qqEhqvVvlzyMux8VspvuFY8OobIonKSyUczf8iKtj/I+ZOhkdSbX41uJbzkDEpcFt9VC2/nJOs/DEXTsNSJFl+VSW/Q8qQk0JjJq0DIc/OhZPtb9THL+cMCi+5VK6Z1nsexm/F9REr0xKQU7nEmdrVdmVp/jvDbxvPoXnZv4qtOX4W8WoLxO7ntrnC8FhUm9IosSRiTtTG/Nnic538DlmhcS8yV0U5f9Yfc+JVmv/O8NvGK8sFUZx4qGDnmtj2J6s/v4C8IRmX3rFNnRz3OXCX6P8hc6c+vzDJgYVBmiibAM+p8Y6lMQv+5zWU578z/KHzC9CjR+ik/3l8k/gsjVkX0+93Ob/g5f3C+9Cw9tylXQ2pjvW4Stn+7zB3Mnz714i0PgOTNM7+brW/ndBNLTyX6L8z/P7zC51+h/kQQ8OptV2OI2mnu93PCp+3KabPy6nf9CZ40PisW5MT0V1X5xL9P2LuZHiy/2eoii9n+E1z29PfDv8HH6BI7XW5Z4kAAAAASUVORK5CYII=" alt="QR">
+        <div class="qr-hint">
+          <strong>掃完開啟師傅 PWA</strong>
+          看今日任務、改服務時間、回繳金額
+        </div>
+      </div>
+      <div class="creds">
+        <div class="creds-row"><span class="creds-key">帳號</span><span class="creds-val">1227</span></div>
+        <div class="creds-row"><span class="creds-key">密碼</span><span class="creds-val">011311280</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">F — 楊仕丞</h2>
+      <span class="card-role">technician</span>
+      <div class="qr-box">
+        <img class="qr-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXIAAAFyAQAAAADAX2ykAAADGklEQVR4nO1cUY6jMAx9DkjzSaUeoEdJbzbaI+0NylH2ACvBZ6Ugr+wkQGclBqTVTjLYHy1N3ofF4zl2cEqMI9a7Q3DA8NvmPpn/aIbfNnc+/EjJ7nJ1x0Q6hp5aoL8Aeb4t0/9D5k6GbwE0QS8pjowXAB2D/HAhoAPgHzpxLdB/Z/gd94eiOLsAfqBh9JeJ+IcQ7QeZj8Je8PvNGb6c+zPmgHwf3zhSq0H6q/zZYW4PaGWnxncB9M4B8PyM0ZofXfg6f3aY2wM6Mb7Vz6VI4j4tw0B/bwLF+NwJYPwf/jjD/3N+p0zpeGXywzVQvoKMBSTOG7v/1T2fbRKn2jgR97cgcn4SR8G+qLs8/53hP61/WxBdJiK6pbVWc2Wi25NYKqNYE8dMy+7ntrnC8GAeGlYatTTSn/DLWMesiVcaK81/Z/htY+YgJKdal8Xg41gzE5/ZN34re96QBCuEilZTQSSq9ZHfJupXiTd+6+SXk36FUCFZRQxlVTQ9R2rjt0J+WbMqpTbLdNY0lpgtmjZ+K+R3kK+YQb2stayLsC7HKnGLz9Xyy8qqEhqvVvlzyMux8VspvuFY8OobIonKSyUczf8iKtj/I+ZOhkdSbX41uJbzkDEpcFt9VC2/nJOs/DEXTsNSJFl+VSW/Q8qQk0JjJq0DIc/OhZPtb9THL+cMCi+5VK6Z1nsexm/F9REr0xKQU7nEmdrVdmVp/jvDbxvPoXnZv4qtOX4W8WoLxO7ntrnC8FhUm9IosSRiTtTG/Nnic538DlmhcS8yV0U5f9Yfc+JVmv/O8NvGK8sFUZx4qGDnmtj2J6s/v4C8IRmX3rFNnRz3OXCX6P8hc6c+vzDJgYVBmiibAM+p8Y6lMQv+5zWU578z/KHzC9CjR+ik/3l8k/gsjVkX0+93Ob/g5f3C+9Cw9tylXQ2pjvW4Stn+7zB3Mnz714i0PgOTNM7+brW/ndBNLTyX6L8z/P7zC51+h/kQQ8OptV2OI2mnu93PCp+3KabPy6nf9CZ40PisW5MT0V1X5xL9P2LuZHiy/2eoii9n+E1z29PfDv8HH6BI7XW5Z4kAAAAASUVORK5CYII=" alt="QR">
+        <div class="qr-hint">
+          <strong>掃完開啟師傅 PWA</strong>
+          看今日任務、改服務時間、回繳金額
+        </div>
+      </div>
+      <div class="creds">
+        <div class="creds-row"><span class="creds-key">帳號</span><span class="creds-val">6398</span></div>
+        <div class="creds-row"><span class="creds-key">密碼</span><span class="creds-val">011504010</span></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    淨新清潔工坊 CMS · Ren Studio · 2026
+  </footer>
+</div>
+</body>
+</html>

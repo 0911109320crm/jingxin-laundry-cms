@@ -41,6 +41,7 @@ type Detail = {
   address: { county: string; district: string; address: string } | null;
   items: {
     id: string;
+    item_code: string | null;
     service_item_id: string;
     quantity: number;
     unit_price: number;
@@ -91,7 +92,7 @@ export default async function StaffOrderPage({
        customer:customers(name, phone,
                           phones:customer_phones(id, phone, label, is_primary)),
        address:customer_addresses(county, district, address),
-       items:order_items(id, service_item_id, quantity, unit_price, subtotal, tag, note,
+       items:order_items(id, item_code, service_item_id, quantity, unit_price, subtotal, tag, note,
                          technician_id,
                          service:service_items(code, name, category),
                          machine:machines(id, type, brand, model, code)),
@@ -256,6 +257,14 @@ export default async function StaffOrderPage({
           <ul className="divide-y divide-zinc-200">
             {o.items.map((it) => (
               <li key={it.id} className="space-y-1.5 px-4 py-3">
+                {it.item_code && (
+                  <div className="flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-2.5 py-1.5">
+                    <span className="text-xs font-medium text-amber-900">📋 保固單編號</span>
+                    <span className="font-mono text-base font-bold text-amber-900 tracking-wide select-all">
+                      {it.item_code}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-zinc-900">

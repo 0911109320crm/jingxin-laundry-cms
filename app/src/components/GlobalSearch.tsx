@@ -183,6 +183,11 @@ export function GlobalSearch() {
                           {STATUS_LABELS[o.status] ?? o.status}
                         </span>
                       </p>
+                      {o.matched_hint && (
+                        <p className="text-xs text-amber-700 mt-0.5 truncate">
+                          🔍 {o.matched_hint}
+                        </p>
+                      )}
                     </div>
                   </button>
                 ))}

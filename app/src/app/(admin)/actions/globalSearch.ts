@@ -17,6 +17,7 @@ export type OrderResult = {
   status: string;
   scheduled_at: string | null;
   customer_name: string;
+  matched_hint?: string; // 顯示哪個欄位命中（清洗編號／保固單編號）
 };
 
 export type SearchResults = {
@@ -55,17 +56,19 @@ export async function globalSearchAction(query: string): Promise<SearchResults> 
     { data: addressMatches },
     { data: phoneHits },
     { data: machineHits },
+    { data: itemCodeHits },
   ] = await Promise.all([
     supabase
       .from("customers")
       .select("id, code, name, phone")
       .or(`name.ilike.${like},phone.ilike.${like},code.ilike.${like}`)
       .limit(5),
+    // orders 搜尋：order_code / note / 舊清洗編號 legacy_code 都查
     supabase
       .from("orders")
-      .select("id, order_code, status, scheduled_at, customers(name)")
-      .or(`order_code.ilike.${like},note.ilike.${like}`)
-      .limit(5),
+      .select("id, order_code, status, scheduled_at, legacy_code, customers(name)")
+      .or(`order_code.ilike.${like},note.ilike.${like},legacy_code.ilike.${like}`)
+      .limit(8),
     supabase
       .from("customer_addresses")
       .select(
@@ -82,6 +85,14 @@ export async function globalSearchAction(query: string): Promise<SearchResults> 
       .ilike("code", like)
       .not("code", "is", null)
       .limit(10),
+    // 保固單編號搜尋：order_items.item_code（如 OLD-20190906-004-1）
+    supabase
+      .from("order_items")
+      .select(
+        "item_code, orders!inner(id, order_code, status, scheduled_at, customers(name))",
+      )
+      .ilike("item_code", like)
+      .limit(5),
   ]);
 
   const customerMap = new Map<string, CustomerResult>();
@@ -162,16 +173,47 @@ export async function globalSearchAction(query: string): Promise<SearchResults> 
   }
   const customerResults: CustomerResult[] = Array.from(customerMap.values());
 
-  const orderResults: OrderResult[] = (orders ?? []).map((o) => {
+  const orderMap = new Map<string, OrderResult>();
+  for (const o of orders ?? []) {
     const cust = o.customers as unknown as { name: string } | null;
-    return {
+    const matchesLegacy = o.legacy_code && o.legacy_code.toLowerCase().includes(trimmed.toLowerCase());
+    orderMap.set(o.id, {
       id: o.id,
       order_code: o.order_code,
       status: o.status,
       scheduled_at: o.scheduled_at ?? null,
       customer_name: cust?.name ?? "",
-    };
-  });
+      matched_hint: matchesLegacy ? `舊清洗編號: ${o.legacy_code}` : undefined,
+    });
+  }
+  // 保固單編號命中：把 item_code 結果合進 orderMap
+  for (const row of (itemCodeHits ?? []) as unknown as Array<{
+    item_code: string;
+    orders: {
+      id: string;
+      order_code: string;
+      status: string;
+      scheduled_at: string | null;
+      customers: { name: string } | null;
+    } | null;
+  }>) {
+    const o = row.orders;
+    if (!o) continue;
+    if (!orderMap.has(o.id)) {
+      orderMap.set(o.id, {
+        id: o.id,
+        order_code: o.order_code,
+        status: o.status,
+        scheduled_at: o.scheduled_at,
+        customer_name: o.customers?.name ?? "",
+        matched_hint: `保固單編號: ${row.item_code}`,
+      });
+    } else {
+      const existing = orderMap.get(o.id)!;
+      if (!existing.matched_hint) existing.matched_hint = `保固單編號: ${row.item_code}`;
+    }
+  }
+  const orderResults: OrderResult[] = Array.from(orderMap.values()).slice(0, 8);
 
   return { customers: customerResults, orders: orderResults };
 }
