@@ -96,11 +96,12 @@ export default async function CalendarPage({
   const technicianIds = techs.map((t) => t.id);
   const nameMap = new Map(techs.map((t) => [t.id, t.name]));
 
-  // 預設選第一位師傅；移除「全部」分頁後不再有全部模式
+  // 預設顯示「全部」(所有師傅的案件 + 顏色區分)，老闆娘可切到特定師傅過濾
+  // 動機：原本預設第一位師傅時，指派給其他師傅的訂單看似「沒顯示」(實際被過濾)
   const techFilter =
-    sp.tech && (techs.some((t) => t.id === sp.tech) || sp.tech === "all")
+    sp.tech && (sp.tech === "all" || techs.some((t) => t.id === sp.tech))
       ? sp.tech
-      : techs[0]?.id ?? "";
+      : "all";
 
   // Filter scheduled by selected technician (items.some)
   let scheduledFiltered = (scheduledRaw as ScheduledRaw[] | null) ?? [];
@@ -164,9 +165,12 @@ export default async function CalendarPage({
     },
   );
 
-  const subtitle = techFilter
-    ? `只顯示「${nameMap.get(techFilter) ?? "未知"}」的案件`
-    : "尚未建立任何師傅";
+  const subtitle =
+    techFilter === "all"
+      ? "顯示所有師傅的案件（顏色區分）"
+      : techFilter
+        ? `只顯示「${nameMap.get(techFilter) ?? "未知"}」的案件`
+        : "尚未建立任何師傅";
 
   return (
     <div className="p-6 space-y-4">

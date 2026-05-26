@@ -17,16 +17,21 @@ export function TechTabs({
   current,
   techs,
 }: {
-  current: string; // tech id
+  current: string; // tech id or "all"
   techs: TechOption[];
 }) {
   if (techs.length === 0) return null;
+  // 把「全部」當第一個選項
+  const options: { id: string; name: string }[] = [
+    { id: "all", name: "全部師傅" },
+    ...techs,
+  ];
   const currentIdx = Math.max(
     0,
-    techs.findIndex((t) => t.id === current),
+    options.findIndex((t) => t.id === current),
   );
-  const prev = techs[(currentIdx - 1 + techs.length) % techs.length];
-  const next = techs[(currentIdx + 1) % techs.length];
+  const prev = options[(currentIdx - 1 + options.length) % options.length];
+  const next = options[(currentIdx + 1) % options.length];
 
   return (
     <div className="flex items-center gap-2">
@@ -38,9 +43,13 @@ export function TechTabs({
         <ChevronLeft className="h-4 w-4" />
       </Link>
       <div className="flex flex-wrap items-center gap-1 rounded-lg bg-zinc-100 p-1">
-        {techs.map((t, idx) => {
+        {options.map((t, idx) => {
           const active = t.id === current;
-          const color = TAB_COLORS[idx % TAB_COLORS.length];
+          // 「全部」用 zinc 色，師傅依序套 TAB_COLORS
+          const color =
+            t.id === "all"
+              ? "data-[active=true]:bg-zinc-800 data-[active=true]:text-white"
+              : TAB_COLORS[(idx - 1) % TAB_COLORS.length];
           return (
             <Link
               key={t.id}
