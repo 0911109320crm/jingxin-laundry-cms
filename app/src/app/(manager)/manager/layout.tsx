@@ -3,6 +3,7 @@ import { CalendarRange, PackageSearch, Wallet, Home } from "lucide-react";
 import { requireRole } from "@/lib/dal";
 import { logoutAction } from "@/app/login/actions";
 import { ManagerSearch } from "@/components/ManagerSearch";
+import { PWAInstallButton } from "@/components/PWAInstallButton";
 
 export default async function ManagerLayout({
   children,
@@ -43,6 +44,7 @@ export default async function ManagerLayout({
         </div>
       </header>
       <main className="flex-1 overflow-auto pb-24">{children}</main>
+      <PWAInstallButton />
       <nav
         className="fixed bottom-0 left-0 right-0 z-10 grid grid-cols-4 border-t border-zinc-200 bg-white"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}

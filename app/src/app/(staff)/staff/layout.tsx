@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CalendarDays, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
 import { logoutAction } from "@/app/login/actions";
+import { PWAInstallButton } from "@/components/PWAInstallButton";
 
 export default async function StaffLayout({
   children,
@@ -34,6 +35,7 @@ export default async function StaffLayout({
         </div>
       </header>
       <main className="flex-1 overflow-auto pb-24">{children}</main>
+      <PWAInstallButton />
       <nav
         className="fixed bottom-0 left-0 right-0 z-10 grid grid-cols-2 border-t border-zinc-200 bg-white"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
