@@ -24,6 +24,34 @@ const MACHINE_TYPES: Array<{ key: string; label: string }> = [
   { key: "other", label: "其他" },
 ];
 
+// 品牌英文 → 中文對照（顯示「中文 英文」方便師傅辨識）
+const BRAND_ZH: Record<string, string> = {
+  "Panasonic": "國際牌",
+  "HITACHI": "日立",
+  "TOSHIBA": "東芝",
+  "SHARP": "夏普",
+  "LG": "樂金",
+  "SAMSUNG": "三星",
+  "SAMPO": "聲寶",
+  "TECO": "東元",
+  "HERAN": "禾聯",
+  "SANLUX": "台灣三洋",
+  "TATUNG": "大同",
+  "CHIMEI": "奇美",
+  "Whirlpool": "惠而浦",
+  "BOSCH": "博世",
+  "Electrolux": "伊萊克斯",
+  "DAIKIN": "大金",
+  "Mitsubishi Heavy Industries": "三菱重工",
+  "Mitsubishi Electric": "三菱電機",
+  "FUJITSU": "富士通",
+};
+
+function brandLabel(name: string): string {
+  const zh = BRAND_ZH[name];
+  return zh ? `${zh} ${name}` : name;
+}
+
 /** 把 service_items.category 對應到 machines.type */
 function inferMachineType(
   serviceCategory: string | null | undefined,
@@ -79,17 +107,28 @@ export function MachineEditor({
   const [model, setModel] = useState<string>(machine?.model ?? "");
   const [code, setCode] = useState<string>(machine?.code ?? "");
 
-  // Brand datalist: 若機器有 type 用 machine.type 過濾，否則用 serviceCategory 過濾
-  const filterCategory =
-    machine?.type ?? serviceCategory ?? null;
-  // 映射回 machine_brands 的 category（machine_brands 用細分類，service 用細分類，machine.type 用粗分類）
-  // 簡單做法：machine.type 是粗的，過濾用 service_category 細的
+  // Brand select 過濾：用 serviceCategory（service_items.category，細分類）
+  // machine_brands.category 也是細分類，可直接 match
   const brandCategoryHint =
-    filterCategory === "washing_machine" ? null : serviceCategory; // 若只有粗類，顯示全部
-  const datalistId = `brands-${orderItemId}`;
+    serviceCategory && serviceCategory !== "washing_machine" ? serviceCategory : null;
   const filteredBrands = brandCategoryHint
     ? brands.filter((b) => b.category === brandCategoryHint)
     : brands;
+  // 去重（跨 category 的同名品牌如 LG 在直立+滾筒+冷氣都有，只顯示一次）
+  const uniqueBrandNames = Array.from(
+    new Set(filteredBrands.map((b) => b.name)),
+  ).sort((a, b) => {
+    // 中文名 / 英文名都依照「優先有中文對照」排，再字母序
+    const aZh = BRAND_ZH[a];
+    const bZh = BRAND_ZH[b];
+    if (aZh && !bZh) return -1;
+    if (!aZh && bZh) return 1;
+    return a.localeCompare(b);
+  });
+
+  // 「其他」選項 (free text input)：選中時顯示一個 input 讓師傅打字
+  const isOtherBrand = brand !== "" && !uniqueBrandNames.includes(brand);
+  const [useOther, setUseOther] = useState(isOtherBrand);
 
   const startEdit = () => {
     setTypeVal(machine?.type ?? inferredType ?? "washing_machine");
@@ -205,20 +244,51 @@ export function MachineEditor({
       )}
       <div>
         <p className="mb-1 text-zinc-600">品牌</p>
-        <input
-          type="text"
-          value={brand}
-          onChange={(e) => setBrand(e.target.value)}
-          placeholder="例如 Panasonic / LG"
-          list={datalistId}
-          maxLength={40}
-          className="w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
-        />
-        <datalist id={datalistId}>
-          {filteredBrands.map((b) => (
-            <option key={`${b.category}-${b.name}`} value={b.name} />
-          ))}
-        </datalist>
+        {useOther ? (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="輸入品牌名稱"
+              maxLength={40}
+              className="flex-1 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setUseOther(false);
+                setBrand("");
+              }}
+              className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-600 active:bg-zinc-100"
+            >
+              ↩ 改回下拉
+            </button>
+          </div>
+        ) : (
+          <select
+            value={uniqueBrandNames.includes(brand) ? brand : ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "__other__") {
+                setUseOther(true);
+                setBrand("");
+              } else {
+                setBrand(v);
+              }
+            }}
+            className="w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
+          >
+            <option value="">— 請選擇品牌 —</option>
+            {uniqueBrandNames.map((name) => (
+              <option key={name} value={name}>
+                {brandLabel(name)}
+              </option>
+            ))}
+            <option value="__other__">其他（手動輸入）...</option>
+          </select>
+        )}
       </div>
       <div>
         <p className="mb-1 text-zinc-600">型號</p>
