@@ -1,0 +1,26 @@
+# Netlify 部署設定（淨新清潔工坊 CMS）
+#
+# 帳號歸屬：客戶專用信箱（與 Supabase 一致，方便日後交接）
+# 部署原則：Next.js 16.2.6 + App Router，App 在 app/ 子資料夾。
+#
+# 環境變數請在 Netlify Dashboard → Site settings → Environment variables 設定：
+#   NEXT_PUBLIC_SUPABASE_URL         (見 app/.env.local)
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY    (見 app/.env.local)
+#   SUPABASE_SERVICE_ROLE_KEY        ⚠ 標記為 sensitive — 絕不可顯示在 build log
+#   SUPABASE_PUBLISHABLE_KEY         (見 app/.env.local)
+
+[build]
+  base    = "app"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # 強制 Node 22（Netlify 預設可能是舊版）
+  NODE_VERSION = "22"
+  # 全站台灣時區（也在 next.config.ts 設過，這裡 build-time 再保一層）
+  TZ = "Asia/Taipei"
+
+# Next.js 在 Netlify 上跑需要這個 plugin（Edge/SSR/ISR 路由轉發）
+# Netlify 偵測到 Next.js 通常會自動安裝，這裡明寫保險
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
