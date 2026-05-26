@@ -2,13 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "buildCommand": "next build",
-  "regions": ["hnd1"],
-  "env": {
-    "TZ": "Asia/Taipei"
-  },
-  "build": {
-    "env": {
-      "TZ": "Asia/Taipei"
-    }
-  }
+  "regions": ["hnd1"]
 }
