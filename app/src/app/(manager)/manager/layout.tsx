@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarRange, PackageSearch, Wallet, Home } from "lucide-react";
 import { requireRole } from "@/lib/dal";
 import { logoutAction } from "@/app/login/actions";
+import { ManagerSearch } from "@/components/ManagerSearch";
 
 export default async function ManagerLayout({
   children,
@@ -23,16 +24,17 @@ export default async function ManagerLayout({
             <p className="text-xs text-zinc-500">老闆娘 · {user.profile.name}</p>
           </div>
           <div className="flex items-center gap-2">
+            <ManagerSearch />
             <Link
               href="/dashboard"
-              className="rounded-lg px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
+              className="rounded-lg px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100"
             >
               桌機版
             </Link>
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="rounded-lg px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
+                className="rounded-lg px-2 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100"
               >
                 登出
               </button>
