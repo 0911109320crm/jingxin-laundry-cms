@@ -76,3 +76,51 @@ export async function swapOrderItemServiceAction(input: {
   revalidatePath(`/orders/${parsed.data.order_id}`);
   return { ok: true };
 }
+
+/**
+ * 師傅標記某品項「不服務」(機器拆不開等)。
+ * order_items.excluded = true → trigger refresh_order_totals 會跳過該筆計算。
+ * order_adjustments (拆解費/車馬費) 仍會計入 orders.total。
+ */
+const ToggleExcludedSchema = z.object({
+  order_id: z.string().uuid(),
+  order_item_id: z.string().uuid(),
+  excluded: z.boolean(),
+});
+
+export async function toggleOrderItemExcludedAction(input: {
+  order_id: string;
+  order_item_id: string;
+  excluded: boolean;
+}): Promise<Res> {
+  const me = await requireRole(["technician", "owner", "manager"]);
+  const parsed = ToggleExcludedSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+
+  if (me.profile.role === "technician") {
+    const { data: owns } = await supabase
+      .from("order_items")
+      .select("id")
+      .eq("id", parsed.data.order_item_id)
+      .eq("technician_id", me.id)
+      .limit(1);
+    if (!Array.isArray(owns) || owns.length === 0) {
+      return { ok: false, error: "不是你負責的明細" };
+    }
+  }
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("order_items")
+    .update({ excluded: parsed.data.excluded })
+    .eq("id", parsed.data.order_item_id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/staff/order/${parsed.data.order_id}`);
+  revalidatePath(`/orders/${parsed.data.order_id}`);
+  return { ok: true };
+}
