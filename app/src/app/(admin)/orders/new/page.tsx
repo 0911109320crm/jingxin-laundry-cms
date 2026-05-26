@@ -24,7 +24,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
   const admin = createAdminClient();
 
   const [
-    { data: customers },
+    { data: customersData },
     { data: services },
     { data: adjustments },
     { data: techProfiles },
@@ -54,6 +54,20 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
       .in("role", ["technician", "manager", "owner"])
       .order("name"),
   ]);
+
+  // 客戶 dropdown 只載前 500 名，但用戶可能從搜尋帶 customer_id 進來，
+  // 該客戶不一定在前 500 名 → 額外撈一筆 merge 進 list，確保下拉看得到
+  type CustomerOpt = { id: string; code: string; name: string; phone: string };
+  let customers = (customersData as CustomerOpt[] | null) ?? [];
+  const targetCustomerId = sp.customer;
+  if (targetCustomerId && !customers.find((c) => c.id === targetCustomerId)) {
+    const { data: extra } = await supabase
+      .from("customers")
+      .select("id, code, name, phone")
+      .eq("id", targetCustomerId)
+      .single();
+    if (extra) customers = [extra as CustomerOpt, ...customers];
+  }
 
   // Clone support
   let cloneInitial: (OrderInput & { addresses?: never; machines?: never }) | undefined;
@@ -145,7 +159,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
       </header>
       <OrderForm
         mode="create"
-        customers={(customers ?? []) as { id: string; code: string; name: string; phone: string }[]}
+        customers={customers}
         services={(services ?? []) as { id: string; code: string; name: string; default_price: number }[]}
         adjustments={(adjustments ?? []) as { id: string; name: string; type: "addon"|"discount"; default_amount: number }[]}
         technicians={(techProfiles ?? []) as { id: string; name: string }[]}

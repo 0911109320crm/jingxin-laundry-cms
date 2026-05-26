@@ -516,13 +516,7 @@ export function OrderForm({
                   </button>
                 )}
               </div>
-              <div
-                className={
-                  mode === "edit"
-                    ? "grid grid-cols-1 gap-3 md:grid-cols-[2fr_1fr_80px_120px]"
-                    : "grid grid-cols-1 gap-3 md:grid-cols-[1fr_80px_120px]"
-                }
-              >
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[2fr_1fr_80px_120px]">
                 <Field
                   label="服務項目"
                   error={errors.items?.[idx]?.service_item_id?.message}
@@ -548,9 +542,9 @@ export function OrderForm({
                     )}
                   />
                 </Field>
-                <Field label="指派師傅（建單時若已知有空師傅可直接選）">
+                <Field label="指派師傅">
                   <Select {...register(`items.${idx}.technician_id`)}>
-                    <option value="">— 未指派（自動進待派工）—</option>
+                    <option value="">— 未指派 —</option>
                     {technicians.map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name}
