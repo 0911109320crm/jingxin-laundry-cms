@@ -78,11 +78,11 @@ export function CustomerContextPanel({
           <div className="flex items-center justify-between gap-2">
             <Link
               href={`/customers/${customer.id}`}
-              className="text-base font-semibold text-zinc-900 hover:underline"
+              className="min-w-0 truncate text-base font-semibold text-zinc-900 hover:underline"
             >
               {customer.name}
             </Link>
-            <span className="font-mono text-xs text-zinc-400">
+            <span className="shrink-0 font-mono text-xs text-zinc-400">
               {customer.code}
             </span>
           </div>

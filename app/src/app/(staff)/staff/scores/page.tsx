@@ -180,20 +180,20 @@ export default async function StaffScoresPage({
                 return (
                   <li
                     key={r.userId}
-                    className={`flex items-center justify-between px-4 py-3 text-sm ${
+                    className={`flex items-center justify-between gap-2 px-4 py-3 text-sm ${
                       isMe ? "bg-amber-50" : ""
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 text-center text-xs text-zinc-500">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="w-6 shrink-0 text-center text-xs text-zinc-500">
                         {medal ?? idx + 1}
                       </span>
-                      <span className={isMe ? "font-bold text-amber-900" : "text-zinc-900"}>
+                      <span className={`truncate ${isMe ? "font-bold text-amber-900" : "text-zinc-900"}`}>
                         {r.name}
                         {isMe && " (我)"}
                       </span>
                     </div>
-                    <span className="font-mono font-semibold">
+                    <span className="shrink-0 font-mono font-semibold">
                       {r.points} <span className="text-xs text-zinc-500">分</span>
                     </span>
                   </li>
@@ -217,17 +217,17 @@ export default async function StaffScoresPage({
               {myMonthPromos.map((r) => (
                 <li
                   key={r.id}
-                  className="flex items-center justify-between px-4 py-2.5 text-sm"
+                  className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm"
                 >
-                  <div>
-                    <p className="font-medium text-zinc-900">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-zinc-900">
                       {r.order?.customer?.name ?? "—"}
                     </p>
-                    <p className="font-mono text-xs text-zinc-500">
+                    <p className="truncate font-mono text-xs text-zinc-500">
                       {r.order?.order_code} · {r.type?.label ?? "—"}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="shrink-0 text-right">
                     <p className="font-mono text-sm font-bold text-amber-700">
                       +{r.points_snapshot}
                     </p>

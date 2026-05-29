@@ -19,12 +19,12 @@ export default async function StaffLayout({
         className="sticky top-0 z-10 border-b border-zinc-200 bg-white"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        <div className="flex items-center justify-between px-4 py-3">
-          <div>
-            <p className="text-sm font-bold text-zinc-900">淨新清潔工坊</p>
-            <p className="text-xs text-zinc-500">師傅 · {user.profile.name}</p>
+        <div className="flex items-center justify-between gap-2 px-4 py-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-zinc-900">淨新清潔工坊</p>
+            <p className="truncate text-xs text-zinc-500">師傅 · {user.profile.name}</p>
           </div>
-          <form action={logoutAction}>
+          <form action={logoutAction} className="shrink-0">
             <button
               type="submit"
               className="rounded-lg px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"

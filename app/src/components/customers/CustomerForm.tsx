@@ -352,7 +352,7 @@ export function CustomerForm({
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <Field label="縣市" error={errors.addresses?.[idx]?.county?.message}>
                     <Select {...register(`addresses.${idx}.county`)}>
                       {COUNTIES.map((c) => (
@@ -377,12 +377,6 @@ export function CustomerForm({
                       ))}
                     </datalist>
                   </Field>
-                  <Field label="標籤">
-                    <Input
-                      {...register(`addresses.${idx}.label`)}
-                      placeholder="例如 家 / 公司"
-                    />
-                  </Field>
                 </div>
                 <Field
                   label="詳細地址"
@@ -396,6 +390,12 @@ export function CustomerForm({
                       const district = watchedAddresses?.[idx]?.district ?? "";
                       checkAddress(idx, county, district, e.target.value);
                     }}
+                  />
+                </Field>
+                <Field label="標籤">
+                  <Input
+                    {...register(`addresses.${idx}.label`)}
+                    placeholder="例如 家 / 公司"
                   />
                 </Field>
                 {dupWarnings[idx] && (

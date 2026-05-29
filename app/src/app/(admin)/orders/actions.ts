@@ -374,9 +374,14 @@ export async function setPaymentMethodAction(
   // Use admin client because technician role lacks UPDATE on orders via RLS
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
+  // 收現金時蓋章「實際收款人」＝當下操作者（多師傅同單時，最後收錢的人按此鍵）。
+  // 非現金（匯款/刷卡/未收款）無現金回繳問題，清空收款人。
   const { error } = await admin
     .from("orders")
-    .update({ payment_method: method })
+    .update({
+      payment_method: method,
+      collected_by_technician_id: method === "cash" ? me.id : null,
+    })
     .eq("id", orderId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/staff");
@@ -654,6 +659,36 @@ export async function settleOrdersAction(orderIds: string[]): Promise<Res> {
   });
   revalidatePath("/payroll/settlements");
   revalidatePath("/orders");
+  return { ok: true };
+}
+
+/**
+ * 改某張訂單的現金收款人（老闆娘對帳時修正「這筆其實是誰收的」）。
+ *
+ * 多師傅同單時，現場誰最後收全款是臨時浮現的、PWA 蓋章未必準；真正的真相來源
+ * 是師傅把現金交回老闆娘那一刻。故收款人以對帳頁指定為權威，PWA 蓋章只是預設值。
+ */
+export async function updateOrderCollectorAction(
+  orderId: string,
+  technicianId: string,
+): Promise<Res> {
+  await requireRole(["owner", "manager"]);
+  if (!technicianId) return { ok: false, error: "請選擇收款師傅" };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ collected_by_technician_id: technicianId })
+    .eq("id", orderId);
+  if (error) return { ok: false, error: error.message };
+  await logAudit({
+    action: "settlement.update_collector",
+    target_type: "order",
+    target_id: orderId,
+    payload: { collected_by_technician_id: technicianId },
+  });
+  revalidatePath("/payroll/settlements");
+  revalidatePath("/manager/settle-today");
+  revalidatePath("/payroll");
   return { ok: true };
 }
 

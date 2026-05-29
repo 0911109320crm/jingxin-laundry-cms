@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/dal";
 import { fetchPayroll } from "@/lib/payroll";
+import { resolveCollector } from "@/lib/settlement";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatDate, formatNTD } from "@/lib/utils";
@@ -103,7 +104,7 @@ export default async function TechnicianPayrollPage({
       supabase
         .from("orders")
         .select(
-          "id, order_code, total, service_at, scheduled_at, customer:customers(name), items:order_items(technician_id, created_at)",
+          "id, order_code, total, service_at, scheduled_at, collected_by_technician_id, customer:customers(name), items:order_items(technician_id, created_at)",
         )
         .eq("payment_method", "cash")
         .eq("settlement_status", "pending")
@@ -123,23 +124,21 @@ export default async function TechnicianPayrollPage({
   const achieved = totalPoints >= kpi;
   const pct = Math.min(100, Math.round((totalPoints / kpi) * 100));
 
-  // Pending settlements assigned to THIS technician (primary = earliest item)
+  // Pending settlements this technician actually collected (fallback: earliest item)
   type PendingOrder = {
     id: string;
     order_code: string;
     total: number;
     service_at: string | null;
     scheduled_at: string | null;
+    collected_by_technician_id: string | null;
     customer: { name: string } | null;
     items: { technician_id: string | null; created_at: string }[];
   };
   const allPending = (pendingRaw as PendingOrder[] | null) ?? [];
-  const myPending = allPending.filter((o) => {
-    const sorted = [...o.items]
-      .filter((it) => it.technician_id)
-      .sort((a, b) => a.created_at.localeCompare(b.created_at));
-    return sorted[0]?.technician_id === user_id;
-  });
+  const myPending = allPending.filter(
+    (o) => resolveCollector(o.collected_by_technician_id, o.items) === user_id,
+  );
   const myPendingTotal = myPending.reduce((s, o) => s + Number(o.total), 0);
 
   // 按促銷類型聚合
@@ -161,14 +160,14 @@ export default async function TechnicianPayrollPage({
 
   return (
     <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Link
           href={`/payroll?month=${month}`}
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
+          className="inline-flex shrink-0 items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
         >
           <ChevronLeft className="h-4 w-4" /> 回師傅薪資
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Link href={`/orders?tech=${user_id}`}>
             <Button variant="outline" size="sm">
               <ClipboardList className="h-4 w-4" /> 看這位師傅所有訂單

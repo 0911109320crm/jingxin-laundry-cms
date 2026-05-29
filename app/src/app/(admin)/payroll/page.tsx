@@ -16,6 +16,7 @@ import { requireRole } from "@/lib/dal";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { formatNTD } from "@/lib/utils";
 import { fetchPayroll } from "@/lib/payroll";
+import { resolveCollector, UNASSIGNED } from "@/lib/settlement";
 import { FinalizeAllButton } from "./FinalizeAllButton";
 
 type SP = Promise<{ month?: string }>;
@@ -80,7 +81,7 @@ export default async function PayrollPage({
     supabase
       .from("orders")
       .select(
-        "id, total, items:order_items(technician_id, created_at)",
+        "id, total, collected_by_technician_id, items:order_items(technician_id, created_at)",
       )
       .eq("payment_method", "cash")
       .eq("settlement_status", "pending"),
@@ -99,10 +100,11 @@ export default async function PayrollPage({
   const techs = (technicians as { id: string; name: string }[] | null) ?? [];
   const kpi = typeof kpiRow?.value === "number" ? kpiRow.value : 30;
 
-  // Pending settlements grouped by primary technician
+  // Pending settlements grouped by actual cash collector
   type PendingOrderRow = {
     id: string;
     total: number;
+    collected_by_technician_id: string | null;
     items: { technician_id: string | null; created_at: string }[];
   };
   const pendingOrders = (pendingOrdersRaw as PendingOrderRow[] | null) ?? [];
@@ -112,12 +114,9 @@ export default async function PayrollPage({
   for (const o of pendingOrders) {
     totalPending += Number(o.total);
     totalPendingCount += 1;
-    // primary = earliest created item with a technician
-    const sortedItems = [...o.items]
-      .filter((it) => it.technician_id)
-      .sort((a, b) => a.created_at.localeCompare(b.created_at));
-    const techId = sortedItems[0]?.technician_id;
-    if (!techId) continue;
+    // 歸屬實際收款人（舊資料回退用最早 item 師傅）
+    const techId = resolveCollector(o.collected_by_technician_id, o.items);
+    if (techId === UNASSIGNED) continue;
     const prev = pendingByTech.get(techId) ?? { count: 0, total: 0 };
     prev.count += 1;
     prev.total += Number(o.total);
@@ -189,7 +188,7 @@ export default async function PayrollPage({
   return (
     <div className="p-6 space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-zinc-900">師傅薪資</h1>
           <p className="text-sm text-zinc-500">
             計件抽成、積分達標、待回繳一覽 · {month}
@@ -200,7 +199,7 @@ export default async function PayrollPage({
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {isOwner && finalizedCount < techs.length && (
             <FinalizeAllButton month={month} />
           )}

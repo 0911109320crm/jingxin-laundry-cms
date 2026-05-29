@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardBody } from "@/components/ui/Card";
 import { formatNTD, formatTaiwanDate } from "@/lib/utils";
+import { resolveCollector, UNASSIGNED } from "@/lib/settlement";
 import { SettleAllButton } from "./SettleAllButton";
 import { DateNav } from "./DateNav";
 
@@ -13,12 +14,11 @@ type Row = {
   total: number;
   service_at: string | null;
   scheduled_at: string | null;
+  collected_by_technician_id: string | null;
   customer: { name: string } | null;
   address: { county: string; district: string } | null;
   items: { technician_id: string | null; created_at: string }[];
 };
-
-const UNASSIGNED = "__unassigned__";
 
 export default async function ManagerSettleTodayPage({
   searchParams,
@@ -38,7 +38,7 @@ export default async function ManagerSettleTodayPage({
   const { data } = await supabase
     .from("orders")
     .select(
-      `id, order_code, total, service_at, scheduled_at,
+      `id, order_code, total, service_at, scheduled_at, collected_by_technician_id,
        customer:customers(name),
        address:customer_addresses(county, district),
        items:order_items(technician_id, created_at)`,
@@ -51,13 +51,10 @@ export default async function ManagerSettleTodayPage({
 
   const orders = (data as unknown as Row[] | null) ?? [];
 
-  // 按主師傅（最早建立的有派工 item）分組
+  // 按實際收款人分組（舊資料回退用最早建立的有派工 item）
   const grouped = new Map<string, Row[]>();
   for (const o of orders) {
-    const sorted = [...o.items]
-      .filter((it) => it.technician_id)
-      .sort((a, b) => a.created_at.localeCompare(b.created_at));
-    const techId = sorted[0]?.technician_id ?? UNASSIGNED;
+    const techId = resolveCollector(o.collected_by_technician_id, o.items);
     const arr = grouped.get(techId) ?? [];
     arr.push(o);
     grouped.set(techId, arr);

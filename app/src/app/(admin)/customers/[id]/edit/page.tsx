@@ -110,10 +110,10 @@ export default async function EditCustomerPage({
 
   return (
     <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Link
           href={`/customers/${c.id}`}
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
+          className="inline-flex shrink-0 items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
         >
           <ChevronLeft className="h-4 w-4" /> 回顧客詳情
         </Link>

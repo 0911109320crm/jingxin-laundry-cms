@@ -178,14 +178,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
 
   return (
     <div className="p-6 space-y-4">
-      <header className="flex items-center justify-between">
-        <div>
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-zinc-900">訂單管理</h1>
           <p className="text-sm text-zinc-500">
             可按狀態、收款、回繳篩選；廣義搜尋訂單編號 / 備註
           </p>
         </div>
-        <Link href="/orders/new">
+        <Link href="/orders/new" className="shrink-0">
           <Button>
             <Plus className="h-4 w-4" /> 新增訂單
           </Button>

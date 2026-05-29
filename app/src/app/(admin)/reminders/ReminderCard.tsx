@@ -74,11 +74,11 @@ export function ReminderCard({
   return (
     <Card>
       <CardBody className="space-y-3">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
             <Link
               href={`/customers/${reminder.customer.id}`}
-              className="text-base font-semibold text-zinc-900 hover:underline"
+              className="block truncate text-base font-semibold text-zinc-900 hover:underline"
             >
               {reminder.customer.name}
             </Link>
@@ -91,15 +91,15 @@ export function ReminderCard({
             </p>
           </div>
           {daysDiff > 0 ? (
-            <span className="rounded bg-red-50 px-2 py-0.5 text-xs text-red-700">
+            <span className="shrink-0 rounded bg-red-50 px-2 py-0.5 text-xs text-red-700">
               逾期 {daysDiff} 天
             </span>
           ) : daysDiff > -7 ? (
-            <span className="rounded bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
+            <span className="shrink-0 rounded bg-amber-50 px-2 py-0.5 text-xs text-amber-700">
               本週到期
             </span>
           ) : (
-            <span className="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+            <span className="shrink-0 rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
               {Math.abs(daysDiff)} 天後到期
             </span>
           )}

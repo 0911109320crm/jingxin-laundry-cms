@@ -3,9 +3,13 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { CheckCheck, Check, ExternalLink } from "lucide-react";
-import { settleOrdersAction } from "@/app/(admin)/orders/actions";
+import {
+  settleOrdersAction,
+  updateOrderCollectorAction,
+} from "@/app/(admin)/orders/actions";
 import { Button } from "@/components/ui/Button";
 import { formatDate, formatNTD } from "@/lib/utils";
+import { UNASSIGNED } from "@/lib/settlement";
 
 export type PendingOrderLite = {
   id: string;
@@ -25,13 +29,25 @@ export type PendingOrderLite = {
  */
 export function SettleGroup({
   technicianName,
+  groupTechId,
   orders,
+  technicians,
 }: {
   technicianName: string;
+  groupTechId: string;
   orders: PendingOrderLite[];
+  technicians: { id: string; name: string }[];
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
+
+  const reassign = (orderId: string, technicianId: string) => {
+    if (!technicianId || technicianId === groupTechId) return;
+    startTransition(async () => {
+      const res = await updateOrderCollectorAction(orderId, technicianId);
+      if (!res.ok) alert(res.error);
+    });
+  };
 
   const allSelected = selected.size === orders.length && orders.length > 0;
   const someSelected = selected.size > 0;
@@ -129,6 +145,25 @@ export function SettleGroup({
                   {o.area && `${o.area} · `}
                   {formatDate(o.service_at ?? o.scheduled_at)}
                 </p>
+                <label className="mt-1 inline-flex items-center gap-1 text-xs text-zinc-500">
+                  收款師傅
+                  <select
+                    value={groupTechId === UNASSIGNED ? "" : groupTechId}
+                    disabled={pending}
+                    onChange={(e) => reassign(o.id, e.target.value)}
+                    className="rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-xs text-zinc-700 focus:border-brand-500 focus:outline-none disabled:opacity-50"
+                    title="若這筆其實是別位師傅收的，改這裡"
+                  >
+                    {groupTechId === UNASSIGNED && (
+                      <option value="">未指定</option>
+                    )}
+                    {technicians.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-zinc-900">

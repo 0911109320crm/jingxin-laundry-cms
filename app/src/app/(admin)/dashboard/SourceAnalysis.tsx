@@ -198,30 +198,32 @@ export async function SourceAnalysis({
           {chartData.length === 0 ? (
             <p className="p-5 text-sm text-zinc-500">本期間無資料</p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-zinc-50">
                 <tr className="text-xs uppercase tracking-wider text-zinc-500">
-                  <th className="px-5 py-2 text-left">來源</th>
-                  <th className="px-5 py-2 text-right">案件數</th>
-                  <th className="px-5 py-2 text-right">營業額</th>
-                  <th className="px-5 py-2 text-right">案件占比</th>
-                  <th className="px-5 py-2 text-right">回購率</th>
+                  <th className="px-5 py-2 text-left whitespace-nowrap">來源</th>
+                  <th className="px-5 py-2 text-right whitespace-nowrap">案件數</th>
+                  <th className="px-5 py-2 text-right whitespace-nowrap">營業額</th>
+                  <th className="px-5 py-2 text-right whitespace-nowrap">案件占比</th>
+                  <th className="px-5 py-2 text-right whitespace-nowrap">回購率</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {chartData.map((r) => (
                   <tr key={r.name}>
                     <td className="px-5 py-2.5 font-medium text-zinc-900">{r.name}</td>
-                    <td className="px-5 py-2.5 text-right font-mono">{r.count}</td>
-                    <td className="px-5 py-2.5 text-right font-mono">{formatNTD(r.revenue)}</td>
-                    <td className="px-5 py-2.5 text-right text-zinc-500">
+                    <td className="px-5 py-2.5 text-right font-mono whitespace-nowrap">{r.count}</td>
+                    <td className="px-5 py-2.5 text-right font-mono whitespace-nowrap">{formatNTD(r.revenue)}</td>
+                    <td className="px-5 py-2.5 text-right text-zinc-500 whitespace-nowrap">
                       {totalOrders > 0 ? Math.round((r.count / totalOrders) * 100) : 0}%
                     </td>
-                    <td className="px-5 py-2.5 text-right text-zinc-500">{r.repurchaseRate}%</td>
+                    <td className="px-5 py-2.5 text-right text-zinc-500 whitespace-nowrap">{r.repurchaseRate}%</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </CardBody>
       </Card>

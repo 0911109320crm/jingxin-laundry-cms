@@ -184,14 +184,14 @@ export default async function CustomersPage({
 
   return (
     <div className="p-6 space-y-4">
-      <header className="flex items-center justify-between">
-        <div>
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-zinc-900">顧客管理</h1>
           <p className="text-sm text-zinc-500">
             支援姓名 / 電話（含副電話）/ 編號 / 備註全域搜尋，可按縣市鄉鎮篩選
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <a
             href={`/api/customers/export?q=${encodeURIComponent(q)}&county=${encodeURIComponent(county)}&district=${encodeURIComponent(district)}`}
             target="_blank"

@@ -126,8 +126,8 @@ export default async function ScoresPage({
 
   return (
     <div className="p-6 space-y-4">
-      <header className="flex items-center justify-between">
-        <div>
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-2xl font-bold text-zinc-900">
             <Trophy className="h-6 w-6 text-yellow-500" />
             師傅促銷積分
@@ -136,7 +136,7 @@ export default async function ScoresPage({
             師傅在訂單上勾選客戶做過的促銷動作即計分。每月 KPI 目標 {kpi} 分。
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <Link
             href={`/scores?month=${fmt(prev)}`}
             className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm"
@@ -206,19 +206,19 @@ export default async function ScoresPage({
                 const pct = Math.min(100, Math.round((r.points / kpi) * 100));
                 return (
                   <li key={r.id} className="px-5 py-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="w-8 text-center text-base">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="w-8 shrink-0 text-center text-base">
                           {medal ?? <span className="text-xs text-zinc-400">{idx + 1}</span>}
                         </span>
-                        <div>
-                          <p className="font-medium text-zinc-900">{r.name}</p>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-zinc-900">{r.name}</p>
                           <p className="text-xs text-zinc-500">
                             {r.role} · {r.count} 筆促銷
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="shrink-0 text-right">
                         <span className="font-mono text-lg font-bold text-zinc-900">{r.points}</span>
                         <span className="text-xs text-zinc-500"> / {kpi} 分</span>
                         {r.achieved && (

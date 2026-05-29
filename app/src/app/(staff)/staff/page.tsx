@@ -139,12 +139,12 @@ export default async function StaffHome() {
     <div className="p-4 space-y-4">
       {pendingCashCount > 0 && (
         <Card className="border-amber-300 bg-amber-50">
-          <CardBody className="flex items-center justify-between">
-            <div>
+          <CardBody className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
               <p className="text-xs text-amber-700">您手上待回繳現金</p>
               <p className="text-xs text-amber-600">{pendingCashCount} 筆訂單</p>
             </div>
-            <p className="text-2xl font-bold text-amber-800 font-mono">
+            <p className="shrink-0 text-2xl font-bold text-amber-800 font-mono">
               NT$ {pendingCashTotal.toLocaleString()}
             </p>
           </CardBody>

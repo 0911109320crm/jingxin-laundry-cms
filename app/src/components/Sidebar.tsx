@@ -105,15 +105,15 @@ export function Sidebar({ userName }: { userName: string }) {
   return (
     <>
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 lg:hidden">
-        <div>
-          <p className="text-sm font-bold text-zinc-900">淨新清潔工坊</p>
-          <p className="text-xs text-zinc-500">{userName}</p>
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-3 lg:hidden">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-zinc-900">淨新清潔工坊</p>
+          <p className="truncate text-xs text-zinc-500">{userName}</p>
         </div>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-lg p-2 text-zinc-700 hover:bg-zinc-100"
+          className="shrink-0 rounded-lg p-2 text-zinc-700 hover:bg-zinc-100"
           aria-label="開啟選單"
         >
           <Menu className="h-5 w-5" />

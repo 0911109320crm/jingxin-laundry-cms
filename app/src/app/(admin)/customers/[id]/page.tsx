@@ -528,12 +528,12 @@ export default async function CustomerDetailPage({
                   <li key={r.id}>
                     <Link
                       href={`/customers/${r.id}`}
-                      className="flex items-center justify-between px-5 py-2.5 text-sm hover:bg-zinc-50"
+                      className="flex items-center justify-between gap-2 px-5 py-2.5 text-sm hover:bg-zinc-50"
                     >
-                      <span className="font-medium text-zinc-900">
+                      <span className="min-w-0 truncate font-medium text-zinc-900">
                         {r.name}
                       </span>
-                      <span className="text-xs text-zinc-500">
+                      <span className="shrink-0 text-xs text-zinc-500">
                         {r.phone} · 累計 {formatNTD(total)}
                       </span>
                     </Link>
@@ -627,6 +627,7 @@ export default async function CustomerDetailPage({
                     {/* Items table */}
                     {o.items.length > 0 && (
                       <div className="mt-3 overflow-hidden rounded-md border border-zinc-200">
+                        <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead className="bg-zinc-50 text-zinc-500">
                             <tr>
@@ -684,6 +685,7 @@ export default async function CustomerDetailPage({
                             })}
                           </tbody>
                         </table>
+                        </div>
                       </div>
                     )}
 

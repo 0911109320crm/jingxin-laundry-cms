@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/dal";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { formatNTD } from "@/lib/utils";
+import { resolveCollector, UNASSIGNED } from "@/lib/settlement";
 import { SettleGroup, type PendingOrderLite } from "./SettleButton";
 
 type PendingOrderRow = {
@@ -14,12 +15,11 @@ type PendingOrderRow = {
   service_at: string | null;
   scheduled_at: string | null;
   note: string | null;
+  collected_by_technician_id: string | null;
   customer: { name: string; phone: string } | null;
   address: { county: string; district: string } | null;
   items: { technician_id: string | null; created_at: string }[];
 };
-
-const UNASSIGNED = "__unassigned__";
 
 export default async function SettlementsPage() {
   await requireRole(["owner", "manager"]);
@@ -29,7 +29,7 @@ export default async function SettlementsPage() {
   const { data } = await supabase
     .from("orders")
     .select(
-      `id, order_code, total, service_at, scheduled_at, note,
+      `id, order_code, total, service_at, scheduled_at, note, collected_by_technician_id,
        customer:customers(name, phone),
        address:customer_addresses(county, district),
        items:order_items(technician_id, created_at)`,
@@ -40,13 +40,10 @@ export default async function SettlementsPage() {
 
   const orders = (data as PendingOrderRow[] | null) ?? [];
 
-  // Group by primary technician (earliest item with a technician)
+  // Group by actual cash collector (fallback: earliest-assigned item technician)
   const grouped = new Map<string, PendingOrderLite[]>();
   for (const o of orders) {
-    const sortedItems = [...o.items]
-      .filter((it) => it.technician_id)
-      .sort((a, b) => a.created_at.localeCompare(b.created_at));
-    const techId = sortedItems[0]?.technician_id ?? UNASSIGNED;
+    const techId = resolveCollector(o.collected_by_technician_id, o.items);
     if (!grouped.has(techId)) grouped.set(techId, []);
     grouped.get(techId)!.push({
       id: o.id,
@@ -77,6 +74,15 @@ export default async function SettlementsPage() {
     );
   }
 
+  // 所有在職師傅（給「改收款人」下拉用）
+  const { data: techList } = await admin
+    .from("user_profiles")
+    .select("id, name")
+    .eq("role", "technician")
+    .eq("active", true)
+    .order("name");
+  const technicians = (techList as { id: string; name: string }[] | null) ?? [];
+
   const grandTotal = orders.reduce((s, o) => s + Number(o.total), 0);
 
   const groups = Array.from(grouped.entries())
@@ -100,13 +106,13 @@ export default async function SettlementsPage() {
       </div>
 
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-zinc-900">師傅待回繳</h1>
           <p className="text-sm text-zinc-500">
             師傅收了現金、還沒交回給老闆娘的訂單。可逐筆勾選、批次標記、或點查看訂單細節。
           </p>
         </div>
-        <Card className="px-5 py-3">
+        <Card className="shrink-0 px-5 py-3">
           <p className="text-xs text-zinc-500">全部待回繳總額</p>
           <p className="font-mono text-2xl font-bold text-amber-700">
             {formatNTD(grandTotal)}
@@ -143,7 +149,9 @@ export default async function SettlementsPage() {
               <CardBody className="p-0">
                 <SettleGroup
                   technicianName={g.name}
+                  groupTechId={g.techId}
                   orders={g.orders}
+                  technicians={technicians}
                 />
               </CardBody>
             </Card>

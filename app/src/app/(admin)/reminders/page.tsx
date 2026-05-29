@@ -99,8 +99,8 @@ export default async function RemindersPage({
 
   return (
     <div className="p-6 space-y-4">
-      <header className="flex items-center justify-between">
-        <div>
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-zinc-900">即將到期客戶</h1>
           <p className="text-sm text-zinc-500">
             上次服務在 11-13 個月前、之後沒再聯絡的客戶
