@@ -31,7 +31,7 @@ type CustomerDetail = {
   name: string;
   phone: string;
   note: string | null;
-  joined_at: string | null;
+  created_at: string;
   referrer_id: string | null;
   source: { name: string } | null;
   phones: {
@@ -123,7 +123,7 @@ export default async function CustomerDetailPage({
     supabase
       .from("customers")
       .select(
-        `id, code, name, phone, note, joined_at, referrer_id,
+        `id, code, name, phone, note, created_at, referrer_id,
          source:customer_sources(name),
          phones:customer_phones(id, phone, label, is_primary, sort_order),
          addresses:customer_addresses(id, county, district, address, label, is_default),
@@ -272,7 +272,7 @@ export default async function CustomerDetailPage({
                 ))}
               </div>
               <p className="text-xs text-zinc-500">
-                加入：{formatDate(customer.joined_at)}
+                建檔：{formatDate(customer.created_at)}
               </p>
             </div>
         <div className="flex shrink-0 gap-2">

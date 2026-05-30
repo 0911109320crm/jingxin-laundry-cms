@@ -19,7 +19,7 @@ type Row = {
   name: string;
   phone: string;
   note: string | null;
-  joined_at: string | null;
+  created_at: string;
   source: { name: string } | null;
   phones: {
     phone: string;
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from("customers")
     .select(
-      `id, code, name, phone, note, joined_at,
+      `id, code, name, phone, note, created_at,
        source:customer_sources(name),
        phones:customer_phones(phone, label, is_primary, sort_order),
        addresses:customer_addresses(county, district, address, is_default),
@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
     "鄉鎮市區",
     "詳細地址",
     "客戶來源",
-    "加入日期",
+    "建檔日期",
     "機器類型",
     "備註",
   ];
@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
         main?.district ?? "",
         main?.address ?? "",
         c.source?.name ?? "",
-        c.joined_at ?? "",
+        c.created_at ? c.created_at.slice(0, 10) : "",
         machineLabel,
         c.note ?? "",
       ]

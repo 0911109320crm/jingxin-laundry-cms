@@ -209,9 +209,6 @@ export function CustomerForm({
               ))}
             </Select>
           </Field>
-          <Field label="加入日期">
-            <Input type="date" {...register("joined_at")} />
-          </Field>
           <Field label="介紹人" className="md:col-span-2">
             <Controller
               control={control}

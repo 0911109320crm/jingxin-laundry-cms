@@ -21,7 +21,7 @@ type CustomerRow = {
   name: string;
   phone: string;
   note: string | null;
-  joined_at: string | null;
+  created_at: string;
   source: { name: string } | null;
   addresses: { county: string; district: string; address: string }[];
   phones: { id: string; phone: string; label: string | null; is_primary: boolean }[];
@@ -39,7 +39,7 @@ export default async function CustomersPage({
   let query = supabase
     .from("customers")
     .select(
-      `id, code, name, phone, note, joined_at,
+      `id, code, name, phone, note, created_at,
        source:customer_sources(name),
        addresses:customer_addresses(county, district, address),
        phones:customer_phones(id, phone, label, is_primary)`,
@@ -365,7 +365,7 @@ export default async function CustomersPage({
                         </div>
                       </div>
                       <span className="text-xs text-zinc-400">
-                        加入：{formatDate(c.joined_at)}
+                        建檔：{formatDate(c.created_at)}
                       </span>
                     </Link>
                   </li>
