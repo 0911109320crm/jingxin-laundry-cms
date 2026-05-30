@@ -23,6 +23,7 @@ import {
   type CustomerStatsOrder,
 } from "./CustomerContextPanel";
 import { ConfirmAllButton } from "./ConfirmAllButton";
+import { CancelOrderButton } from "./CancelOrderButton";
 
 type Item = {
   id: string;
@@ -219,18 +220,23 @@ export default async function OrderDetailPage({
 
   return (
     <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Link
           href={back.href}
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
+          className="inline-flex shrink-0 items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
         >
           <ChevronLeft className="h-4 w-4" /> {back.label}
         </Link>
-        <Link href={`/orders/${o.id}/edit${qs}`}>
-          <Button variant="outline">
-            <Pencil className="h-4 w-4" /> 編輯
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {o.status !== "cancelled" && (
+            <CancelOrderButton id={o.id} orderCode={o.order_code} />
+          )}
+          <Link href={`/orders/${o.id}/edit${qs}`}>
+            <Button variant="outline">
+              <Pencil className="h-4 w-4" /> 編輯
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <header className="space-y-2">

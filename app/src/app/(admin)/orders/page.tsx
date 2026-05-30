@@ -14,7 +14,6 @@ import {
 } from "@/components/orders/StatusBadges";
 import { formatDate, formatNTD, cn } from "@/lib/utils";
 import { type OrderInput } from "@/lib/validators/order";
-import { QuickDeleteOrderButton } from "./QuickDeleteOrderButton";
 
 type SP = Promise<{
   q?: string;
@@ -473,15 +472,6 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                       </p>
                     </div>
                   </Link>
-                  {o.status === "pending" && (
-                    <div className="flex items-center pr-3">
-                      <QuickDeleteOrderButton
-                        id={o.id}
-                        orderCode={o.order_code}
-                        customerName={o.customer?.name ?? "—"}
-                      />
-                    </div>
-                  )}
                 </li>
               ))}
             </ul>
