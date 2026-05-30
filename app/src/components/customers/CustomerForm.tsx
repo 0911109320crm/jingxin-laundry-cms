@@ -481,7 +481,7 @@ export function CustomerForm({
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <Field label="類型">
                     <Select {...register(`machines.${idx}.type`)}>
                       {MACHINE_TYPES.map((t) => (
@@ -502,12 +502,6 @@ export function CustomerForm({
                     <Input
                       {...register(`machines.${idx}.model`)}
                       placeholder="例如 WT-138RG"
-                    />
-                  </Field>
-                  <Field label="子類型">
-                    <Input
-                      {...register(`machines.${idx}.sub_type`)}
-                      placeholder="例如 直立式 / 滾筒式"
                     />
                   </Field>
                 </div>

@@ -469,11 +469,6 @@ export default async function CustomerDetailPage({
                                   <span className="font-medium">
                                     {MACHINE_TYPE_LABEL[m.type] ?? m.type}
                                   </span>
-                                  {m.sub_type && (
-                                    <span className="text-xs text-zinc-500">
-                                      {m.sub_type}
-                                    </span>
-                                  )}
                                 </div>
                                 <p className="mt-0.5 text-zinc-700">
                                   {[m.brand, m.model].filter(Boolean).join(" / ") || "—"}

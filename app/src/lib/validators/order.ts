@@ -59,7 +59,8 @@ export const OrderItemSchema = z.object({
     .or(z.literal("").transform(() => null)),
   quantity: z.number().int().min(1),
   unit_price: z.number().min(0),
-  tag: z.string().max(10).optional().nullable(),
+  // 設備資訊：補充服務項目內容的自由文字（原「代號」欄改用途）。欄位本身是 text，無 DB 長度限制。
+  tag: z.string().max(50).optional().nullable(),
   note: z.string().optional().nullable(),
 });
 

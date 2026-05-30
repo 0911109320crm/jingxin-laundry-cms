@@ -143,12 +143,13 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
     0,
   );
 
-  // 訂單狀態判定（老闆娘 2026-05-27 需求調整）：
-  //   - 有 scheduled_at + 至少一個 item 有指派師傅 → 直接 'scheduled'（已排案）
-  //   - 否則 'pending'（待派工，等月曆拖曳）
-  const hasAssignedTech = data.items.some((it) => it.technician_id);
+  // 訂單狀態判定（老闆娘 2026-05-31 需求調整）：
+  //   - 有 scheduled_at + 「所有」服務項目都已指派師傅 → 直接 'scheduled'（已排案）
+  //   - 否則 'pending'（待派工，等月曆拖曳補齊師傅）
+  // 註：之前是「至少一個」(some)，但部分指派不該算完整派工，改為全部 (every)。
+  const allAssigned = data.items.every((it) => it.technician_id);
   const hasScheduled = !!data.scheduled_at;
-  const orderStatus = hasScheduled && hasAssignedTech ? "scheduled" : "pending";
+  const orderStatus = hasScheduled && allAssigned ? "scheduled" : "pending";
 
   const { data: order, error: orderErr } = await supabase
     .from("orders")
@@ -179,8 +180,8 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
     const { error } = await supabase.from("order_items").insert(
       data.items.map((it) => ({
         order_id: orderRow.id,
-        // 機器資訊改由師傅到現場補填
-        machine_id: null,
+        // 建單時若老闆娘已知客戶機器可直接帶入（5a）；不知道就留 null 由師傅現場補
+        machine_id: it.machine_id ?? null,
         service_item_id: it.service_item_id,
         // 老闆娘 2026-05-27 起允許建單時直接指派師傅
         technician_id: it.technician_id ?? null,

@@ -23,6 +23,8 @@ export default async function MachineBrandsSettingsPage({
     .from("machine_brands")
     .select("id, category, name, sort_order, active")
     .eq("category", activeCategory)
+    // 「(未知)」是給師傅 PWA 的系統預設選項(sort 99990)，老闆娘不需管理 → 不在主檔列出
+    .neq("name", "(未知)")
     .order("sort_order");
 
   const brands = (data as Brand[] | null) ?? [];
@@ -68,17 +70,15 @@ export default async function MachineBrandsSettingsPage({
         <CardHeader>
           <CardTitle>品牌清單（{brands.length}）</CardTitle>
         </CardHeader>
-        <CardBody className="p-0">
+        <CardBody>
           {brands.length === 0 ? (
-            <p className="p-5 text-sm text-zinc-500">尚無資料</p>
+            <p className="text-sm text-zinc-500">尚無資料</p>
           ) : (
-            <ul className="divide-y divide-zinc-200">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {brands.map((b) => (
-                <li key={b.id}>
-                  <BrandRow brand={b} />
-                </li>
+                <BrandRow key={b.id} brand={b} />
               ))}
-            </ul>
+            </div>
           )}
         </CardBody>
       </Card>

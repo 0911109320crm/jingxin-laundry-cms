@@ -24,16 +24,10 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
   const admin = createAdminClient();
 
   const [
-    { data: customersData },
     { data: services },
     { data: adjustments },
     { data: techProfiles },
   ] = await Promise.all([
-    supabase
-      .from("customers")
-      .select("id, code, name, phone")
-      .order("name")
-      .limit(500),
     // 建單只列各 category 的「基本價代表」(is_basic_choice=true)
     // 老闆娘電話接單時不知道機型/品牌/容量，先選大類基本價，師傅現場補實際
     supabase
@@ -55,19 +49,8 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
       .order("name"),
   ]);
 
-  // 客戶 dropdown 只載前 500 名，但用戶可能從搜尋帶 customer_id 進來，
-  // 該客戶不一定在前 500 名 → 額外撈一筆 merge 進 list，確保下拉看得到
-  type CustomerOpt = { id: string; code: string; name: string; phone: string };
-  let customers = (customersData as CustomerOpt[] | null) ?? [];
-  const targetCustomerId = sp.customer;
-  if (targetCustomerId && !customers.find((c) => c.id === targetCustomerId)) {
-    const { data: extra } = await supabase
-      .from("customers")
-      .select("id, code, name, phone")
-      .eq("id", targetCustomerId)
-      .single();
-    if (extra) customers = [extra as CustomerOpt, ...customers];
-  }
+  // 客戶改用 CustomerPicker（即時搜尋），不再預載清單 — 因客戶數量上萬，下拉不可行。
+  // defaultCustomerId（從搜尋/客戶頁帶入）由 CustomerPicker 依 id 自行解析顯示。
 
   // Clone support
   let cloneInitial: (OrderInput & { addresses?: never; machines?: never }) | undefined;
@@ -159,7 +142,6 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
       </header>
       <OrderForm
         mode="create"
-        customers={customers}
         services={(services ?? []) as { id: string; code: string; name: string; default_price: number }[]}
         adjustments={(adjustments ?? []) as { id: string; name: string; type: "addon"|"discount"; default_amount: number }[]}
         technicians={(techProfiles ?? []) as { id: string; name: string }[]}

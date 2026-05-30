@@ -24,7 +24,6 @@ export default async function EditOrderPage({
 
   const [
     { data: order },
-    { data: customers },
     { data: services },
     { data: adjustments },
     { data: technicians },
@@ -41,11 +40,6 @@ export default async function EditOrderPage({
       )
       .eq("id", id)
       .single(),
-    supabase
-      .from("customers")
-      .select("id, code, name, phone")
-      .order("name")
-      .limit(500),
     supabase
       .from("service_items")
       .select("id, code, name, default_price")
@@ -175,7 +169,6 @@ export default async function EditOrderPage({
         mode="edit"
         initial={initial}
         orderCode={o?.order_code}
-        customers={(customers ?? []) as { id: string; code: string; name: string; phone: string }[]}
         services={(services ?? []) as { id: string; code: string; name: string; default_price: number }[]}
         adjustments={(adjustments ?? []) as { id: string; name: string; type: "addon"|"discount"; default_amount: number }[]}
         technicians={(technicians ?? []) as { id: string; name: string }[]}

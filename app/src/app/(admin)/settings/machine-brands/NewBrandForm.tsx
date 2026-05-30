@@ -23,16 +23,10 @@ export function NewBrandForm({ category }: { category: CategoryKey }) {
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2"
+      className="grid grid-cols-[1fr_80px_auto] items-center gap-2"
     >
       <input type="hidden" name="category" value={category} />
       <Input name="name" placeholder="例：Panasonic" required />
-      <Input
-        name="sort_order"
-        type="number"
-        defaultValue={999}
-        placeholder="排序"
-      />
       <label className="flex items-center gap-1 text-sm text-zinc-600">
         <input
           type="checkbox"

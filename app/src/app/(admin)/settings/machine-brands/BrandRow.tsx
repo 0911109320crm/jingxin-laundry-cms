@@ -41,15 +41,10 @@ export function BrandRow({ brand }: { brand: Brand }) {
     return (
       <form
         action={onSave}
-        className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2 px-5 py-3"
+        className="flex items-center gap-2 rounded-lg border border-brand-300 bg-white p-2"
       >
-        <Input name="name" defaultValue={brand.name} required />
-        <Input
-          name="sort_order"
-          type="number"
-          defaultValue={brand.sort_order}
-        />
-        <label className="flex items-center gap-1 text-sm text-zinc-600">
+        <Input name="name" defaultValue={brand.name} required className="flex-1" />
+        <label className="flex shrink-0 items-center gap-1 text-xs text-zinc-600">
           <input
             type="checkbox"
             name="active"
@@ -58,7 +53,7 @@ export function BrandRow({ brand }: { brand: Brand }) {
           />
           啟用
         </label>
-        <div className="flex gap-1">
+        <div className="flex shrink-0 gap-1">
           <Button type="submit" size="sm" disabled={pending}>
             <Check className="h-4 w-4" />
           </Button>
@@ -77,21 +72,16 @@ export function BrandRow({ brand }: { brand: Brand }) {
   }
 
   return (
-    <div className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2 px-5 py-3">
-      <div className="text-sm font-medium text-zinc-900">{brand.name}</div>
-      <div className="text-sm text-zinc-500">排序 {brand.sort_order}</div>
-      <div>
-        {brand.active ? (
-          <span className="rounded bg-green-50 px-2 py-0.5 text-xs text-green-700">
-            啟用
-          </span>
-        ) : (
-          <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
-            停用
-          </span>
-        )}
-      </div>
-      <div className="flex gap-1">
+    <div className="group flex items-center gap-2 rounded-lg border border-zinc-200 bg-white p-2.5 hover:border-zinc-300">
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">
+        {brand.name}
+      </span>
+      {!brand.active && (
+        <span className="shrink-0 rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
+          停用
+        </span>
+      )}
+      <div className="flex shrink-0 gap-0.5 opacity-60 transition-opacity group-hover:opacity-100">
         <Button
           type="button"
           size="sm"

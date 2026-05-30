@@ -28,9 +28,9 @@ import {
   previewOrderCodeAction,
 } from "@/app/(admin)/orders/actions";
 import { AddAddressDialog } from "@/components/orders/AddAddressDialog";
+import { CustomerPicker } from "@/components/customers/CustomerPicker";
 import { formatNTD } from "@/lib/utils";
 
-type Customer = { id: string; code: string; name: string; phone: string };
 type Technician = { id: string; name: string };
 type Service = {
   id: string;
@@ -62,7 +62,6 @@ type Machine = {
 };
 
 type Props = {
-  customers: Customer[];
   technicians: Technician[];
   services: Service[];
   adjustments: Adjustment[];
@@ -92,7 +91,6 @@ const emptyItem = {
 };
 
 export function OrderForm({
-  customers,
   technicians,
   services,
   adjustments,
@@ -341,14 +339,17 @@ export function OrderForm({
         </CardHeader>
         <CardBody className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           <Field label="客戶" error={errors.customer_id?.message}>
-            <Select {...register("customer_id")}>
-              <option value="">— 選擇客戶 —</option>
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} · {c.phone} · {c.code}
-                </option>
-              ))}
-            </Select>
+            <Controller
+              control={control}
+              name="customer_id"
+              render={({ field }) => (
+                <CustomerPicker
+                  value={field.value || null}
+                  onChange={(id) => field.onChange(id ?? "")}
+                  placeholder="打字搜尋客戶（姓名 / 電話 / 編號）..."
+                />
+              )}
+            />
           </Field>
           <Field label="服務地址" error={errors.address_id?.message}>
             <div className="flex gap-2">
@@ -535,7 +536,8 @@ export function OrderForm({
                         <option value="">— 選擇 —</option>
                         {services.map((s) => (
                           <option key={s.id} value={s.id}>
-                            {s.code} · {s.name}（{formatNTD(s.default_price)}）
+                            {/* WV-S/WTUB 這類英文代號是內部 SKU，老闆娘只看中文品名 + 價格 */}
+                            {s.name}（{formatNTD(s.default_price)}）
                           </option>
                         ))}
                       </Select>
@@ -571,13 +573,21 @@ export function OrderForm({
               </div>
               <div
                 className={
-                  mode === "edit"
-                    ? "grid grid-cols-1 gap-3 md:grid-cols-[1fr_100px]"
+                  mode === "edit" || machines.length > 0
+                    ? "grid grid-cols-1 gap-3 md:grid-cols-[1fr_140px]"
                     : "grid grid-cols-1 gap-3"
                 }
               >
-                {mode === "edit" && (
-                  <Field label="機器（可選）">
+                {/* 5a：建單時若此客戶已登錄機器，老闆娘可直接帶入（不再只能選預設基本價）。
+                    客戶沒登錄機器時（create 模式）就不顯示，維持精簡。 */}
+                {(mode === "edit" || machines.length > 0) && (
+                  <Field
+                    label={
+                      mode === "create"
+                        ? "帶入此客戶的機器（可選）"
+                        : "機器（可選）"
+                    }
+                  >
                     <Select {...register(`items.${idx}.machine_id`)}>
                       <option value="">— 不指定機器 —</option>
                       {machines.map((m) => (
@@ -620,11 +630,11 @@ export function OrderForm({
                     })()}
                   </Field>
                 )}
-                <Field label="代號（遠/母/卡…）">
+                <Field label="設備資訊">
                   <Input
                     {...register(`items.${idx}.tag`)}
-                    placeholder="可空"
-                    maxLength={4}
+                    placeholder="補充此項說明，例：陽台那台、客廳冷氣"
+                    maxLength={50}
                   />
                 </Field>
               </div>
