@@ -357,6 +357,20 @@ export async function updateCustomerAction(
 export async function deleteCustomerAction(id: string): Promise<ActionResult> {
   await requireRole(["owner", "manager"]);
   const supabase = await createClient();
+
+  // 先檢查是否還有訂單引用此客戶——外鍵會擋下，但原始 SQL 錯誤對使用者是天書，
+  // 改成看得懂的提示。
+  const { count } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_id", id);
+  if (count && count > 0) {
+    return {
+      ok: false,
+      error: `此客戶名下還有 ${count} 筆訂單，無法刪除客戶。如要刪除，請先逐筆刪除該客戶的訂單；若只是想刪掉某一筆訂單，請到「訂單」頁面刪除，不要刪客戶。`,
+    };
+  }
+
   const { error } = await supabase.from("customers").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
   await logAudit({ action: "customer.delete", target_type: "customer", target_id: id });
