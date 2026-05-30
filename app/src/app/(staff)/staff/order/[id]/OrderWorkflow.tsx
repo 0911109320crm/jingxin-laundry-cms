@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import {
   setPaymentMethodAction,
+  confirmMyItemsAction,
   completeOrderAction,
   addOrderAdjustmentAction,
   removeOrderAdjustmentAction,
@@ -91,6 +92,16 @@ type Props = {
   promotionTypes: PromotionType[];
   initialPromotions: OrderPromotion[];
   myUserId: string;
+  /** 我負責(未排除)的品項是否都已確認金額（沒有負責品項也為 true） */
+  myConfirmed: boolean;
+  /** 我在此單有沒有負責的品項 */
+  hasMyItems: boolean;
+  /** 收款閘門：整單所有未排除品項都已確認 */
+  allConfirmed: boolean;
+  /** 我是不是此單的現金收款人 */
+  iAmCollector: boolean;
+  /** 若現金已被別人收走，收款師傅的名字 */
+  collectorName: string | null;
 };
 
 export function OrderWorkflow({
@@ -107,6 +118,11 @@ export function OrderWorkflow({
   promotionTypes,
   initialPromotions,
   myUserId,
+  myConfirmed,
+  hasMyItems,
+  allConfirmed,
+  iAmCollector,
+  collectorName,
 }: Props) {
   const [pending, startTransition] = useTransition();
   const [adjPending, startAdjTransition] = useTransition();
@@ -268,6 +284,27 @@ export function OrderWorkflow({
   const openCheckout = () => {
     setStep("checkout");
     setDialogOpen(true);
+  };
+
+  // 開「完成案件」對話框（與收款解耦：誰最後做完都可按）
+  const openComplete = () => {
+    setStep("complete");
+    setSelectedTagIds(() => {
+      const ids = new Set<string>();
+      for (const p of presets) if (initialTags.includes(p.label)) ids.add(p.id);
+      return ids;
+    });
+    setStaleTags(initialTags.filter((t) => !presetLabelSet.has(t)));
+    setNotes(initialNotes);
+    setDialogOpen(true);
+  };
+
+  // 師傅確認「自己負責品項」的金額（多師傅同單收款閘門）
+  const confirmMine = () => {
+    startTransition(async () => {
+      const res = await confirmMyItemsAction(orderId);
+      if (!res.ok) alert(res.error);
+    });
   };
 
   const openEditNotes = () => {
@@ -493,30 +530,65 @@ export function OrderWorkflow({
 
       {/* 主操作 */}
       <Card>
-        <CardBody className="space-y-2">
-          {!isDone && currentPayment === "unpaid" && (
-            <Button
-              size="lg"
-              className="w-full"
-              disabled={pending}
-              onClick={openCheckout}
-            >
-              <Banknote className="h-5 w-5" /> 結帳收款
-            </Button>
-          )}
-          {!isDone && currentPayment === "cash" && (
-            <>
-              <p className="rounded bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-700">
-                ✓ 已收現金 {formatNTD(localTotal)}
-              </p>
+        <CardBody className="space-y-3">
+          {/* ── 收款區 ── */}
+          {currentPayment === "unpaid" ? (
+            hasMyItems && !myConfirmed ? (
+              <>
+                <Button
+                  size="lg"
+                  className="w-full"
+                  disabled={pending}
+                  onClick={confirmMine}
+                >
+                  <Check className="h-5 w-5" /> 確認我負責品項的金額
+                </Button>
+                <p className="text-center text-xs text-zinc-500">
+                  先把你做的項目金額調好再確認；等所有師傅都確認後，由最後一位收全額
+                </p>
+              </>
+            ) : !allConfirmed ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-center text-sm text-amber-800">
+                ✓ 你的金額已確認
+                <div className="mt-0.5 text-xs text-amber-700">
+                  等待其他師傅確認中…由最後完成的師傅向客戶收全額
+                </div>
+              </div>
+            ) : (
               <Button
                 size="lg"
                 className="w-full"
                 disabled={pending}
                 onClick={openCheckout}
               >
-                繼續完成案件
+                <Banknote className="h-5 w-5" /> 結帳收款（全額 {formatNTD(localTotal)}）
               </Button>
+            )
+          ) : currentPayment === "cash" && !iAmCollector ? (
+            <div className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-3 text-center">
+              <p className="text-sm font-medium text-zinc-700">
+                🔒 此單現金 {formatNTD(localTotal)}
+              </p>
+              <p className="text-sm text-zinc-600">
+                已由「{collectorName ?? "其他師傅"}」收取
+              </p>
+              <p className="mt-1 text-xs text-zinc-400">
+                收款相關操作僅收款人本人或老闆娘可更動
+              </p>
+            </div>
+          ) : (
+            <>
+              <p
+                className={`rounded px-3 py-2 text-center text-sm font-medium ${
+                  currentPayment === "cash"
+                    ? "bg-green-50 text-green-700"
+                    : "bg-blue-50 text-blue-700"
+                }`}
+              >
+                {currentPayment === "cash"
+                  ? `✓ 已收現金 ${formatNTD(localTotal)}`
+                  : `✓ 客戶已付款 ${formatNTD(localTotal)}`}
+              </p>
               <Button
                 size="sm"
                 variant="outline"
@@ -528,46 +600,35 @@ export function OrderWorkflow({
               </Button>
             </>
           )}
-          {!isDone && currentPayment === "transfer" && (
-            <>
-              <p className="rounded bg-blue-50 px-3 py-2 text-center text-sm font-medium text-blue-700">
-                ✓ 客戶已匯款 {formatNTD(localTotal)}
-              </p>
+
+          {/* ── 完工區（與收款分開，誰最後做完都可完成） ── */}
+          <div className="border-t border-zinc-100 pt-3">
+            {!isDone ? (
               <Button
                 size="lg"
                 className="w-full"
                 disabled={pending}
-                onClick={openCheckout}
+                onClick={openComplete}
               >
-                繼續完成案件
+                <CheckCircle2 className="h-5 w-5" /> 完成此案件
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full"
-                disabled={pending}
-                onClick={revertToUnpaid}
-              >
-                改回「未收款」（修正用）
-              </Button>
-            </>
-          )}
-          {isDone && (
-            <>
-              <p className="text-center py-2 text-sm font-medium text-green-700">
-                ✓ 此案件已完成
-              </p>
-              <Button
-                size="md"
-                variant="outline"
-                className="w-full"
-                disabled={pending}
-                onClick={openEditNotes}
-              >
-                補 / 修改備註
-              </Button>
-            </>
-          )}
+            ) : (
+              <>
+                <p className="py-1 text-center text-sm font-medium text-green-700">
+                  ✓ 此案件已完成
+                </p>
+                <Button
+                  size="md"
+                  variant="outline"
+                  className="w-full"
+                  disabled={pending}
+                  onClick={openEditNotes}
+                >
+                  補 / 修改備註
+                </Button>
+              </>
+            )}
+          </div>
         </CardBody>
       </Card>
 

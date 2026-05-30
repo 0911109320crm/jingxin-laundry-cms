@@ -94,11 +94,15 @@ export default async function StaffHome() {
       .gte("scheduled_at", startWindow.toISOString())
       .not("status", "in", "(cancelled)")
       .order("scheduled_at"),
+    // 只算「我收的現金」：collected_by=我，或舊資料(null)回退（RLS 已限定我有參與的單）
     supabase
       .from("orders")
       .select("total")
       .eq("payment_method", "cash")
-      .eq("settlement_status", "pending"),
+      .eq("settlement_status", "pending")
+      .or(
+        `collected_by_technician_id.eq.${me.id},collected_by_technician_id.is.null`,
+      ),
     supabase
       .from("order_promotions")
       .select("points_snapshot")

@@ -367,27 +367,134 @@ export async function setPaymentMethodAction(
   method: "unpaid" | "cash" | "transfer" | "card" | "line_pay",
 ): Promise<Res> {
   const me = await requireRole(["owner", "manager", "technician"]);
-  if (me.profile.role === "technician") {
+  const isTech = me.profile.role === "technician";
+  if (isTech) {
     const owns = await technicianOwnsOrder(orderId, me.id);
     if (!owns) return { ok: false, error: "不是你的訂單" };
   }
   // Use admin client because technician role lacks UPDATE on orders via RLS
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
-  // 收現金時蓋章「實際收款人」＝當下操作者（多師傅同單時，最後收錢的人按此鍵）。
-  // 非現金（匯款/刷卡/未收款）無現金回繳問題，清空收款人。
-  const { error } = await admin
+
+  const revalidate = () => {
+    revalidatePath("/staff");
+    revalidatePath(`/staff/order/${orderId}`);
+    revalidatePath("/orders");
+    revalidatePath(`/orders/${orderId}`);
+    revalidatePath("/payroll/settlements");
+  };
+
+  // 「改回未收款」(修正用)：已收款後僅收款人本人或老闆娘可動，
+  // 避免多師傅同單時別的師傅誤觸、把收款紀錄洗掉。
+  if (method === "unpaid") {
+    if (isTech) {
+      const { data: ord } = await admin
+        .from("orders")
+        .select("collected_by_technician_id")
+        .eq("id", orderId)
+        .single();
+      const collector = (
+        ord as { collected_by_technician_id: string | null } | null
+      )?.collected_by_technician_id;
+      if (collector && collector !== me.id) {
+        return {
+          ok: false,
+          error: "此單由其他師傅收款，僅收款人本人或老闆娘可改回",
+        };
+      }
+    }
+    const { error } = await admin
+      .from("orders")
+      .update({ payment_method: "unpaid", collected_by_technician_id: null })
+      .eq("id", orderId);
+    if (error) return { ok: false, error: error.message };
+    revalidate();
+    return { ok: true };
+  }
+
+  // 收款（現金/匯款等）前的閘門：整單所有「未標記不服務」的品項，
+  // 都必須已由負責師傅確認過實際金額，否則不得收款（金額才會正確）。
+  const { data: unconfirmed } = await admin
+    .from("order_items")
+    .select("id")
+    .eq("order_id", orderId)
+    .eq("excluded", false)
+    .eq("confirmed", false)
+    .limit(1);
+  if (Array.isArray(unconfirmed) && unconfirmed.length > 0) {
+    return {
+      ok: false,
+      error: "尚有師傅未確認金額，請等所有師傅確認後再收款",
+    };
+  }
+
+  // 原子鎖定：僅當目前仍為「未收款」時才成功，防兩位師傅同時按收款互相覆蓋。
+  // 現金才蓋章收款人(=當下收錢的師傅)；匯款/刷卡無現金回繳問題，不設收款人。
+  const { data: locked, error } = await admin
     .from("orders")
     .update({
       payment_method: method,
       collected_by_technician_id: method === "cash" ? me.id : null,
     })
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .eq("payment_method", "unpaid")
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!locked || locked.length === 0) {
+    return { ok: false, error: "此單已由其他人完成收款，請重新整理頁面" };
+  }
+  revalidate();
+  return { ok: true };
+}
+
+/**
+ * 師傅確認「自己負責品項」的實際金額（多師傅同單收款閘門）。
+ * 把登入師傅在此單負責、未標記不服務的品項設為 confirmed。
+ * 當整單所有未排除品項都 confirmed，收款鈕才會在最後確認的師傅面前出現。
+ */
+export async function confirmMyItemsAction(orderId: string): Promise<Res> {
+  const me = await requireRole(["owner", "manager", "technician"]);
+  if (me.profile.role === "technician") {
+    const owns = await technicianOwnsOrder(orderId, me.id);
+    if (!owns) return { ok: false, error: "不是你的訂單" };
+  }
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("order_items")
+    .update({ confirmed: true })
+    .eq("order_id", orderId)
+    .eq("technician_id", me.id)
+    .eq("excluded", false);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/staff");
   revalidatePath(`/staff/order/${orderId}`);
-  revalidatePath("/orders");
-  revalidatePath("/payroll/settlements");
+  return { ok: true };
+}
+
+/**
+ * 老闆娘兜底：代為確認整單所有品項金額（放行收款）。
+ * 用於師傅做完忘了在手機確認就離開、導致最後收款師傅卡住收不了款的情況。
+ */
+export async function confirmAllItemsAction(orderId: string): Promise<Res> {
+  await requireRole(["owner", "manager"]);
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("order_items")
+    .update({ confirmed: true })
+    .eq("order_id", orderId)
+    .eq("excluded", false);
+  if (error) return { ok: false, error: error.message };
+  await logAudit({
+    action: "settlement.confirm_all_items",
+    target_type: "order",
+    target_id: orderId,
+    payload: {},
+  });
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/staff");
+  revalidatePath(`/staff/order/${orderId}`);
   return { ok: true };
 }
 

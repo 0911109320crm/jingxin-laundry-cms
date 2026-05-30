@@ -24,6 +24,7 @@ type Detail = {
   status: OrderInput["status"];
   payment_method: OrderInput["payment_method"];
   settlement_status: "pending" | "settled" | "not_required";
+  collected_by_technician_id: string | null;
   scheduled_at: string | null;
   service_at: string | null;
   subtotal: number;
@@ -44,6 +45,7 @@ type Detail = {
     id: string;
     item_code: string | null;
     excluded: boolean;
+    confirmed: boolean;
     service_item_id: string;
     quantity: number;
     unit_price: number;
@@ -88,13 +90,13 @@ export default async function StaffOrderPage({
   const { data } = await supabase
     .from("orders")
     .select(
-      `id, order_code, status, payment_method, settlement_status,
+      `id, order_code, status, payment_method, settlement_status, collected_by_technician_id,
        scheduled_at, service_at, subtotal, adjustments_total, total, estimated_total, note,
        service_tags, service_notes, customer_id,
        customer:customers(name, phone,
                           phones:customer_phones(id, phone, label, is_primary)),
        address:customer_addresses(county, district, address),
-       items:order_items(id, item_code, excluded, service_item_id, quantity, unit_price, subtotal, tag, note,
+       items:order_items(id, item_code, excluded, confirmed, service_item_id, quantity, unit_price, subtotal, tag, note,
                          technician_id,
                          service:service_items(code, name, category),
                          machine:machines(id, type, brand, model, code)),
@@ -190,6 +192,32 @@ export default async function StaffOrderPage({
   const priorNotes = ((priorData as PriorNote[] | null) ?? []).filter(
     (p) => (p.service_tags && p.service_tags.length > 0) || p.service_notes,
   );
+
+  // ── 多師傅同單：金額確認狀態 + 收款人歸屬 ──
+  // 我負責、且未標記不服務的品項
+  const myItems = o.items.filter(
+    (it) => it.technician_id === me.id && !it.excluded,
+  );
+  const hasMyItems = myItems.length > 0;
+  // 我這邊是否都確認了（沒有負責品項也視為 OK）
+  const myConfirmed = myItems.every((it) => it.confirmed);
+  // 收款閘門：整單所有未排除品項皆已確認
+  const activeItems = o.items.filter((it) => !it.excluded);
+  const allConfirmed =
+    activeItems.length > 0 && activeItems.every((it) => it.confirmed);
+  const iAmCollector = o.collected_by_technician_id === me.id;
+
+  // 已被別人收款時，查收款師傅名字（顯示「已由 X 收取」）
+  let collectorName: string | null = null;
+  if (o.collected_by_technician_id && !iAmCollector) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const { data: c } = await createAdminClient()
+      .from("user_profiles")
+      .select("name")
+      .eq("id", o.collected_by_technician_id)
+      .maybeSingle();
+    collectorName = (c as { name: string } | null)?.name ?? "其他師傅";
+  }
 
   return (
     <div className="p-4 space-y-3">
@@ -412,6 +440,11 @@ export default async function StaffOrderPage({
         promotionTypes={promotionTypes}
         initialPromotions={myPromotions}
         myUserId={me.id}
+        myConfirmed={myConfirmed}
+        hasMyItems={hasMyItems}
+        allConfirmed={allConfirmed}
+        iAmCollector={iAmCollector}
+        collectorName={collectorName}
       />
     </div>
   );

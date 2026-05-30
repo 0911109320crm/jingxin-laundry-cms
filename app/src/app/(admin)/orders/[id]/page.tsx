@@ -22,6 +22,7 @@ import {
   type CustomerMachine,
   type CustomerStatsOrder,
 } from "./CustomerContextPanel";
+import { ConfirmAllButton } from "./ConfirmAllButton";
 
 type Item = {
   id: string;
@@ -30,6 +31,8 @@ type Item = {
   subtotal: number;
   tag: string | null;
   note: string | null;
+  excluded: boolean;
+  confirmed: boolean;
   service: { code: string; name: string } | null;
   machine: { type: string; brand: string | null; model: string | null } | null;
   technician_id: string | null;
@@ -104,7 +107,7 @@ export default async function OrderDetailPage({
                           source:customer_sources(name),
                           phones:customer_phones(id, phone, label, is_primary, sort_order)),
        address:customer_addresses(county, district, address),
-       items:order_items(id, quantity, unit_price, subtotal, tag, note,
+       items:order_items(id, quantity, unit_price, subtotal, tag, note, excluded, confirmed,
                          technician_id,
                          service:service_items(code, name),
                          machine:machines(type, brand, model)),
@@ -156,6 +159,30 @@ export default async function OrderDetailPage({
   }
   const defaultTechnicianId =
     (o.items.find((i) => i.technician_id)?.technician_id as string | null) ?? null;
+
+  // ---- 多師傅同單：金額確認進度（收款閘門） ----
+  const confirmByTech = new Map<
+    string,
+    { name: string; total: number; confirmed: number }
+  >();
+  for (const it of o.items) {
+    if (it.excluded) continue; // 不服務的品項不需確認
+    const tid = it.technician_id ?? "__none__";
+    const name = it.technician_id
+      ? techMap.get(it.technician_id) ?? "—"
+      : "未指派師傅";
+    const cur = confirmByTech.get(tid) ?? { name, total: 0, confirmed: 0 };
+    cur.total += 1;
+    if (it.confirmed) cur.confirmed += 1;
+    confirmByTech.set(tid, cur);
+  }
+  const confirmGroups = [...confirmByTech.values()];
+  const hasUnconfirmed = confirmGroups.some((g) => g.confirmed < g.total);
+  // 僅在「未收款、非取消、有可收費品項」時才需顯示確認閘門
+  const showConfirmGate =
+    o.payment_method === "unpaid" &&
+    o.status !== "cancelled" &&
+    confirmGroups.length > 0;
 
   // ---- Customer side-panel data ----
   let customerStatsOrders: CustomerStatsOrder[] = [];
@@ -345,6 +372,51 @@ export default async function OrderDetailPage({
           </ul>
         </CardBody>
       </Card>
+
+      {showConfirmGate && (
+        <Card
+          className={
+            hasUnconfirmed
+              ? "border-amber-300 bg-amber-50/40"
+              : "border-emerald-200 bg-emerald-50/40"
+          }
+        >
+          <CardHeader>
+            <CardTitle>金額確認進度（多師傅同單收款用）</CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-2">
+            <ul className="space-y-1 text-sm">
+              {confirmGroups.map((g) => (
+                <li
+                  key={g.name}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span className="min-w-0 truncate text-zinc-700">{g.name}</span>
+                  {g.confirmed >= g.total ? (
+                    <span className="shrink-0 text-emerald-700">✓ 已確認</span>
+                  ) : (
+                    <span className="shrink-0 text-amber-700">
+                      ⏳ 未確認（{g.confirmed}/{g.total}）
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {hasUnconfirmed ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-amber-200 pt-2">
+                <p className="min-w-0 flex-1 text-xs text-amber-700">
+                  還有師傅未確認金額，收款鈕不會出現。若師傅已離場忘了確認，可代為放行：
+                </p>
+                <ConfirmAllButton orderId={o.id} />
+              </div>
+            ) : (
+              <p className="border-t border-emerald-200 pt-2 text-xs text-emerald-700">
+                ✓ 全部確認完成，最後收尾的師傅手機已可向客戶收全額
+              </p>
+            )}
+          </CardBody>
+        </Card>
+      )}
 
       {o.adjustments.length > 0 && (
         <Card>
