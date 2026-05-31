@@ -29,6 +29,7 @@ import {
 } from "@/app/(admin)/orders/actions";
 import { AddAddressDialog } from "@/components/orders/AddAddressDialog";
 import { CustomerPicker } from "@/components/customers/CustomerPicker";
+import { AddressPicker } from "@/components/orders/AddressPicker";
 import { formatNTD } from "@/lib/utils";
 
 type Technician = { id: string; name: string };
@@ -353,21 +354,20 @@ export function OrderForm({
           </Field>
           <Field label="服務地址" error={errors.address_id?.message}>
             <div className="flex gap-2">
-              <Select
-                {...register("address_id")}
-                disabled={addresses.length === 0}
-                className="min-w-0 flex-1"
-              >
-                <option value="">
-                  {addresses.length === 0 ? "— 先選客戶 —" : "— 選擇地址 —"}
-                </option>
-                {addresses.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.county} {a.district} {a.address}
-                    {a.label ? ` (${a.label})` : ""}
-                  </option>
-                ))}
-              </Select>
+              <div className="min-w-0 flex-1">
+                <Controller
+                  control={control}
+                  name="address_id"
+                  render={({ field }) => (
+                    <AddressPicker
+                      addresses={addresses}
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      disabled={addresses.length === 0}
+                    />
+                  )}
+                />
+              </div>
               {customerId && (
                 <AddAddressDialog
                   customerId={customerId}
