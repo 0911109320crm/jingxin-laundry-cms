@@ -42,19 +42,20 @@ export function DateTimeSelect({
   const minutes = Array.from(minuteSet).sort();
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <Input
         type="date"
         value={date}
         onChange={(e) =>
           onChange(compose(e.target.value, hour, minute))
         }
-        className="min-w-0 flex-1"
+        // 給足寬度顯示完整 年/月/日；窄欄時時分下拉自動換行(flex-wrap)
+        className="min-w-[9.5rem] flex-1"
       />
       <Select
         value={hour}
         onChange={(e) => onChange(compose(date, e.target.value, minute))}
-        className="w-[5.5rem] shrink-0"
+        className="w-[4.5rem] shrink-0"
         aria-label="小時"
       >
         <option value="">時</option>
@@ -67,7 +68,7 @@ export function DateTimeSelect({
       <Select
         value={minute}
         onChange={(e) => onChange(compose(date, hour, e.target.value))}
-        className="w-[5.5rem] shrink-0"
+        className="w-[4.5rem] shrink-0"
         aria-label="分鐘"
       >
         <option value="">分</option>
