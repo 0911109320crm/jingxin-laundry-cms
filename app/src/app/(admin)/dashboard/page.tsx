@@ -75,6 +75,7 @@ export default async function DashboardPage({
     { data: techProfiles },
     { count: todayRemainingCount },
     { data: allDoneOrders },
+    { data: openOrders },
   ] = await Promise.all([
     supabase
       .from("orders")
@@ -115,6 +116,11 @@ export default async function DashboardPage({
       .select("customer_id, total, customer:customers(id, name, phone, code)")
       .eq("status", "done")
       .not("customer_id", "is", null),
+    // 全時段「未完成」訂單(待派工/已排案)，用來算各師傅手上負荷
+    supabase
+      .from("orders")
+      .select("id, items:order_items(technician_id)")
+      .in("status", ["pending", "scheduled"]),
   ]);
 
   const orders = (monthOrders as MonthOrder[] | null) ?? [];
@@ -122,7 +128,6 @@ export default async function DashboardPage({
   let monthRevenue = 0;
   let doneCount = 0;
   let cancelledCount = 0;
-  const byTech = new Map<string, { done: number; todo: number }>();
 
   for (const o of orders) {
     if (o.status === "done") {
@@ -131,15 +136,15 @@ export default async function DashboardPage({
     } else if (o.status === "cancelled") {
       cancelledCount++;
     }
-    for (const it of o.items) {
-      if (!it.technician_id) continue;
-      if (!byTech.has(it.technician_id)) {
-        byTech.set(it.technician_id, { done: 0, todo: 0 });
-      }
-      const s = byTech.get(it.technician_id)!;
-      if (o.status === "done") s.done++;
-      else if (o.status !== "cancelled") s.todo++;
-    }
+  }
+
+  // 各師傅「手上未完成案量」(全時段待派工/已排案的訂單數，去重；負荷指標)
+  const openByTech = new Map<string, number>();
+  for (const o of (openOrders as { id: string; items: { technician_id: string | null }[] }[] | null) ?? []) {
+    const techs = new Set(
+      (o.items ?? []).map((it) => it.technician_id).filter(Boolean) as string[],
+    );
+    for (const t of techs) openByTech.set(t, (openByTech.get(t) ?? 0) + 1);
   }
   const cancelRate =
     orders.length > 0
@@ -165,13 +170,11 @@ export default async function DashboardPage({
   const technicianRows =
     ((techProfiles as { id: string; name: string; role: string; active: boolean }[] | null) ?? [])
       .filter((p) => p.role === "technician")
-      .map((p) => {
-        const stats = byTech.get(p.id) ?? { done: 0, todo: 0 };
-        return { ...p, ...stats, total: stats.done + stats.todo };
-      })
-      .sort((a, b) => b.total - a.total);
+      .map((p) => ({ ...p, unfinished: openByTech.get(p.id) ?? 0 }))
+      // 升冪：未完成最少的排最前，老闆娘一眼看出該優先派給誰
+      .sort((a, b) => a.unfinished - b.unfinished);
 
-  const maxTotal = Math.max(1, ...technicianRows.map((t) => t.total));
+  const maxUnfinished = Math.max(1, ...technicianRows.map((t) => t.unfinished));
 
   // Top 30 customers by lifetime spending
   type DoneRow = { customer_id: string; total: number; customer: { id: string; name: string; phone: string; code: string } | null };
@@ -247,91 +250,63 @@ export default async function DashboardPage({
               interactive
             />
           </Link>
-          <KpiCard
-            icon={
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded text-xs font-bold ${
-                  cancelRate >= 20 ? "bg-rose-500 text-white" : "bg-zinc-300 text-zinc-700"
-                }`}
-              >
-                ×
-              </span>
-            }
-            label="本月取消率"
-            value={`${cancelRate}%`}
-            sub={`${cancelledCount} / ${orders.length} 取消`}
-            alert={cancelRate >= 20}
-          />
+          <Link href="/orders?status=cancelled">
+            <KpiCard
+              icon={
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded text-xs font-bold ${
+                    cancelRate >= 20 ? "bg-rose-500 text-white" : "bg-zinc-300 text-zinc-700"
+                  }`}
+                >
+                  ×
+                </span>
+              }
+              label="本月取消率"
+              value={`${cancelRate}%`}
+              sub={`${cancelledCount} / ${orders.length} 取消`}
+              alert={cancelRate >= 20}
+              interactive
+            />
+          </Link>
         </div>
 
-        {/* 右：師傅本月案量 直條圖 */}
+        {/* 右：師傅未完成案量 直條圖（越少越優先派新案） */}
         <Card>
           <CardHeader>
-            <CardTitle>師傅本月案量（用於分派新案）</CardTitle>
+            <CardTitle>師傅未完成案量（越少越優先派新案）</CardTitle>
           </CardHeader>
           <CardBody>
             {technicianRows.length === 0 ? (
               <p className="text-sm text-zinc-500">尚無師傅資料</p>
             ) : (
               <>
-                <div className="mb-2 flex items-center gap-4 text-xs text-zinc-500">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-3 w-3 rounded-sm bg-green-500" />
-                    已完成
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-3 w-3 rounded-sm bg-amber-400" />
-                    待完成
-                  </span>
-                </div>
+                <p className="mb-2 text-xs text-zinc-500">
+                  手上待派工 / 已排案但未完成的訂單數，由少到多排列
+                </p>
                 <div
                   className="flex items-end justify-around gap-2 border-b border-zinc-200"
                   style={{ height: 200 }}
                 >
                   {technicianRows.map((t) => {
                     const barMax = 160;
-                    const doneH = (t.done / maxTotal) * barMax;
-                    const todoH = (t.todo / maxTotal) * barMax;
+                    const h = (t.unfinished / maxUnfinished) * barMax;
                     return (
                       <Link
                         key={t.id}
                         href={`/calendar?tech=${t.id}`}
                         className="group flex h-full flex-1 flex-col items-center"
                       >
-                        {/* 總數 label 在頂部 */}
                         <div className="flex w-full flex-1 flex-col items-center justify-end">
                           <span className="mb-1 text-sm font-semibold text-zinc-700">
-                            {t.total > 0 ? t.total : ""}
+                            {t.unfinished > 0 ? t.unfinished : ""}
                           </span>
-                          {/* 堆疊條：todo 在上，done 在下；柱子加寬 */}
-                          <div className="flex w-full flex-col justify-end overflow-hidden rounded-t">
-                            {t.todo > 0 && (
-                              <div
-                                className="flex items-center justify-center bg-amber-400 transition-opacity group-hover:opacity-80"
-                                style={{ height: todoH }}
-                                title={`待完成 ${t.todo}`}
-                              >
-                                {todoH >= 18 && (
-                                  <span className="text-[10px] font-medium text-white">
-                                    {t.todo}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {t.done > 0 && (
-                              <div
-                                className="flex items-center justify-center bg-green-500 transition-opacity group-hover:opacity-80"
-                                style={{ height: doneH }}
-                                title={`已完成 ${t.done}`}
-                              >
-                                {doneH >= 18 && (
-                                  <span className="text-[10px] font-medium text-white">
-                                    {t.done}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                          <div
+                            className={`flex w-full items-center justify-center overflow-hidden rounded-t transition-opacity group-hover:opacity-80 ${
+                              t.unfinished === 0 ? "bg-zinc-200" : "bg-brand-500"
+                            }`}
+                            style={{ height: Math.max(h, t.unfinished > 0 ? 6 : 3) }}
+                            title={`未完成 ${t.unfinished}`}
+                          />
                         </div>
                       </Link>
                     );
