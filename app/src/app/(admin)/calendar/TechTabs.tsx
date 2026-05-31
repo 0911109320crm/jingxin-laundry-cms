@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { techTab } from "@/lib/tech-colors";
 
 export type TechOption = { id: string; name: string };
 
@@ -49,7 +50,7 @@ export function TechTabs({
           const color =
             t.id === "all"
               ? "data-[active=true]:bg-zinc-800 data-[active=true]:text-white"
-              : TAB_COLORS[(idx - 1) % TAB_COLORS.length];
+              : techTab(t.name) ?? TAB_COLORS[(idx - 1) % TAB_COLORS.length];
           return (
             <Link
               key={t.id}

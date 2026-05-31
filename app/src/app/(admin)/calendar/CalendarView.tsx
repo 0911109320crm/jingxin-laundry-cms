@@ -12,6 +12,7 @@ import {
   cancelOrderAction,
   unscheduleOrderAction,
 } from "@/app/(admin)/orders/actions";
+import { techHex } from "@/lib/tech-colors";
 
 const TECH_COLORS = [
   "#4f46e5",
@@ -41,7 +42,14 @@ export type CalendarOrder = {
   technician_name: string | null;
 };
 
-function colorFor(techId: string | null, techList: string[]) {
+function colorFor(
+  techId: string | null,
+  techList: string[],
+  techName?: string | null,
+) {
+  // 先用老闆娘指定的師傅代表色（依姓名），找不到才退回索引調色盤
+  const named = techHex(techName);
+  if (named) return named;
   if (!techId) return UNASSIGNED_COLOR;
   const idx = techList.indexOf(techId);
   return TECH_COLORS[idx % TECH_COLORS.length];
@@ -193,8 +201,8 @@ export function CalendarView({
       id: o.id,
       start: o.scheduled_at,
       end,
-      backgroundColor: colorFor(o.technician_id, technicianIds),
-      borderColor: colorFor(o.technician_id, technicianIds),
+      backgroundColor: colorFor(o.technician_id, technicianIds, o.technician_name),
+      borderColor: colorFor(o.technician_id, technicianIds, o.technician_name),
       extendedProps: {
         order_code: o.order_code,
         total: o.total,
