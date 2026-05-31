@@ -22,7 +22,7 @@ export function NewPromotionTypeForm() {
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[160px_1fr_70px_70px_80px_auto] items-center gap-2"
+      className="grid grid-cols-1 md:grid-cols-[160px_1fr_70px_70px_80px_auto] md:items-center gap-2"
     >
       <Input name="code" placeholder="代碼（小寫底線）" required />
       <Input name="label" placeholder="顯示文字（例：FB按讚）" required />

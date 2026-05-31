@@ -96,7 +96,7 @@ export function PromotionsPanel({
               return (
                 <li
                   key={p.id}
-                  className="grid grid-cols-[1fr_70px_180px_auto] items-center gap-2 px-3 py-2 text-sm"
+                  className="grid grid-cols-1 md:grid-cols-[1fr_70px_180px_auto] md:items-center gap-2 px-3 py-2 text-sm"
                 >
                   <span className="font-medium text-zinc-900">
                     {t?.label ?? "（已刪除）"}

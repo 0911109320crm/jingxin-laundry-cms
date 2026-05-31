@@ -23,7 +23,7 @@ export function NewAdjustmentForm() {
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[1fr_110px_110px_110px_70px_auto] items-center gap-2"
+      className="grid grid-cols-1 md:grid-cols-[1fr_110px_110px_110px_70px_auto] md:items-center gap-2"
     >
       <Input name="name" placeholder="項目名稱" required />
       <Select name="type" defaultValue="addon">

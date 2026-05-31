@@ -103,7 +103,7 @@ export default async function ServicesSettingsPage({
           <CardTitle>項目清單（{items.length}）</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
-          <div className="grid grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] gap-2 border-b border-zinc-200 bg-zinc-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <div className="hidden md:grid md:grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] gap-2 border-b border-zinc-200 bg-zinc-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
             <div>代碼</div>
             <div>名稱</div>
             <div>預設價</div>

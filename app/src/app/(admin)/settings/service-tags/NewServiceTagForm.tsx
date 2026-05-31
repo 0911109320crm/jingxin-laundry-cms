@@ -23,7 +23,7 @@ export function NewServiceTagForm({ category }: { category: TagCategoryKey }) {
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2"
+      className="grid grid-cols-1 md:grid-cols-[1fr_100px_80px_auto] md:items-center gap-2"
     >
       <input type="hidden" name="category" value={category} />
       <Input name="label" placeholder="例如：洗衣粉、無電梯、有廢水" required />

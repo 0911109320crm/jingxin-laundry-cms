@@ -139,7 +139,7 @@ export function UserRow({ user, isSelf }: { user: UserItem; isSelf: boolean }) {
   }
 
   return (
-    <div className="grid grid-cols-[1fr_1fr_1fr_120px_80px_auto] items-center gap-2 px-5 py-3 text-sm">
+    <div className="grid grid-cols-1 gap-1.5 px-5 py-3 text-sm md:grid-cols-[1fr_1fr_1fr_120px_80px_auto] md:items-center md:gap-2">
       <div className="font-medium text-zinc-900">
         {user.name}
         {isSelf && (

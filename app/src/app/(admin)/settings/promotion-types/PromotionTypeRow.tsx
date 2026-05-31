@@ -42,7 +42,7 @@ export function PromotionTypeRow({ promo }: { promo: PromotionType }) {
     return (
       <form
         action={onSave}
-        className="grid grid-cols-[160px_1fr_70px_70px_80px_auto] items-center gap-2 px-5 py-3"
+        className="grid grid-cols-1 md:grid-cols-[160px_1fr_70px_70px_80px_auto] md:items-center gap-2 px-5 py-3"
       >
         <Input value={promo.code} disabled className="text-zinc-500" />
         <Input name="label" defaultValue={promo.label} required />
@@ -85,7 +85,7 @@ export function PromotionTypeRow({ promo }: { promo: PromotionType }) {
   }
 
   return (
-    <div className="grid grid-cols-[160px_1fr_70px_70px_80px_auto] items-center gap-2 px-5 py-3">
+    <div className="grid grid-cols-1 md:grid-cols-[160px_1fr_70px_70px_80px_auto] md:items-center gap-2 px-5 py-3">
       <div className="text-xs font-mono text-zinc-400">{promo.code}</div>
       <div className="text-sm font-medium text-zinc-900">{promo.label}</div>
       <div className="rounded bg-amber-50 text-center text-sm font-bold text-amber-700">

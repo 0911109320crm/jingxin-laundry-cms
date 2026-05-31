@@ -466,7 +466,7 @@ export default async function TechnicianPayrollPage({
                 return (
                   <li key={row.day}>
                     <details className="group">
-                      <summary className="grid cursor-pointer grid-cols-[60px_1fr_auto] items-center gap-3 px-5 py-2.5 text-sm hover:bg-zinc-50">
+                      <summary className="grid cursor-pointer grid-cols-1 md:grid-cols-[60px_1fr_auto] md:items-center gap-3 px-5 py-2.5 text-sm hover:bg-zinc-50">
                         <span className="font-mono text-zinc-700">
                           {data.month}/{String(row.day).padStart(2, "0")}
                         </span>

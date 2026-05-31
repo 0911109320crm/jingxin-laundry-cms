@@ -77,7 +77,7 @@ export function ServiceRow({ service }: { service: Service }) {
     return (
       <form
         action={onSave}
-        className={"grid grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] items-center gap-2 px-5 py-3"}
+        className={"grid grid-cols-1 md:grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] md:items-center gap-2 px-5 py-3"}
       >
         <Input name="code" defaultValue={service.code} required />
         <Input name="name" defaultValue={service.name} required />
@@ -157,7 +157,7 @@ export function ServiceRow({ service }: { service: Service }) {
 
   return (
     <div
-      className="grid grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] items-center gap-2 px-5 py-3 text-sm"
+      className="grid grid-cols-1 md:grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] md:items-center gap-2 px-5 py-3 text-sm"
     >
       <code className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-mono">
         {service.code}

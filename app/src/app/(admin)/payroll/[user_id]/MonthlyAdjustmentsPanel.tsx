@@ -101,7 +101,7 @@ export function MonthlyAdjustmentsPanel({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="grid grid-cols-[110px_120px_1fr] gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-[110px_120px_1fr] gap-2">
               <Select name="type" defaultValue="bonus">
                 <option value="bonus">獎勵</option>
                 <option value="deduction">扣款</option>

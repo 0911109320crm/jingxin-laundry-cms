@@ -63,7 +63,7 @@ export default async function UsersSettingsPage() {
           <CardTitle>帳號清單（{users.length}）</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
-          <div className="grid grid-cols-[1fr_1fr_1fr_120px_80px_auto] gap-2 border-b border-zinc-200 bg-zinc-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_120px_80px_auto] gap-2 border-b border-zinc-200 bg-zinc-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
             <div>姓名</div>
             <div>帳號</div>
             <div>電話</div>

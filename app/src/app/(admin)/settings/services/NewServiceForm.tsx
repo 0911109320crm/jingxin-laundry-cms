@@ -28,7 +28,7 @@ export function NewServiceForm({
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] items-center gap-2"
+      className="grid grid-cols-1 md:grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] md:items-center gap-2"
     >
       <Input name="code" placeholder="代碼" required />
       <Input name="name" placeholder="名稱" required />

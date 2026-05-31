@@ -44,7 +44,7 @@ export function AdjustmentRow({ adjustment }: { adjustment: Adjustment }) {
     return (
       <form
         action={onSave}
-        className="grid grid-cols-[1fr_110px_110px_110px_70px_auto] items-center gap-2 px-5 py-3"
+        className="grid grid-cols-1 md:grid-cols-[1fr_110px_110px_110px_70px_auto] md:items-center gap-2 px-5 py-3"
       >
         <Input name="name" defaultValue={adjustment.name} required />
         <Select name="type" defaultValue={adjustment.type}>
@@ -91,7 +91,7 @@ export function AdjustmentRow({ adjustment }: { adjustment: Adjustment }) {
   }
 
   return (
-    <div className="grid grid-cols-[1fr_110px_110px_110px_70px_auto] items-center gap-2 px-5 py-3 text-sm">
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_110px_110px_110px_70px_auto] md:items-center gap-2 px-5 py-3 text-sm">
       <div className="font-medium text-zinc-900">{adjustment.name}</div>
       <div>
         {adjustment.type === "addon" ? (

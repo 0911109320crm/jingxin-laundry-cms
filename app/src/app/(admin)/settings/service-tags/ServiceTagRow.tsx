@@ -41,7 +41,7 @@ export function ServiceTagRow({ tag }: { tag: ServiceTag }) {
     return (
       <form
         action={onSave}
-        className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2 px-5 py-3"
+        className="grid grid-cols-1 md:grid-cols-[1fr_100px_80px_auto] md:items-center gap-2 px-5 py-3"
       >
         <Input name="label" defaultValue={tag.label} required />
         <Input
@@ -77,7 +77,7 @@ export function ServiceTagRow({ tag }: { tag: ServiceTag }) {
   }
 
   return (
-    <div className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2 px-5 py-3">
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_100px_80px_auto] md:items-center gap-2 px-5 py-3">
       <div className="text-sm font-medium text-zinc-900">{tag.label}</div>
       <div className="text-sm text-zinc-500">排序 {tag.sort_order}</div>
       <div>

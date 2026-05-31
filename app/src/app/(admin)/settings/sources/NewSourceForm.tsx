@@ -22,7 +22,7 @@ export function NewSourceForm() {
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-[1fr_100px_80px_auto] items-center gap-2"
+      className="grid grid-cols-1 md:grid-cols-[1fr_100px_80px_auto] md:items-center gap-2"
     >
       <Input name="name" placeholder="新增來源名稱" required />
       <Input

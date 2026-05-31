@@ -40,7 +40,7 @@ export default async function AdjustmentsSettingsPage() {
           <CardTitle>項目清單（{items.length}）</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
-          <div className="grid grid-cols-[1fr_110px_110px_110px_70px_auto] gap-2 border-b border-zinc-200 bg-zinc-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <div className="hidden md:grid md:grid-cols-[1fr_110px_110px_110px_70px_auto] gap-2 border-b border-zinc-200 bg-zinc-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
             <div>名稱</div>
             <div>類型</div>
             <div>預設金額</div>
