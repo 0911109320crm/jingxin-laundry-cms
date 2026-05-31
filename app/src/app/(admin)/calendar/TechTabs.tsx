@@ -1,18 +1,12 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { techTab, techHex } from "@/lib/tech-colors";
+import { techHex } from "@/lib/tech-colors";
 
 export type TechOption = { id: string; name: string };
 
-const TAB_COLORS = [
-  "data-[active=true]:bg-indigo-600 data-[active=true]:text-white",
-  "data-[active=true]:bg-cyan-600 data-[active=true]:text-white",
-  "data-[active=true]:bg-green-600 data-[active=true]:text-white",
-  "data-[active=true]:bg-orange-600 data-[active=true]:text-white",
-  "data-[active=true]:bg-pink-600 data-[active=true]:text-white",
-  "data-[active=true]:bg-purple-600 data-[active=true]:text-white",
-];
+// 未指定代表色的師傅(備援)依序套用
+const FALLBACK_HEX = ["#4f46e5", "#0891b2", "#16a34a", "#ea580c", "#db2777", "#9333ea"];
 
 export function TechTabs({
   current,
@@ -46,29 +40,29 @@ export function TechTabs({
       <div className="flex flex-wrap items-center gap-1 rounded-lg bg-zinc-100 p-1">
         {options.map((t, idx) => {
           const active = t.id === current;
-          // 「全部」用 zinc 色，師傅依序套 TAB_COLORS
-          const color =
-            t.id === "all"
-              ? "data-[active=true]:bg-zinc-800 data-[active=true]:text-white"
-              : techTab(t.name) ?? TAB_COLORS[(idx - 1) % TAB_COLORS.length];
-          // 每個師傅按鈕前永遠顯示其代表色圓點，方便對照月曆上的顏色
-          const dotHex = t.id === "all" ? null : techHex(t.name) ?? "#9ca3af";
+          const isAll = t.id === "all";
+          // 師傅按鈕整顆「持續」顯示代表色；被選中時全亮+外框，未選中時稍微淡化
+          const hex = isAll ? null : techHex(t.name) ?? FALLBACK_HEX[(idx - 1) % FALLBACK_HEX.length];
           return (
             <Link
               key={t.id}
               href={`/calendar?tech=${t.id}`}
               data-active={active}
+              style={hex ? { backgroundColor: hex } : undefined}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-white",
-                color,
+                "inline-flex items-center rounded px-3 py-1.5 text-sm font-medium transition-all",
+                isAll
+                  ? active
+                    ? "bg-zinc-800 text-white"
+                    : "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
+                  : cn(
+                      "text-white",
+                      active
+                        ? "opacity-100 ring-2 ring-zinc-800 ring-offset-1"
+                        : "opacity-60 hover:opacity-90",
+                    ),
               )}
             >
-              {dotHex && (
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-white/60"
-                  style={{ backgroundColor: dotHex }}
-                />
-              )}
               {t.name}
             </Link>
           );
