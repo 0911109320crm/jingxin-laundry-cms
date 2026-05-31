@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { techTab } from "@/lib/tech-colors";
+import { techTab, techHex } from "@/lib/tech-colors";
 
 export type TechOption = { id: string; name: string };
 
@@ -51,16 +51,24 @@ export function TechTabs({
             t.id === "all"
               ? "data-[active=true]:bg-zinc-800 data-[active=true]:text-white"
               : techTab(t.name) ?? TAB_COLORS[(idx - 1) % TAB_COLORS.length];
+          // 每個師傅按鈕前永遠顯示其代表色圓點，方便對照月曆上的顏色
+          const dotHex = t.id === "all" ? null : techHex(t.name) ?? "#9ca3af";
           return (
             <Link
               key={t.id}
               href={`/calendar?tech=${t.id}`}
               data-active={active}
               className={cn(
-                "inline-flex items-center gap-1 rounded px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-white",
+                "inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-white",
                 color,
               )}
             >
+              {dotHex && (
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-white/60"
+                  style={{ backgroundColor: dotHex }}
+                />
+              )}
               {t.name}
             </Link>
           );
