@@ -56,6 +56,13 @@ export default async function CalendarPage({
   const supabase = await createClient();
   const admin = createAdminClient();
 
+  // 月曆只載「近期」訂單（前 2 個月 ~ 後 4 個月），避免把上萬筆歷史完工單全部丟給
+  // FullCalendar 導致卡死/排案看不到。要看更早歷史請用「訂單」頁。
+  const calWinStart = new Date();
+  calWinStart.setMonth(calWinStart.getMonth() - 2);
+  const calWinEnd = new Date();
+  calWinEnd.setMonth(calWinEnd.getMonth() + 4);
+
   const [
     { data: techsRaw },
     { data: scheduledRaw },
@@ -77,6 +84,8 @@ export default async function CalendarPage({
       )
       .not("scheduled_at", "is", null)
       .not("status", "in", "(pending,cancelled)")
+      .gte("scheduled_at", calWinStart.toISOString())
+      .lte("scheduled_at", calWinEnd.toISOString())
       .order("scheduled_at"),
     supabase
       .from("orders")

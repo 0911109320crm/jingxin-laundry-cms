@@ -118,8 +118,12 @@ export function MonthBoard({
             <li
               key={d.date}
               className={cn(
-                "rounded-xl border bg-white p-3",
-                d.isToday ? "border-brand-400 ring-1 ring-brand-200" : "border-zinc-200",
+                "rounded-xl border p-3",
+                d.leave === "full"
+                  ? "border-rose-400 bg-rose-100/70 ring-1 ring-rose-200"
+                  : d.isToday
+                    ? "border-brand-400 bg-white ring-1 ring-brand-200"
+                    : "border-zinc-200 bg-white",
               )}
             >
               <div className="flex items-start gap-3">
@@ -127,11 +131,13 @@ export function MonthBoard({
                 <div
                   className={cn(
                     "flex w-12 shrink-0 flex-col items-center rounded-lg py-1",
-                    d.isToday
-                      ? "bg-brand-600 text-white"
-                      : d.isWeekend
-                        ? "bg-rose-50 text-rose-600"
-                        : "bg-zinc-100 text-zinc-700",
+                    d.leave === "full"
+                      ? "bg-rose-600 text-white"
+                      : d.isToday
+                        ? "bg-brand-600 text-white"
+                        : d.isWeekend
+                          ? "bg-rose-50 text-rose-600"
+                          : "bg-zinc-100 text-zinc-700",
                   )}
                 >
                   <span className="text-lg font-bold leading-none">{d.dayNum}</span>
@@ -174,7 +180,14 @@ export function MonthBoard({
                   {/* 休假狀態 / 按鈕 */}
                   {d.leave ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold",
+                          d.leave === "full"
+                            ? "bg-rose-600 text-white"
+                            : "bg-amber-100 text-amber-800",
+                        )}
+                      >
                         <Plane className="h-3 w-3" /> {LEAVE_LABEL[d.leave]}
                       </span>
                       <button
