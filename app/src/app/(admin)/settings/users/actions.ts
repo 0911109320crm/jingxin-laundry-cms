@@ -14,7 +14,7 @@ const CreateUserSchema = z.object({
     .min(1, "請填帳號")
     .max(60)
     .regex(/^[A-Za-z0-9._+\-@]+$/, "帳號只能用英數、 . _ + - @"),
-  password: z.string().min(6, "密碼至少 6 字"),
+  password: z.string().min(4, "密碼至少 4 字"),
   name: z.string().min(1, "請填姓名").max(40),
   phone: z.string().max(20).optional().nullable(),
   role: z.enum(["owner", "manager", "technician"]),
@@ -89,10 +89,10 @@ export async function updateUser(id: string, fd: FormData): Promise<Res> {
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
-  // 新密碼：留空 = 不改；有填則必須 ≥6 字（讓老闆娘在「編輯」就能直接改密碼）
+  // 新密碼：留空 = 不改；有填則必須 ≥4 字（讓老闆娘在「編輯」就能直接改密碼）
   const newPassword = String(fd.get("password") ?? "").trim();
-  if (newPassword && newPassword.length < 6) {
-    return { ok: false, error: "新密碼至少 6 字（不改請留空）" };
+  if (newPassword && newPassword.length < 4) {
+    return { ok: false, error: "新密碼至少 4 字（不改請留空）" };
   }
 
   const admin = createAdminClient();
@@ -123,7 +123,7 @@ export async function updateUser(id: string, fd: FormData): Promise<Res> {
 export async function resetPassword(id: string, fd: FormData): Promise<Res> {
   await requireRole(["owner"]);
   const password = String(fd.get("password") ?? "").trim();
-  if (password.length < 6) return { ok: false, error: "密碼至少 6 字" };
+  if (password.length < 4) return { ok: false, error: "密碼至少 4 字" };
 
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.updateUserById(id, { password });

@@ -46,7 +46,7 @@ export function UserRow({ user, isSelf }: { user: UserItem; isSelf: boolean }) {
   };
 
   const onResetPassword = () => {
-    const pwd = prompt(`重設「${user.name}」的密碼（至少 6 字）：`, "admin1234");
+    const pwd = prompt(`重設「${user.name}」的密碼（至少 4 字）：`, "admin1234");
     if (!pwd) return;
     const fd = new FormData();
     fd.set("password", pwd);
@@ -98,7 +98,7 @@ export function UserRow({ user, isSelf }: { user: UserItem; isSelf: boolean }) {
           </label>
           <label className="space-y-1 text-sm sm:col-span-2">
             <span className="text-xs font-medium text-zinc-500">
-              新密碼（留空＝不更動；要改才填，至少 6 字）
+              新密碼（留空＝不更動；要改才填，至少 4 字）
             </span>
             <Input
               name="password"
