@@ -37,6 +37,14 @@ const TW_DATE_FMT = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Asia/Taipei",
 });
 
+// 預約時間一律用台灣時區顯示（伺服器在 UTC，不可用 getHours()）
+const TW_TIME_FMT = new Intl.DateTimeFormat("zh-TW", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: "Asia/Taipei",
+});
+
 function taiwanDateKey(iso: string): string {
   return TW_DATE_FMT.format(new Date(iso));
 }
@@ -236,8 +244,7 @@ export default async function StaffHome() {
 
                 <ul className="space-y-2">
                   {groupOrders.map((o) => {
-                    const t = new Date(o.scheduled_at);
-                    const time = `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+                    const time = TW_TIME_FMT.format(new Date(o.scheduled_at));
                     return (
                       <li key={o.id}>
                         <Link href={`/staff/order/${o.id}`}>

@@ -232,7 +232,7 @@ export default async function StaffScoresPage({
                       +{r.points_snapshot}
                     </p>
                     <p className="text-xs text-zinc-400">
-                      {new Date(r.created_at).toLocaleDateString("zh-TW")}
+                      {new Date(r.created_at).toLocaleDateString("zh-TW", { timeZone: "Asia/Taipei" })}
                     </p>
                   </div>
                 </li>
