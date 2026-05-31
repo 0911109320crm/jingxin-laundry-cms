@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Users, ClipboardList, X, Phone } from "lucide-react";
+import { Search, Users, ClipboardList, X, Phone, ListFilter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   quickSearchAction,
@@ -192,14 +192,14 @@ export function GlobalSearch() {
         {/* ── 下段：完整搜尋（按 Enter）── */}
         <div>
           <div className="flex items-center gap-2 px-4 pt-3">
-            <Search className="h-3.5 w-3.5 text-brand-500" />
+            <ListFilter className="h-3.5 w-3.5 text-brand-500" />
             <span className="text-xs font-semibold text-zinc-600">
               完整搜尋（姓名 / 編號 / 訂單 / 機器 / 保固單）
             </span>
             <span className="text-[11px] text-zinc-400">打完按 Enter</span>
           </div>
           <div className="flex items-center gap-3 px-4 py-2.5">
-            <Search
+            <ListFilter
               className={cn(
                 "h-4 w-4 shrink-0 text-zinc-400",
                 fullPending && "animate-pulse",
