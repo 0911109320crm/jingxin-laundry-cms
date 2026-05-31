@@ -72,6 +72,55 @@ export async function updateBrand(id: string, formData: FormData): Promise<Res> 
   return { ok: true };
 }
 
+/**
+ * 上移 / 下移品牌顯示順序（與相鄰品牌交換 sort_order）。
+ * 老闆娘用 ↑↓ 調順序、不用看數字；「(未知)」(99990)排除在外永遠墊底。
+ */
+export async function moveBrand(
+  id: string,
+  direction: "up" | "down",
+): Promise<Res> {
+  await requireRole(["owner", "manager"]);
+  const supabase = await createClient();
+
+  const { data: cur } = await supabase
+    .from("machine_brands")
+    .select("id, category, sort_order")
+    .eq("id", id)
+    .single();
+  const c = cur as { id: string; category: string; sort_order: number } | null;
+  if (!c) return { ok: false, error: "找不到品牌" };
+
+  let q = supabase
+    .from("machine_brands")
+    .select("id, sort_order")
+    .eq("category", c.category)
+    .neq("name", "(未知)")
+    .limit(1);
+  q =
+    direction === "up"
+      ? q.lt("sort_order", c.sort_order).order("sort_order", { ascending: false })
+      : q.gt("sort_order", c.sort_order).order("sort_order", { ascending: true });
+  const { data: adjRows } = await q;
+  const adj = (adjRows as { id: string; sort_order: number }[] | null)?.[0];
+  if (!adj) return { ok: true }; // 已在頂/底，不動作
+
+  // 交換兩者的 sort_order（sort_order 無唯一約束，可安全交換）
+  const e1 = await supabase
+    .from("machine_brands")
+    .update({ sort_order: adj.sort_order })
+    .eq("id", c.id);
+  const e2 = await supabase
+    .from("machine_brands")
+    .update({ sort_order: c.sort_order })
+    .eq("id", adj.id);
+  if (e1.error || e2.error)
+    return { ok: false, error: (e1.error ?? e2.error)!.message };
+
+  revalidatePath("/settings/machine-brands");
+  return { ok: true };
+}
+
 export async function deleteBrand(id: string): Promise<Res> {
   await requireRole(["owner", "manager"]);
   const supabase = await createClient();

@@ -69,14 +69,22 @@ export default async function MachineBrandsSettingsPage({
       <Card>
         <CardHeader>
           <CardTitle>品牌清單（{brands.length}）</CardTitle>
+          <p className="text-xs font-normal text-zinc-500">
+            用 ↑ ↓ 調整顯示順序，常用品牌往上移，師傅選單就會優先出現
+          </p>
         </CardHeader>
         <CardBody>
           {brands.length === 0 ? (
             <p className="text-sm text-zinc-500">尚無資料</p>
           ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {brands.map((b) => (
-                <BrandRow key={b.id} brand={b} />
+            <div className="mx-auto max-w-2xl space-y-2">
+              {brands.map((b, i) => (
+                <BrandRow
+                  key={b.id}
+                  brand={b}
+                  isFirst={i === 0}
+                  isLast={i === brands.length - 1}
+                />
               ))}
             </div>
           )}

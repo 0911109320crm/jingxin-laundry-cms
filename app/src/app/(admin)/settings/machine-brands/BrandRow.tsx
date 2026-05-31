@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, Trash2, Check, X } from "lucide-react";
+import { Pencil, Trash2, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import {
   updateBrand,
   deleteBrand,
+  moveBrand,
 } from "@/app/(admin)/settings/machine-brands/actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -17,7 +18,15 @@ export type Brand = {
   active: boolean;
 };
 
-export function BrandRow({ brand }: { brand: Brand }) {
+export function BrandRow({
+  brand,
+  isFirst,
+  isLast,
+}: {
+  brand: Brand;
+  isFirst?: boolean;
+  isLast?: boolean;
+}) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -26,6 +35,13 @@ export function BrandRow({ brand }: { brand: Brand }) {
       const res = await updateBrand(brand.id, fd);
       if (!res.ok) alert(res.error);
       else setEditing(false);
+    });
+  };
+
+  const onMove = (direction: "up" | "down") => {
+    startTransition(async () => {
+      const res = await moveBrand(brand.id, direction);
+      if (!res.ok) alert(res.error);
     });
   };
 
@@ -73,6 +89,27 @@ export function BrandRow({ brand }: { brand: Brand }) {
 
   return (
     <div className="group flex items-center gap-2 rounded-lg border border-zinc-200 bg-white p-2.5 hover:border-zinc-300">
+      {/* 順序調整 ↑↓ */}
+      <div className="flex shrink-0 flex-col">
+        <button
+          type="button"
+          onClick={() => onMove("up")}
+          disabled={pending || isFirst}
+          title="上移"
+          className="rounded p-0.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 disabled:opacity-25 disabled:hover:bg-transparent"
+        >
+          <ChevronUp className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onMove("down")}
+          disabled={pending || isLast}
+          title="下移"
+          className="rounded p-0.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 disabled:opacity-25 disabled:hover:bg-transparent"
+        >
+          <ChevronDown className="h-4 w-4" />
+        </button>
+      </div>
       <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">
         {brand.name}
       </span>
