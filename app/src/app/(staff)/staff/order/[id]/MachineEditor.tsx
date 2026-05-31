@@ -7,22 +7,15 @@ import {
   createMachineForOrderItem,
 } from "./machine-actions";
 import { Button } from "@/components/ui/Button";
+import {
+  MACHINE_TYPES as MACHINE_TYPE_KEYS,
+  MACHINE_TYPE_LABEL,
+} from "@/lib/validators/customer";
 
-const MACHINE_TYPE_LABEL: Record<string, string> = {
-  washing_machine: "洗衣機",
-  air_conditioner: "冷氣",
-  mattress: "床墊",
-  sofa: "沙發",
-  other: "其他",
-};
-
-const MACHINE_TYPES: Array<{ key: string; label: string }> = [
-  { key: "washing_machine", label: "洗衣機" },
-  { key: "air_conditioner", label: "冷氣" },
-  { key: "mattress", label: "床墊" },
-  { key: "sofa", label: "沙發" },
-  { key: "other", label: "其他" },
-];
+// 師傅新增機器的下拉選項（與顧客端共用同一組細分類型）
+const MACHINE_TYPES: Array<{ key: string; label: string }> = MACHINE_TYPE_KEYS.map(
+  (k) => ({ key: k, label: MACHINE_TYPE_LABEL[k] }),
+);
 
 // 品牌英文 → 中文對照（顯示「中文 英文」方便師傅辨識）
 const BRAND_ZH: Record<string, string> = {
@@ -52,22 +45,22 @@ function brandLabel(name: string): string {
   return zh ? `${zh} ${name}` : name;
 }
 
-/** 把 service_items.category 對應到 machines.type */
+/** 把 service_items.category 對應到 machines.type。
+ *  機器類型已細分(0027)，與 service_items.category 同一套詞彙，可直接帶入。 */
 function inferMachineType(
   serviceCategory: string | null | undefined,
 ): string | null {
   if (!serviceCategory) return null;
-  if (
-    serviceCategory === "washing_vertical" ||
-    serviceCategory === "washing_twin_tub" ||
-    serviceCategory === "washing_drum"
-  )
-    return "washing_machine";
-  if (serviceCategory === "ac_split" || serviceCategory === "ac_hidden")
-    return "air_conditioner";
-  if (serviceCategory === "mattress") return "mattress";
-  if (serviceCategory === "sofa") return "sofa";
-  return null;
+  const known = [
+    "washing_vertical",
+    "washing_twin_tub",
+    "washing_drum",
+    "ac_split",
+    "ac_hidden",
+    "mattress",
+    "sofa",
+  ];
+  return known.includes(serviceCategory) ? serviceCategory : null;
 }
 
 type MachineLite = {
@@ -101,7 +94,7 @@ export function MachineEditor({
 
   const inferredType = inferMachineType(serviceCategory);
   const [typeVal, setTypeVal] = useState<string>(
-    machine?.type ?? inferredType ?? "washing_machine",
+    machine?.type ?? inferredType ?? "washing_vertical",
   );
   const [brand, setBrand] = useState<string>(machine?.brand ?? "");
   const [model, setModel] = useState<string>(machine?.model ?? "");
@@ -131,7 +124,7 @@ export function MachineEditor({
   const [useOther, setUseOther] = useState(isOtherBrand);
 
   const startEdit = () => {
-    setTypeVal(machine?.type ?? inferredType ?? "washing_machine");
+    setTypeVal(machine?.type ?? inferredType ?? "washing_vertical");
     setBrand(machine?.brand ?? "");
     setModel(machine?.model ?? "");
     setCode(machine?.code ?? "");
@@ -160,12 +153,7 @@ export function MachineEditor({
             order_id: orderId,
             order_item_id: orderItemId,
             customer_id: customerId,
-            type: typeVal as
-              | "washing_machine"
-              | "air_conditioner"
-              | "mattress"
-              | "sofa"
-              | "other",
+            type: typeVal as (typeof MACHINE_TYPE_KEYS)[number],
             brand: trimBrand,
             model: trimModel,
             code: trimCode,

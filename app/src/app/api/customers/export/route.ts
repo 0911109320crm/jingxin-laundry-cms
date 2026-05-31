@@ -42,11 +42,17 @@ type Row = {
 };
 
 const MACHINE_TYPE: Record<string, string> = {
-  washing_machine: "洗衣機",
-  air_conditioner: "冷氣",
+  washing_vertical: "直立式洗衣機",
+  washing_twin_tub: "雙槽式洗衣機",
+  washing_drum: "滾筒式洗衣機",
+  ac_split: "分離式冷氣",
+  ac_hidden: "吊隱式冷氣",
   mattress: "床墊",
   sofa: "沙發",
   other: "其他",
+  // 舊資料
+  washing_machine: "洗衣機（待分類）",
+  air_conditioner: "冷氣（待分類）",
 };
 
 export async function GET(req: NextRequest) {

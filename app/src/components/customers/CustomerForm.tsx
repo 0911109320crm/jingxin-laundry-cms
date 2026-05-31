@@ -59,7 +59,7 @@ const emptyPhone = {
 };
 
 const emptyMachine = {
-  type: "washing_machine" as const,
+  type: "washing_vertical" as const,
   brand: "",
   model: "",
   sub_type: "",

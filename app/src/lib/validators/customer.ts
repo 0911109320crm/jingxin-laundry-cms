@@ -1,19 +1,39 @@
 import { z } from "zod";
 
+// 機器類型（細分；2026-05-31 與建單分類 / 品牌主檔 category 統一）。
+// 顧客 / 師傅新增機器的下拉就用這組。需先套用 migration 0027（machine_type enum 新值）。
 export const MACHINE_TYPES = [
-  "washing_machine",
-  "air_conditioner",
+  "washing_vertical",
+  "washing_twin_tub",
+  "washing_drum",
+  "ac_split",
+  "ac_hidden",
   "mattress",
   "sofa",
   "other",
 ] as const;
 
-export const MACHINE_TYPE_LABEL: Record<(typeof MACHINE_TYPES)[number], string> = {
-  washing_machine: "洗衣機",
-  air_conditioner: "冷氣",
+// 舊資料相容值：不在新下拉，但顯示與驗證仍要認得（既有機器用這些；無法自動判斷直立/滾筒）。
+export const LEGACY_MACHINE_TYPES = ["washing_machine", "air_conditioner"] as const;
+
+// zod 驗證用：新值 + 舊值都接受 → 編輯舊機器存檔不會被擋。
+export const ALL_MACHINE_TYPES = [
+  ...MACHINE_TYPES,
+  ...LEGACY_MACHINE_TYPES,
+] as const;
+
+export const MACHINE_TYPE_LABEL: Record<string, string> = {
+  washing_vertical: "直立式洗衣機",
+  washing_twin_tub: "雙槽式洗衣機",
+  washing_drum: "滾筒式洗衣機",
+  ac_split: "分離式冷氣",
+  ac_hidden: "吊隱式冷氣",
   mattress: "床墊",
   sofa: "沙發",
   other: "其他",
+  // 舊資料（既有匯入機器）
+  washing_machine: "洗衣機（待分類）",
+  air_conditioner: "冷氣（待分類）",
 };
 
 export const AddressSchema = z.object({
@@ -34,7 +54,8 @@ export const PhoneSchema = z.object({
 
 export const MachineSchema = z.object({
   id: z.string().uuid().optional(),
-  type: z.enum(MACHINE_TYPES),
+  // 接受新細分值 + 舊值（編輯既有機器才不會被擋）
+  type: z.enum(ALL_MACHINE_TYPES),
   brand: z.string().optional().nullable(),
   model: z.string().optional().nullable(),
   sub_type: z.string().optional().nullable(),

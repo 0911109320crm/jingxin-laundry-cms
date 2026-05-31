@@ -4,15 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/dal";
-
-// machines.type 採用 customer.ts 既定的 enum（與 customer 表格欄位相容）
-const MACHINE_TYPES = [
-  "washing_machine",
-  "air_conditioner",
-  "mattress",
-  "sofa",
-  "other",
-] as const;
+import { ALL_MACHINE_TYPES } from "@/lib/validators/customer";
 
 export type Res = { ok: true; machineId?: string } | { ok: false; error: string };
 
@@ -27,7 +19,7 @@ const CreateSchema = z.object({
   order_id: z.string().uuid(),
   order_item_id: z.string().uuid(),
   customer_id: z.string().uuid(),
-  type: z.enum(MACHINE_TYPES),
+  type: z.enum(ALL_MACHINE_TYPES),
   brand: z.string().max(40).nullable(),
   model: z.string().max(80).nullable(),
   code: z.string().max(40).nullable(),
@@ -66,7 +58,7 @@ export async function createMachineForOrderItem(input: {
   order_id: string;
   order_item_id: string;
   customer_id: string;
-  type: (typeof MACHINE_TYPES)[number];
+  type: (typeof ALL_MACHINE_TYPES)[number];
   brand: string | null;
   model: string | null;
   code: string | null;

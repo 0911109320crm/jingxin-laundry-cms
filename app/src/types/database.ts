@@ -10,11 +10,18 @@
 
 export type UserRole = "owner" | "manager" | "technician";
 export type MachineType =
-  | "washing_machine"
-  | "air_conditioner"
+  // 細分（2026-05-31）
+  | "washing_vertical"
+  | "washing_twin_tub"
+  | "washing_drum"
+  | "ac_split"
+  | "ac_hidden"
   | "mattress"
   | "sofa"
-  | "other";
+  | "other"
+  // 舊資料相容
+  | "washing_machine"
+  | "air_conditioner";
 export type AdjustmentType = "discount" | "addon";
 export type OrderStatus =
   | "pending"
