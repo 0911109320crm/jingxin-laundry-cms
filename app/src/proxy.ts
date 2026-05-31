@@ -28,6 +28,28 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // 查帳唯讀帳號（app_metadata.readonly）：只能瀏覽 /customers 與 /orders 的「檢視」頁，
+  // 擋掉會繞過 RLS 的分析頁(dashboard/reports/payroll…)與所有新增/編輯頁。
+  // 資料層另有 RLS 只給成立日後資料 + 寫入封鎖，這裡是第二道防線(縮小可達範圍)。
+  const isReadonly = Boolean(
+    (user.app_metadata as { readonly?: boolean } | undefined)?.readonly,
+  );
+  if (isReadonly) {
+    const viewable =
+      (pathname === "/customers" ||
+        pathname.startsWith("/customers/") ||
+        pathname === "/orders" ||
+        pathname.startsWith("/orders/")) &&
+      !pathname.endsWith("/new") &&
+      !pathname.endsWith("/edit");
+    if (!viewable) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/customers";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
+
   return response;
 }
 

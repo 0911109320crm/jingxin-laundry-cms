@@ -32,7 +32,7 @@ export default async function CustomersPage({
 }: {
   searchParams: SearchParams;
 }) {
-  await requireRole(["owner", "manager"]);
+  const me = await requireRole(["owner", "manager"]);
   const { q = "", county = "", district = "" } = await searchParams;
   const supabase = await createClient();
 
@@ -200,11 +200,13 @@ export default async function CustomersPage({
               匯出 CSV
             </Button>
           </a>
-          <Link href="/customers/new">
-            <Button>
-              <Plus className="h-4 w-4" /> 新增顧客
-            </Button>
-          </Link>
+          {!me.profile.readonly && (
+            <Link href="/customers/new">
+              <Button>
+                <Plus className="h-4 w-4" /> 新增顧客
+              </Button>
+            </Link>
+          )}
         </div>
       </header>
 

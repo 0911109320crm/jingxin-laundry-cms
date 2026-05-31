@@ -114,7 +114,8 @@ export default async function CustomerDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireRole(["owner", "manager"]);
+  const me = await requireRole(["owner", "manager"]);
+  const readonly = Boolean(me.profile.readonly);
   const { id } = await params;
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -275,6 +276,7 @@ export default async function CustomerDetailPage({
                 建檔：{formatDate(customer.created_at)}
               </p>
             </div>
+        {!readonly && (
         <div className="flex shrink-0 gap-2">
           <Link
             href={`/orders/new?customer=${customer.id}&from=customer&cid=${customer.id}`}
@@ -289,6 +291,7 @@ export default async function CustomerDetailPage({
             </Button>
           </Link>
         </div>
+        )}
       </header>
         );
       })()}
@@ -595,13 +598,15 @@ export default async function CustomerDetailPage({
                         <span className="text-xs text-zinc-500">
                           {formatDate(o.service_at ?? o.scheduled_at)}
                         </span>
-                        <Link
-                          href={`/orders/new?clone=${o.id}&from=customer&cid=${customer.id}`}
-                          className="rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-700 hover:bg-brand-100"
-                          title="複製此單為新訂單"
-                        >
-                          複製此單
-                        </Link>
+                        {!readonly && (
+                          <Link
+                            href={`/orders/new?clone=${o.id}&from=customer&cid=${customer.id}`}
+                            className="rounded bg-brand-50 px-2 py-0.5 text-xs text-brand-700 hover:bg-brand-100"
+                            title="複製此單為新訂單"
+                          >
+                            複製此單
+                          </Link>
+                        )}
                       </div>
                     </div>
 

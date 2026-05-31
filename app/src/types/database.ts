@@ -86,4 +86,8 @@ export type UserProfile = {
   phone: string | null;
   role: UserRole;
   active: boolean;
+  /** 查帳唯讀帳號：擋下所有寫入。 */
+  readonly?: boolean;
+  /** 資料日期下限（查帳用）：只看得到此日期(含)以後的顧客/訂單。 */
+  data_floor_date?: string | null;
 };

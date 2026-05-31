@@ -77,7 +77,7 @@ const TABS = [
 ] as const;
 
 export default async function OrdersPage({ searchParams }: { searchParams: SP }) {
-  await requireRole(["owner", "manager"]);
+  const me = await requireRole(["owner", "manager"]);
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const status = sp.status ?? "";
@@ -184,11 +184,13 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
             可按狀態、收款、回繳篩選；廣義搜尋訂單編號 / 備註
           </p>
         </div>
-        <Link href="/orders/new" className="shrink-0">
-          <Button>
-            <Plus className="h-4 w-4" /> 新增訂單
-          </Button>
-        </Link>
+        {!me.profile.readonly && (
+          <Link href="/orders/new" className="shrink-0">
+            <Button>
+              <Plus className="h-4 w-4" /> 新增訂單
+            </Button>
+          </Link>
+        )}
       </header>
 
       {/* Status tabs */}
