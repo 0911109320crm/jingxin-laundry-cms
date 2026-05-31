@@ -25,6 +25,77 @@ export type SearchResults = {
   orders: OrderResult[];
 };
 
+/**
+ * 快速搜尋：只查「電話 + 地址」(都有 trigram 索引 → 快)，供邊打邊即時用。
+ * 其餘欄位(姓名/編號/訂單/機器/保固單)交給 globalSearchAction(完整搜尋、按 Enter)。
+ */
+export async function quickSearchAction(
+  query: string,
+): Promise<CustomerResult[]> {
+  await requireAuth();
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+
+  const supabase = await createClient();
+  const like = `%${trimmed}%`;
+  const digits = trimmed.replace(/\D/g, "");
+
+  const [{ data: phoneRows }, { data: addrRows }] = await Promise.all([
+    digits.length >= 3
+      ? supabase
+          .from("customer_phones")
+          .select("phone, label, customers!inner(id, code, name, phone)")
+          .ilike("phone", `%${digits}%`)
+          .limit(12)
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("customer_addresses")
+      .select(
+        "address, county, district, label, customers!inner(id, code, name, phone)",
+      )
+      .or(`address.ilike.${like},district.ilike.${like}`)
+      .limit(12),
+  ]);
+
+  const map = new Map<string, CustomerResult>();
+  for (const row of (phoneRows ?? []) as unknown as Array<{
+    phone: string;
+    label: string | null;
+    customers: { id: string; code: string; name: string; phone: string } | null;
+  }>) {
+    const c = row.customers;
+    if (!c || map.has(c.id)) continue;
+    if (map.size >= 10) break;
+    map.set(c.id, {
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      phone: c.phone,
+      matched_address: `電話 ${row.phone}${row.label ? `（${row.label}）` : ""}`,
+    });
+  }
+  for (const row of (addrRows ?? []) as unknown as Array<{
+    address: string;
+    county: string;
+    district: string;
+    label: string | null;
+    customers: { id: string; code: string; name: string; phone: string } | null;
+  }>) {
+    const c = row.customers;
+    if (!c) continue;
+    if (map.has(c.id)) continue;
+    if (map.size >= 10) break;
+    map.set(c.id, {
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      phone: c.phone,
+      matched_address: `${row.county}${row.district} ${row.address}${row.label ? ` (${row.label})` : ""}`,
+    });
+  }
+  return Array.from(map.values());
+}
+
 export async function globalSearchAction(query: string): Promise<SearchResults> {
   await requireAuth();
 
