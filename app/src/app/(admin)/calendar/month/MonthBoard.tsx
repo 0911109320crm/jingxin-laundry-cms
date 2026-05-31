@@ -234,29 +234,17 @@ function LeaveButtons({
   disabled: boolean;
   onSet: (period: LeavePeriod) => void;
 }) {
-  // 上午有案→只能下午休；下午有案→只能上午休；都空→三種都可；都有案→排滿不顯示
-  const options: LeavePeriod[] = [];
-  if (!amBusy && !pmBusy) options.push("full", "am", "pm");
-  else if (amBusy && !pmBusy) options.push("pm");
-  else if (!amBusy && pmBusy) options.push("am");
-
-  if (options.length === 0) {
-    return <p className="text-xs text-zinc-400">上下午皆已派案</p>;
-  }
+  // 簡化：只留「全日休」。當天若已有派案就不提供(不能既派案又全日休)。
+  if (amBusy || pmBusy) return null;
 
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {options.map((p) => (
-        <button
-          key={p}
-          type="button"
-          disabled={disabled}
-          onClick={() => onSet(p)}
-          className="rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
-        >
-          {LEAVE_LABEL[p]}
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onSet("full")}
+      className="rounded-md border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+    >
+      全日休
+    </button>
   );
 }
