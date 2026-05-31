@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, ChevronRight, Star } from "lucide-react";
+import { CalendarDays, MapPin, ChevronRight, Star, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/dal";
 import { redirect } from "next/navigation";
@@ -149,6 +149,22 @@ export default async function StaffHome() {
 
   return (
     <div className="p-4 space-y-4">
+      {me.profile.can_view_all && (
+        <Link href="/staff/all">
+          <Card className="border-sky-300 bg-sky-50 transition-shadow active:shadow-md">
+            <CardBody className="flex items-center justify-between gap-2 py-3">
+              <div className="flex items-center gap-2">
+                <Eye className="h-5 w-5 text-sky-600" />
+                <span className="text-sm font-medium text-sky-900">
+                  查看所有師傅排班
+                </span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-sky-400" />
+            </CardBody>
+          </Card>
+        </Link>
+      )}
+
       {pendingCashCount > 0 && (
         <Card className="border-amber-300 bg-amber-50">
           <CardBody className="flex items-center justify-between gap-2">

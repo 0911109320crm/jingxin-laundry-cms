@@ -90,4 +90,6 @@ export type UserProfile = {
   readonly?: boolean;
   /** 資料日期下限（查帳用）：只看得到此日期(含)以後的顧客/訂單。 */
   data_floor_date?: string | null;
+  /** 師傅可唯讀檢視所有師傅排班（給身為老闆的師傅）。 */
+  can_view_all?: boolean;
 };
