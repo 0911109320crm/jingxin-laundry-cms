@@ -57,3 +57,18 @@ export function computeCustomerStats(
     avgCycleMonths,
   };
 }
+
+/**
+ * 把月數轉成易讀的「X 年 Y 個月」。
+ * 例：77 →「6 年 5 個月」、12 →「1 年」、8 →「8 個月」、null → 自訂 fallback。
+ */
+export function formatMonths(
+  months: number | null | undefined,
+  fallback = "—",
+): string {
+  if (months == null) return fallback;
+  if (months < 12) return `${months} 個月`;
+  const y = Math.floor(months / 12);
+  const m = months % 12;
+  return m === 0 ? `${y} 年` : `${y} 年 ${m} 個月`;
+}

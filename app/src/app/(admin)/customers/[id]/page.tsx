@@ -15,7 +15,7 @@ import { requireRole } from "@/lib/dal";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatDate, formatNTD } from "@/lib/utils";
-import { computeCustomerStats } from "@/lib/customer-stats";
+import { computeCustomerStats, formatMonths } from "@/lib/customer-stats";
 import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
 import {
   StatusBadge,
@@ -321,7 +321,7 @@ export default async function CustomerDetailPage({
                       : "text-zinc-900"
               }`}
             >
-              {monthsSinceLast == null ? "—" : `${monthsSinceLast} 個月`}
+              {formatMonths(monthsSinceLast)}
             </p>
             <p className="text-xs text-zinc-400">
               {lastServiceAt ? formatDate(lastServiceAt) : "尚無完工紀錄"}
@@ -332,7 +332,7 @@ export default async function CustomerDetailPage({
           <CardBody className="py-3">
             <p className="text-xs text-zinc-500">平均週期</p>
             <p className="text-xl font-bold text-zinc-900">
-              {avgCycleMonths == null ? "—" : `${avgCycleMonths} 個月`}
+              {formatMonths(avgCycleMonths)}
             </p>
             <p className="text-xs text-zinc-400">≥2 次完工才計算</p>
           </CardBody>

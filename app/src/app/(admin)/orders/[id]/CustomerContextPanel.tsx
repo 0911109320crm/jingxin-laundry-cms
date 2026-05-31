@@ -3,7 +3,7 @@ import { ArrowRight, Phone, Wrench, History, MapPin } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/orders/StatusBadges";
 import { formatNTD } from "@/lib/utils";
-import { computeCustomerStats } from "@/lib/customer-stats";
+import { computeCustomerStats, formatMonths } from "@/lib/customer-stats";
 import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
 import type { OrderInput } from "@/lib/validators/order";
 import type { MachineType } from "@/types/database";
@@ -163,15 +163,13 @@ export function CustomerContextPanel({
             <p className="text-sm font-semibold text-zinc-900">
               {stats.monthsSinceLast == null
                 ? "—"
-                : `${stats.monthsSinceLast} 個月前`}
+                : `${formatMonths(stats.monthsSinceLast)}前`}
             </p>
           </div>
           <div>
             <p className="text-zinc-400">平均週期</p>
             <p className="text-sm font-semibold text-zinc-900">
-              {stats.avgCycleMonths == null
-                ? "—"
-                : `${stats.avgCycleMonths} 個月`}
+              {formatMonths(stats.avgCycleMonths)}
             </p>
           </div>
         </div>
