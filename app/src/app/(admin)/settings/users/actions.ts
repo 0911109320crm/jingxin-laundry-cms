@@ -89,6 +89,12 @@ export async function updateUser(id: string, fd: FormData): Promise<Res> {
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
 
+  // 新密碼：留空 = 不改；有填則必須 ≥6 字（讓老闆娘在「編輯」就能直接改密碼）
+  const newPassword = String(fd.get("password") ?? "").trim();
+  if (newPassword && newPassword.length < 6) {
+    return { ok: false, error: "新密碼至少 6 字（不改請留空）" };
+  }
+
   const admin = createAdminClient();
   const { error } = await admin
     .from("user_profiles")
@@ -96,11 +102,18 @@ export async function updateUser(id: string, fd: FormData): Promise<Res> {
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
 
+  if (newPassword) {
+    const { error: pwErr } = await admin.auth.admin.updateUserById(id, {
+      password: newPassword,
+    });
+    if (pwErr) return { ok: false, error: `密碼更新失敗：${pwErr.message}` };
+  }
+
   await logAudit({
     action: "user.update",
     target_type: "user",
     target_id: id,
-    payload: parsed.data,
+    payload: { ...parsed.data, password_changed: !!newPassword },
   });
 
   revalidatePath("/settings/users");
