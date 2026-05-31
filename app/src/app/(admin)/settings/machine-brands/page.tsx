@@ -70,7 +70,7 @@ export default async function MachineBrandsSettingsPage({
         <CardHeader>
           <CardTitle>品牌清單（{brands.length}）</CardTitle>
           <p className="text-xs font-normal text-zinc-500">
-            用 ↑ ↓ 調整顯示順序，常用品牌往上移，師傅選單就會優先出現
+            左邊數字＝顯示順序，直接改數字（按 Enter）即可把常用品牌排到前面，師傅選單就會優先出現
           </p>
         </CardHeader>
         <CardBody>
@@ -80,10 +80,10 @@ export default async function MachineBrandsSettingsPage({
             <div className="mx-auto max-w-2xl space-y-2">
               {brands.map((b, i) => (
                 <BrandRow
-                  key={b.id}
+                  key={`${b.id}-${b.sort_order}`}
                   brand={b}
-                  isFirst={i === 0}
-                  isLast={i === brands.length - 1}
+                  position={i + 1}
+                  total={brands.length}
                 />
               ))}
             </div>

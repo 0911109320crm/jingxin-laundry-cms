@@ -73,50 +73,48 @@ export async function updateBrand(id: string, formData: FormData): Promise<Res> 
 }
 
 /**
- * 上移 / 下移品牌顯示順序（與相鄰品牌交換 sort_order）。
- * 老闆娘用 ↑↓ 調順序、不用看數字；「(未知)」(99990)排除在外永遠墊底。
+ * 直接把某品牌移到第 N 順位（老闆娘輸入 1、2、3…）。
+ * 把該分類所有品牌(排除「(未知)」)依目前順序取出，移動該筆到 newPos，
+ * 再重新編號 sort_order=10,20,30…；「(未知)」維持 99990 墊底。
  */
-export async function moveBrand(
-  id: string,
-  direction: "up" | "down",
-): Promise<Res> {
+export async function reorderBrand(id: string, newPos: number): Promise<Res> {
   await requireRole(["owner", "manager"]);
+  if (!Number.isFinite(newPos)) return { ok: false, error: "順序須為數字" };
   const supabase = await createClient();
 
   const { data: cur } = await supabase
     .from("machine_brands")
-    .select("id, category, sort_order")
+    .select("id, category")
     .eq("id", id)
     .single();
-  const c = cur as { id: string; category: string; sort_order: number } | null;
+  const c = cur as { id: string; category: string } | null;
   if (!c) return { ok: false, error: "找不到品牌" };
 
-  let q = supabase
+  const { data: rows } = await supabase
     .from("machine_brands")
-    .select("id, sort_order")
+    .select("id")
     .eq("category", c.category)
     .neq("name", "(未知)")
-    .limit(1);
-  q =
-    direction === "up"
-      ? q.lt("sort_order", c.sort_order).order("sort_order", { ascending: false })
-      : q.gt("sort_order", c.sort_order).order("sort_order", { ascending: true });
-  const { data: adjRows } = await q;
-  const adj = (adjRows as { id: string; sort_order: number }[] | null)?.[0];
-  if (!adj) return { ok: true }; // 已在頂/底，不動作
+    .order("sort_order");
+  const ids = ((rows as { id: string }[] | null) ?? []).map((r) => r.id);
 
-  // 交換兩者的 sort_order（sort_order 無唯一約束，可安全交換）
-  const e1 = await supabase
-    .from("machine_brands")
-    .update({ sort_order: adj.sort_order })
-    .eq("id", c.id);
-  const e2 = await supabase
-    .from("machine_brands")
-    .update({ sort_order: c.sort_order })
-    .eq("id", adj.id);
-  if (e1.error || e2.error)
-    return { ok: false, error: (e1.error ?? e2.error)!.message };
+  const from = ids.indexOf(id);
+  if (from === -1) return { ok: false, error: "找不到品牌" };
+  // 目標索引（0-based），夾在 0 ~ 最後
+  const to = Math.min(Math.max(Math.round(newPos) - 1, 0), ids.length - 1);
+  if (to === from) return { ok: true };
 
+  ids.splice(from, 1);
+  ids.splice(to, 0, id);
+
+  // 重新編號（只更新順序真的有變的，省寫入）
+  for (let i = 0; i < ids.length; i++) {
+    const { error } = await supabase
+      .from("machine_brands")
+      .update({ sort_order: (i + 1) * 10 })
+      .eq("id", ids[i]);
+    if (error) return { ok: false, error: error.message };
+  }
   revalidatePath("/settings/machine-brands");
   return { ok: true };
 }
