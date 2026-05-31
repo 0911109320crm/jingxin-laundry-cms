@@ -37,8 +37,8 @@ const items: NavItem[] = [
   { href: "/reports", label: "營業報表", icon: BarChart3 },
   { href: "/payroll", label: "師傅薪資", icon: Wallet },
   { href: "/scores", label: "促銷積分排行", icon: Star },
-  { href: "/manager", label: "老闆娘 PWA", icon: Smartphone },
-  { href: "/staff", label: "師傅 PWA", icon: HardHat },
+  { href: "/demo/manager", label: "老闆娘 PWA", icon: Smartphone },
+  { href: "/demo/pwa", label: "師傅 PWA", icon: HardHat },
   { href: "/settings", label: "系統設定", icon: Settings },
 ];
 
@@ -71,6 +71,7 @@ export function Sidebar({ userName }: { userName: string }) {
   );
 
   function openSearch() {
+    setOpen(false); // 若是從手機抽屜點的，先關抽屜再開搜尋
     window.dispatchEvent(new CustomEvent("open-global-search"));
   }
 
@@ -79,11 +80,13 @@ export function Sidebar({ userName }: { userName: string }) {
       <button
         type="button"
         onClick={openSearch}
-        className="flex w-full items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100 transition-colors"
+        className="flex w-full items-center gap-2 rounded-lg border border-brand-400 bg-brand-50 px-3 py-2.5 text-sm font-semibold text-brand-700 shadow-sm transition-colors hover:bg-brand-100"
       >
-        <Search className="h-3.5 w-3.5" />
-        <span className="flex-1 text-left">搜尋</span>
-        <kbd className="rounded border border-zinc-200 bg-white px-1 py-0.5 text-[10px] font-mono">⌘K</kbd>
+        <Search className="h-4 w-4 shrink-0" />
+        <span className="flex-1 text-left">搜尋客戶 / 訂單</span>
+        <kbd className="hidden rounded border border-brand-200 bg-white px-1 py-0.5 text-[10px] font-mono text-brand-500 lg:block">
+          ⌘K
+        </kbd>
       </button>
     </div>
   );
@@ -114,14 +117,25 @@ export function Sidebar({ userName }: { userName: string }) {
           <p className="truncate text-sm font-bold text-zinc-900">淨新清潔工坊</p>
           <p className="truncate text-xs text-zinc-500">{userName}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="shrink-0 rounded-lg p-2 text-zinc-700 hover:bg-zinc-100"
-          aria-label="開啟選單"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={openSearch}
+            className="flex items-center gap-1 rounded-lg border border-brand-400 bg-brand-50 px-2.5 py-2 text-sm font-semibold text-brand-700 active:bg-brand-100"
+            aria-label="搜尋"
+          >
+            <Search className="h-4 w-4" />
+            搜尋
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="rounded-lg p-2 text-zinc-700 hover:bg-zinc-100"
+            aria-label="開啟選單"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       {/* Mobile drawer */}
@@ -146,6 +160,7 @@ export function Sidebar({ userName }: { userName: string }) {
                 <X className="h-5 w-5" />
               </button>
             </div>
+            <div className="pt-2">{SearchChip}</div>
             {NavList}
             {Footer}
           </aside>

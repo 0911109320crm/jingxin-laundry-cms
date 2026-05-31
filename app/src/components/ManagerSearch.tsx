@@ -76,7 +76,7 @@ export function ManagerSearch() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="快速搜尋"
-        className="flex items-center gap-1 rounded-lg bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 active:bg-brand-100"
+        className="flex items-center gap-1 rounded-lg border border-brand-400 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 shadow-sm active:bg-brand-100"
       >
         <Search className="h-4 w-4" />
         搜尋
