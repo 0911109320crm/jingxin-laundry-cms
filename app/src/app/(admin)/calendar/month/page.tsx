@@ -99,6 +99,7 @@ export default async function CalendarMonthPage({ searchParams }: { searchParams
         .from("orders")
         .select(
           `id, order_code, scheduled_at, status, duration_minutes,
+           customer:customers(name),
            address:customer_addresses(county, district),
            items:order_items(technician_id, service:service_items(name))`,
         )
@@ -120,6 +121,7 @@ export default async function CalendarMonthPage({ searchParams }: { searchParams
       scheduled_at: string;
       status: string;
       duration_minutes: number | null;
+      customer: { name: string } | null;
       address: { county: string; district: string } | null;
       items: { technician_id: string | null; service: { name: string } | null }[];
     };
@@ -135,6 +137,7 @@ export default async function CalendarMonthPage({ searchParams }: { searchParams
       cell.assignments.push({
         orderId: o.id,
         timeLabel: label,
+        customerName: o.customer?.name ?? "—",
         services: services.join("、") || "未填項目",
         area: o.address ? `${o.address.county}${o.address.district}` : "—",
         status: o.status,

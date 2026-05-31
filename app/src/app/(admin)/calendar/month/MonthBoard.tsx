@@ -15,6 +15,7 @@ export type TechOpt = { id: string; name: string };
 export type Assignment = {
   orderId: string;
   timeLabel: string;
+  customerName: string;
   services: string;
   area: string;
   status: string;
@@ -154,7 +155,10 @@ export function MonthBoard({
                             <span className="font-mono font-semibold text-brand-700">
                               {a.timeLabel}
                             </span>
-                            <span className="min-w-0 flex-1 truncate text-zinc-800">
+                            <span className="shrink-0 font-medium text-zinc-900">
+                              {a.customerName}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-zinc-600">
                               {a.services}
                             </span>
                           </div>
