@@ -19,6 +19,7 @@ import {
   Search,
   Star,
   Smartphone,
+  HardHat,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ const items: NavItem[] = [
   { href: "/payroll", label: "師傅薪資", icon: Wallet },
   { href: "/scores", label: "促銷積分排行", icon: Star },
   { href: "/manager", label: "老闆娘 PWA", icon: Smartphone },
+  { href: "/staff", label: "師傅 PWA", icon: HardHat },
   { href: "/settings", label: "系統設定", icon: Settings },
 ];
 
