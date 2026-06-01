@@ -1,16 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { LogOut } from "lucide-react";
 
 export function PhoneFrame({
   userName,
   previewSrc = "/staff",
   previewName = null,
+  technicians = [],
+  activeTechId = null,
 }: {
   userName: string;
   previewSrc?: string;
   previewName?: string | null;
+  technicians?: { id: string; name: string }[];
+  activeTechId?: string | null;
 }) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -20,7 +25,35 @@ export function PhoneFrame({
   const timeLabel = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-start bg-zinc-900 px-4 py-8 text-zinc-100 lg:flex-row lg:items-center lg:justify-center lg:gap-10">
+    <div className="min-h-screen bg-zinc-900 px-4 py-8 text-zinc-100">
+      {/* 師傅切換列（這頁沒有後台側邊欄，切換靠這裡） */}
+      {technicians.length > 0 && (
+        <div className="mx-auto mb-6 w-full max-w-4xl">
+          <p className="mb-2 text-center text-sm font-medium text-zinc-300 lg:text-left">
+            切換預覽師傅
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 lg:justify-start">
+            {technicians.map((t) => {
+              const active = t.id === activeTechId;
+              return (
+                <Link
+                  key={t.id}
+                  href={`/demo/pwa?tech=${t.id}`}
+                  className={
+                    active
+                      ? "rounded-full bg-brand-500 px-4 py-1.5 text-sm font-medium text-white"
+                      : "rounded-full border border-zinc-700 bg-zinc-800 px-4 py-1.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-700"
+                  }
+                >
+                  {t.name}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col items-center justify-start lg:flex-row lg:items-center lg:justify-center lg:gap-10">
       {/* Phone frame */}
       <div className="relative">
         {/* Outer shell */}
@@ -144,6 +177,7 @@ export function PhoneFrame({
           <LogOut className="h-4 w-4" /> 回管理後台
         </a>
       </aside>
+      </div>
     </div>
   );
 }

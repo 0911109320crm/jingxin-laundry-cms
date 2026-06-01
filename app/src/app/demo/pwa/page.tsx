@@ -17,16 +17,18 @@ export default async function DemoPWAPage({
   const sp = await searchParams;
   const tech = typeof sp.tech === "string" ? sp.tech : null;
 
-  let previewName: string | null = null;
-  if (tech) {
-    const { createAdminClient } = await import("@/lib/supabase/admin");
-    const { data } = await createAdminClient()
-      .from("user_profiles")
-      .select("name")
-      .eq("id", tech)
-      .maybeSingle();
-    previewName = (data as { name: string } | null)?.name ?? null;
-  }
+  // 師傅清單（頁面上的切換列用，因為這頁沒有後台側邊欄）
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { data: techRows } = await admin
+    .from("user_profiles")
+    .select("id, name")
+    .eq("role", "technician")
+    .eq("active", true)
+    .order("name");
+  const technicians = (techRows as { id: string; name: string }[] | null) ?? [];
+  const previewName =
+    (tech && technicians.find((t) => t.id === tech)?.name) || null;
 
   // 預覽指定師傅 → iframe 載入 /staff?as=<id>（越權防護在 /staff 內以登入者角色把關）
   const previewSrc = tech ? `/staff?as=${encodeURIComponent(tech)}` : "/staff";
@@ -36,6 +38,8 @@ export default async function DemoPWAPage({
       userName={me.profile.name}
       previewSrc={previewSrc}
       previewName={previewName}
+      technicians={technicians}
+      activeTechId={tech}
     />
   );
 }
