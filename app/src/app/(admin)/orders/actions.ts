@@ -476,12 +476,17 @@ export async function confirmMyItemsAction(orderId: string): Promise<Res> {
   }
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
-  const { error } = await admin
+  let q = admin
     .from("order_items")
     .update({ confirmed: true })
     .eq("order_id", orderId)
-    .eq("technician_id", me.id)
     .eq("excluded", false);
+  // 師傅：只確認「指派給我」+「沒指派師傅(現場兜底)」的品項；
+  // 老闆娘/manager：確認整單(代為放行，避免有品項沒人能確認導致收款卡死)
+  if (me.profile.role === "technician") {
+    q = q.or(`technician_id.eq.${me.id},technician_id.is.null`);
+  }
+  const { error } = await q;
   if (error) return { ok: false, error: error.message };
   revalidatePath("/staff");
   revalidatePath(`/staff/order/${orderId}`);

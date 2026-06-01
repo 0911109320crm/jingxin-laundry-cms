@@ -209,9 +209,14 @@ export default async function StaffOrderPage({
   );
 
   // ── 多師傅同單：金額確認狀態 + 收款人歸屬 ──
-  // 我負責、且未標記不服務的品項
+  // 我可確認的品項（未標記不服務）：指派給我的、沒指派師傅的(現場師傅兜底)；
+  // 老闆娘/manager 檢視時可確認整單(避免有品項沒人能確認 → 收款閘門卡死)
+  const isPrivileged =
+    me.profile.role === "owner" || me.profile.role === "manager";
   const myItems = o.items.filter(
-    (it) => it.technician_id === me.id && !it.excluded,
+    (it) =>
+      !it.excluded &&
+      (isPrivileged || it.technician_id === me.id || it.technician_id === null),
   );
   const hasMyItems = myItems.length > 0;
   // 我這邊是否都確認了（沒有負責品項也視為 OK）

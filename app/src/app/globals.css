@@ -28,6 +28,15 @@
   textarea {
     @apply text-zinc-900;
   }
+  /* 手機/平板（PWA 使用情境）一律鎖死橫向捲動，頁面寬度適配螢幕、只允許上下滑。
+     桌機後台(>=1024px)不套用，保留月曆等需要橫向的版面。 */
+  @media (max-width: 1023px) {
+    html,
+    body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+  }
 }
 
 /* FullCalendar custom tweaks */
