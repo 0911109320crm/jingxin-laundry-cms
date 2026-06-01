@@ -385,19 +385,6 @@ export default async function StaffHome({
                                 )}
                               </p>
 
-                              {o.items.length > 0 && (
-                                <p className="truncate text-sm text-zinc-700">
-                                  {o.items
-                                    .map((it) =>
-                                      it.service?.name
-                                        ? `${it.service.name}${it.quantity > 1 ? `×${it.quantity}` : ""}`
-                                        : null,
-                                    )
-                                    .filter(Boolean)
-                                    .join("、")}
-                                </p>
-                              )}
-
                               {/* 地址：一整行不斷行 */}
                               {o.address && (
                                 <p className="flex items-center gap-1 text-sm text-zinc-600">
@@ -410,13 +397,25 @@ export default async function StaffHome({
                                 </p>
                               )}
 
-                              {/* 徽章列（金額已移到上方，這裡只留狀態） */}
-                              <div className="flex flex-wrap gap-1">
-                                <StatusBadge value={o.status} />
-                                <PaymentBadge value={o.payment_method} />
-                                {o.settlement_status !== "not_required" && (
-                                  <SettlementBadge value={o.settlement_status} />
-                                )}
+                              {/* 項目(左, truncate) + 狀態徽章(右) 同一列 */}
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="min-w-0 flex-1 truncate text-sm text-zinc-700">
+                                  {o.items
+                                    .map((it) =>
+                                      it.service?.name
+                                        ? `${it.service.name}${it.quantity > 1 ? `×${it.quantity}` : ""}`
+                                        : null,
+                                    )
+                                    .filter(Boolean)
+                                    .join("、")}
+                                </span>
+                                <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                                  <StatusBadge value={o.status} />
+                                  <PaymentBadge value={o.payment_method} />
+                                  {o.settlement_status !== "not_required" && (
+                                    <SettlementBadge value={o.settlement_status} />
+                                  )}
+                                </div>
                               </div>
                             </CardBody>
                           </Card>
