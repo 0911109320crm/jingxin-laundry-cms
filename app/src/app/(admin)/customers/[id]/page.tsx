@@ -24,6 +24,7 @@ import {
 } from "@/components/orders/StatusBadges";
 import type { MachineType } from "@/types/database";
 import type { OrderInput } from "@/lib/validators/order";
+import { CustomerAddresses } from "./CustomerAddresses";
 
 type CustomerDetail = {
   id: string;
@@ -48,6 +49,7 @@ type CustomerDetail = {
     address: string;
     label: string | null;
     is_default: boolean;
+    merged_into_id: string | null;
   }[];
   machines: {
     id: string;
@@ -77,6 +79,7 @@ type OrderRow = {
   settlement_status: "pending" | "settled" | "not_required";
   total: number;
   note: string | null;
+  address_id: string | null;
   cancellation_reason: string | null;
   service_tags: string[] | null;
   service_notes: string | null;
@@ -127,7 +130,7 @@ export default async function CustomerDetailPage({
         `id, code, name, phone, note, created_at, referrer_id,
          source:customer_sources(name),
          phones:customer_phones(id, phone, label, is_primary, sort_order),
-         addresses:customer_addresses(id, county, district, address, label, is_default),
+         addresses:customer_addresses(id, county, district, address, label, is_default, merged_into_id),
          machines(id, type, brand, model, sub_type, note, address_id)`,
       )
       .eq("id", id)
@@ -137,7 +140,7 @@ export default async function CustomerDetailPage({
       .select(
         `id, order_code, scheduled_at, service_at, status, payment_method,
          settlement_status, total, note, cancellation_reason,
-         service_tags, service_notes,
+         service_tags, service_notes, address_id,
          address:customer_addresses(county, district, address, label),
          items:order_items(
            id, technician_id, quantity, unit_price, tag, note,
@@ -206,6 +209,27 @@ export default async function CustomerDetailPage({
     monthsSinceLast,
     avgCycleMonths,
   } = computeCustomerStats(orders);
+
+  // 地址：濾掉已合併(軟刪除)的；算每筆地址的訂單/機器數，供合併 UI 用
+  const liveAddresses = customer.addresses.filter((a) => !a.merged_into_id);
+  const orderCountByAddr = new Map<string, number>();
+  for (const o of orders) {
+    if (o.address_id) orderCountByAddr.set(o.address_id, (orderCountByAddr.get(o.address_id) ?? 0) + 1);
+  }
+  const machineCountByAddr = new Map<string, number>();
+  for (const m of customer.machines) {
+    if (m.address_id) machineCountByAddr.set(m.address_id, (machineCountByAddr.get(m.address_id) ?? 0) + 1);
+  }
+  const addrItems = liveAddresses.map((a) => ({
+    id: a.id,
+    county: a.county,
+    district: a.district,
+    address: a.address,
+    label: a.label,
+    is_default: a.is_default,
+    orderCount: orderCountByAddr.get(a.id) ?? 0,
+    machineCount: machineCountByAddr.get(a.id) ?? 0,
+  }));
 
   return (
     <div className="p-6 space-y-4">
@@ -374,43 +398,14 @@ export default async function CustomerDetailPage({
         )}
         <Card>
           <CardHeader>
-            <CardTitle>地址（{customer.addresses.length} 筆）</CardTitle>
+            <CardTitle>地址（{liveAddresses.length} 筆）</CardTitle>
           </CardHeader>
           <CardBody>
-            {customer.addresses.length === 0 ? (
-              <p className="text-sm text-zinc-500">尚無地址</p>
-            ) : (
-              <div
-                className={`grid grid-cols-1 gap-2 ${
-                  customer.note ? "" : "md:grid-cols-2"
-                }`}
-              >
-                {customer.addresses.map((a) => (
-                  <div
-                    key={a.id}
-                    className="rounded-lg border border-zinc-200 p-2.5 text-sm"
-                  >
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
-                      <span className="font-medium">
-                        {a.county} {a.district}
-                      </span>
-                      {a.label && (
-                        <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600">
-                          {a.label}
-                        </span>
-                      )}
-                      {a.is_default && (
-                        <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs text-brand-700">
-                          預設
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-0.5 text-zinc-700">{a.address}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            <CustomerAddresses
+              customerId={customer.id}
+              addresses={addrItems}
+              readonly={readonly}
+            />
           </CardBody>
         </Card>
 
@@ -434,14 +429,14 @@ export default async function CustomerDetailPage({
                   groups.get(key)!.push(m);
                 }
                 const addressMap = new Map(
-                  customer.addresses.map((a) => [a.id, a]),
+                  liveAddresses.map((a) => [a.id, a]),
                 );
-                // 顯示順序：先按 customer.addresses 順序，最後是未指定
+                // 顯示順序：先按地址順序，最後是未指定
                 const orderedKeys: (string | null)[] = [
-                  ...customer.addresses.map((a) => a.id).filter((aid) => groups.has(aid)),
+                  ...liveAddresses.map((a) => a.id).filter((aid) => groups.has(aid)),
                   ...(groups.has(null) ? [null] : []),
                 ];
-                const showHeading = customer.addresses.length >= 2;
+                const showHeading = liveAddresses.length >= 2;
                 return (
                   <div className="space-y-3">
                     {orderedKeys.map((aid) => {

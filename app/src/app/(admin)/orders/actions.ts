@@ -18,6 +18,7 @@ export async function getCustomerContext(customerId: string) {
       .from("customer_addresses")
       .select("id, county, district, address, label, is_default")
       .eq("customer_id", customerId)
+      .is("merged_into_id", null)
       .order("is_default", { ascending: false }),
     supabase
       .from("machines")

@@ -11,6 +11,77 @@ import { logAudit } from "@/lib/audit";
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 /**
+ * 合併重複地址：把 mergeIds 的訂單/機器改指到 keepId，再把 mergeIds 軟刪除(可復原)。
+ * 歷史訂單不掉(只是改指到保留地址)；被併地址標記 merged_into_id、不真刪。
+ */
+export async function mergeAddressesAction(
+  customerId: string,
+  keepId: string,
+  mergeIds: string[],
+): Promise<{ ok: true; movedOrders: number } | { ok: false; error: string }> {
+  const me = await requireRole(["owner", "manager"]);
+  const ids = Array.from(new Set(mergeIds.filter((x) => x && x !== keepId)));
+  if (!keepId || ids.length === 0) {
+    return { ok: false, error: "請選擇要保留的地址與至少一筆要併入的地址" };
+  }
+  const supabase = await createClient();
+
+  // 驗證：保留地址 + 併入地址都屬於此客戶、且尚未被合併
+  const { data: valid } = await supabase
+    .from("customer_addresses")
+    .select("id")
+    .eq("customer_id", customerId)
+    .is("merged_into_id", null)
+    .in("id", [keepId, ...ids]);
+  const validIds = new Set(((valid as { id: string }[] | null) ?? []).map((r) => r.id));
+  if (!validIds.has(keepId) || !ids.every((i) => validIds.has(i))) {
+    return { ok: false, error: "地址資料已變動，請重新整理後再試" };
+  }
+
+  // 先算會搬動幾筆訂單(供回報/稽核)
+  const { count: movedOrders } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .in("address_id", ids);
+
+  // 1) 訂單改指到保留地址
+  const { error: oErr } = await supabase
+    .from("orders")
+    .update({ address_id: keepId })
+    .in("address_id", ids);
+  if (oErr) return { ok: false, error: `訂單改指失敗：${oErr.message}` };
+
+  // 2) 機器改指到保留地址
+  const { error: mErr } = await supabase
+    .from("machines")
+    .update({ address_id: keepId })
+    .in("address_id", ids);
+  if (mErr) return { ok: false, error: `機器改指失敗：${mErr.message}` };
+
+  // 3) 軟刪除被併地址(可復原)
+  const { error: aErr } = await supabase
+    .from("customer_addresses")
+    .update({
+      merged_into_id: keepId,
+      merged_at: new Date().toISOString(),
+      merged_by: me.id,
+    })
+    .in("id", ids);
+  if (aErr) return { ok: false, error: `合併失敗：${aErr.message}` };
+
+  await logAudit({
+    action: "customer.merge_addresses",
+    target_type: "customer",
+    target_id: customerId,
+    payload: { keep_id: keepId, merged_ids: ids, moved_orders: movedOrders ?? 0 },
+  });
+
+  revalidatePath(`/customers/${customerId}`);
+  revalidatePath(`/customers/${customerId}/edit`);
+  return { ok: true, movedOrders: movedOrders ?? 0 };
+}
+
+/**
  * 產生下一個顧客編號（C00001、C00002...）。
  *
  * 規則：

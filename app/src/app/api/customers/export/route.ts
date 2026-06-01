@@ -32,6 +32,7 @@ type Row = {
     district: string;
     address: string;
     is_default: boolean;
+    merged_into_id: string | null;
   }[];
   machines: {
     type: string;
@@ -73,7 +74,7 @@ export async function GET(req: NextRequest) {
       `id, code, name, phone, note, created_at,
        source:customer_sources(name),
        phones:customer_phones(phone, label, is_primary, sort_order),
-       addresses:customer_addresses(county, district, address, is_default),
+       addresses:customer_addresses(county, district, address, is_default, merged_into_id),
        machines(type, brand, model, sub_type)`,
     )
     .order("created_at", { ascending: false })
@@ -115,6 +116,7 @@ export async function GET(req: NextRequest) {
     rows = rows.filter((c) =>
       c.addresses.some(
         (a) =>
+          !a.merged_into_id &&
           (!county || a.county === county) &&
           (!district || a.district === district),
       ),
@@ -137,8 +139,9 @@ export async function GET(req: NextRequest) {
 
   const lines: string[] = [header.map(csvEscape).join(",")];
   for (const c of rows) {
+    const liveAddresses = c.addresses.filter((a) => !a.merged_into_id);
     const main =
-      c.addresses.find((a) => a.is_default) ?? c.addresses[0] ?? null;
+      liveAddresses.find((a) => a.is_default) ?? liveAddresses[0] ?? null;
     const machineLabel = c.machines
       .map(
         (m) =>

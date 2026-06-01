@@ -28,7 +28,7 @@ type EditData = {
     is_primary: boolean;
     sort_order: number;
   }[];
-  addresses: (AddressInput & { id: string })[];
+  addresses: (AddressInput & { id: string; merged_into_id?: string | null })[];
   machines: (MachineInput & { id: string; type: MachineType; address_id: string | null })[];
 };
 
@@ -46,7 +46,7 @@ export default async function EditCustomerPage({
       .select(
         `id, code, name, phone, note, joined_at, source_id, referrer_id,
          phones:customer_phones(id, phone, label, is_primary, sort_order),
-         addresses:customer_addresses(id, county, district, address, label, is_default),
+         addresses:customer_addresses(id, county, district, address, label, is_default, merged_into_id),
          machines(id, type, brand, model, sub_type, note, address_id)`,
       )
       .eq("id", id)
@@ -89,7 +89,7 @@ export default async function EditCustomerPage({
     source_id: c.source_id,
     referrer_id: c.referrer_id ?? null,
     phones: phonesForForm,
-    addresses: c.addresses.map((a) => ({
+    addresses: c.addresses.filter((a) => !a.merged_into_id).map((a) => ({
       id: a.id,
       county: a.county,
       district: a.district,

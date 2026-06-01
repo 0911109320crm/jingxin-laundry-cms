@@ -54,6 +54,7 @@ export async function quickSearchAction(
         "address, county, district, label, customers!inner(id, code, name, phone)",
       )
       .or(`address.ilike.${like},district.ilike.${like}`)
+      .is("merged_into_id", null)
       .limit(12),
   ]);
 
@@ -146,6 +147,7 @@ export async function globalSearchAction(query: string): Promise<SearchResults> 
         "address, county, district, label, customers!inner(id, code, name, phone)",
       )
       .or(`address.ilike.${like},district.ilike.${like}`)
+      .is("merged_into_id", null)
       .limit(10),
     phoneHitsPromise,
     supabase
