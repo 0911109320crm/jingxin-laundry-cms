@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
+import { useIsMobile } from "@/lib/use-is-mobile";
 
 export function PhoneFrame({
   userName,
@@ -23,6 +24,39 @@ export function PhoneFrame({
     return () => clearInterval(t);
   }, []);
   const timeLabel = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  const isMobile = useIsMobile();
+
+  // 真手機：不套桌機展示外框，內容直接全螢幕（保留頂部師傅切換列）
+  if (isMobile) {
+    return (
+      <div className="flex h-[100dvh] flex-col bg-zinc-900">
+        {technicians.length > 0 && (
+          <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-zinc-800 px-3 py-2">
+            {technicians.map((t) => (
+              <Link
+                key={t.id}
+                href={`/demo/pwa?tech=${t.id}`}
+                className={`shrink-0 rounded-full px-3 py-1 text-xs ${
+                  t.id === activeTechId
+                    ? "bg-brand-500 font-medium text-white"
+                    : "bg-zinc-800 text-zinc-300"
+                }`}
+              >
+                {t.name}
+              </Link>
+            ))}
+          </div>
+        )}
+        <iframe
+          key={previewSrc}
+          src={previewSrc}
+          className="w-full flex-1 border-0 bg-white"
+          title="師傅 PWA"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-900 px-4 py-8 text-zinc-100">

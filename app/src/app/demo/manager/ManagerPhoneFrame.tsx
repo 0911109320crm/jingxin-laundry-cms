@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { LogOut, Home, CalendarRange, PackageSearch, Wallet } from "lucide-react";
+import { useIsMobile } from "@/lib/use-is-mobile";
 
 type Tab = {
   key: string;
@@ -34,6 +35,38 @@ export function ManagerPhoneFrame({
   const timeLabel = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   const activeTab = TABS.find((t) => t.key === active) ?? TABS[0];
+
+  const isMobile = useIsMobile();
+
+  // 真手機：不套桌機展示外框，內容直接全螢幕（保留頂部分頁切換列）
+  if (isMobile) {
+    return (
+      <div className="flex h-[100dvh] flex-col bg-zinc-900">
+        <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-zinc-800 px-3 py-2">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setActive(t.key)}
+              className={`shrink-0 rounded-full px-3 py-1 text-xs ${
+                active === t.key
+                  ? "bg-brand-600 font-medium text-white"
+                  : "bg-zinc-800 text-zinc-300"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <iframe
+          key={activeTab.href}
+          src={activeTab.href}
+          className="w-full flex-1 border-0 bg-white"
+          title="老闆娘 PWA"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-start bg-zinc-900 px-4 py-8 text-zinc-100 lg:flex-row lg:items-start lg:justify-center lg:gap-10">
