@@ -42,6 +42,10 @@ type Props = {
   initial?: CustomerInput & { id?: string };
   mode: "create" | "edit";
   customerId?: string;
+  /** 從搜尋查無 → 建立新客戶時，帶入已輸入的電話/地址/姓名（僅 create 無 initial 時用） */
+  prefillPhone?: string;
+  prefillAddress?: string;
+  prefillName?: string;
 };
 
 const emptyAddress = {
@@ -72,6 +76,9 @@ export function CustomerForm({
   initial,
   mode,
   customerId,
+  prefillPhone,
+  prefillAddress,
+  prefillName,
 }: Props) {
   // 去重後給 datalist 用（同名品牌可能跨多個 category，例如 LG 跨直立/滾筒）
   const uniqueBrandNames = Array.from(
@@ -100,13 +107,13 @@ export function CustomerForm({
     resolver: zodResolver(CustomerSchema),
     defaultValues: initial ?? {
       code: "",
-      name: "",
+      name: prefillName ?? "",
       source_id: null,
       referrer_id: null,
       note: "",
       joined_at: "",
-      phones: [{ phone: "", label: "", is_primary: true }],
-      addresses: [emptyAddress],
+      phones: [{ phone: prefillPhone ?? "", label: "", is_primary: true }],
+      addresses: [{ ...emptyAddress, address: prefillAddress ?? "" }],
       machines: [],
     },
   });

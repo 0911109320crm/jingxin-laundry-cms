@@ -4,8 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/dal";
 import { CustomerForm } from "@/components/customers/CustomerForm";
 
-export default async function NewCustomerPage() {
+export default async function NewCustomerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ phone?: string; address?: string; name?: string }>;
+}) {
   await requireRole(["owner", "manager"]);
+  const sp = await searchParams;
   const supabase = await createClient();
   const [{ data: sources }, { data: brands }] = await Promise.all([
     supabase
@@ -38,6 +43,9 @@ export default async function NewCustomerPage() {
         mode="create"
         sources={(sources as { id: string; name: string }[] | null) ?? []}
         machineBrands={(brands as { category: string; name: string }[] | null) ?? []}
+        prefillPhone={sp.phone}
+        prefillAddress={sp.address}
+        prefillName={sp.name}
       />
     </div>
   );

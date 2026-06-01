@@ -100,6 +100,17 @@ export function GlobalSearch() {
     router.push(href);
   }
 
+  // 查無客戶 → 直接去建立，帶入已輸入的電話/地址（純數字當電話、否則當地址）
+  function goCreateFromQuick(q: string) {
+    const t = q.trim();
+    const digits = t.replace(/\D/g, "");
+    const param =
+      digits.length >= 6 && digits.length / t.length > 0.6
+        ? `phone=${encodeURIComponent(t)}`
+        : `address=${encodeURIComponent(t)}`;
+    navigate(`/customers/new?${param}`);
+  }
+
   if (!open) return null;
 
   const CustomerRow = (c: CustomerResult) => (
@@ -149,9 +160,18 @@ export function GlobalSearch() {
             <span className="text-xs font-semibold text-zinc-600">
               快速搜尋（電話 / 地址）
             </span>
-            <span className="text-[11px] text-zinc-400">
+            <span className="hidden text-[11px] text-zinc-400 sm:inline">
               邊打邊找 · 例：0912345678、員林、建國路
             </span>
+            {/* 手機沒有 ESC，給可見的關閉鈕，避免老闆娘離不開 */}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="關閉搜尋"
+              className="ml-auto rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
           <div className="flex items-center gap-3 px-4 py-2.5">
             <Search
@@ -181,9 +201,18 @@ export function GlobalSearch() {
             <div className="max-h-52 overflow-y-auto pb-1">
               {quickResults.map((c) => CustomerRow(c))}
               {quickEmpty && (
-                <p className="px-4 py-3 text-center text-xs text-zinc-400">
-                  查無電話 / 地址符合「{quickQuery}」
-                </p>
+                <div className="px-4 py-3 text-center">
+                  <p className="text-xs text-zinc-400">
+                    查無電話 / 地址符合「{quickQuery}」
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => goCreateFromQuick(quickQuery)}
+                    className="mt-2 inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+                  >
+                    ＋ 用「{quickQuery}」建立新客戶
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -305,9 +334,22 @@ export function GlobalSearch() {
                 </section>
               )}
               {fullEmpty && (
-                <p className="px-4 py-3 text-center text-xs text-zinc-400">
-                  找不到「{fullSearched}」的相關結果
-                </p>
+                <div className="px-4 py-3 text-center">
+                  <p className="text-xs text-zinc-400">
+                    找不到「{fullSearched}」的相關結果
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(
+                        `/customers/new?name=${encodeURIComponent(fullSearched)}`,
+                      )
+                    }
+                    className="mt-2 inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+                  >
+                    ＋ 用「{fullSearched}」建立新客戶
+                  </button>
+                </div>
               )}
             </div>
           )}
