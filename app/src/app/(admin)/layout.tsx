@@ -14,9 +14,19 @@ export default async function AdminLayout({
 
   const readonly = Boolean(user.profile.readonly);
 
+  // 師傅清單（給側邊欄「師傅 PWA」次選單預覽用）；用 admin client 避免 RLS 漏讀
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { data: techRows } = await createAdminClient()
+    .from("user_profiles")
+    .select("id, name")
+    .eq("role", "technician")
+    .eq("active", true)
+    .order("name");
+  const technicians = (techRows as { id: string; name: string }[] | null) ?? [];
+
   return (
     <div className="flex min-h-screen w-full flex-col lg:flex-row">
-      <Sidebar userName={user.profile.name} />
+      <Sidebar userName={user.profile.name} technicians={technicians} />
       <main className="flex-1 overflow-auto bg-zinc-50">
         {readonly && (
           <div className="sticky top-0 z-20 border-b border-amber-300 bg-amber-100 px-4 py-2 text-center text-sm font-medium text-amber-900">

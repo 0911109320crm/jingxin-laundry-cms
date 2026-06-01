@@ -544,7 +544,7 @@ export function OrderWorkflow({
                   <Check className="h-5 w-5" /> 確認我的金額
                 </Button>
                 <p className="text-center text-xs text-zinc-500">
-                  先把你做的項目金額調好再確認；等所有師傅都確認後，由最後一位收全額
+                  請先核對現場機器與品項是否一致（老闆娘建單內容僅供參考），調好金額再確認；等所有師傅都確認後，由最後一位收全額
                 </p>
               </>
             ) : !allConfirmed ? (

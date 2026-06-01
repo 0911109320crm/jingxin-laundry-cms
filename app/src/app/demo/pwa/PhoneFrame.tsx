@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
 
-export function PhoneFrame({ userName }: { userName: string }) {
+export function PhoneFrame({
+  userName,
+  previewSrc = "/staff",
+  previewName = null,
+}: {
+  userName: string;
+  previewSrc?: string;
+  previewName?: string | null;
+}) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
@@ -54,7 +62,8 @@ export function PhoneFrame({ userName }: { userName: string }) {
             <div className="pointer-events-none absolute left-1/2 top-2.5 z-20 h-7 w-32 -translate-x-1/2 rounded-full bg-black" />
 
             <iframe
-              src="/staff"
+              key={previewSrc}
+              src={previewSrc}
               className="absolute inset-x-0 bottom-0 w-full border-0"
               style={{ top: 44, height: "calc(100% - 44px)" }}
               title="師傅 PWA 預覽"
@@ -68,7 +77,9 @@ export function PhoneFrame({ userName }: { userName: string }) {
         <div>
           <h1 className="text-xl font-bold text-white">師傅 PWA 示範重點</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            目前以「{userName}」身份顯示
+            {previewName
+              ? `正在預覽「${previewName}」的師傅頁面`
+              : `目前以「${userName}」身份顯示`}
           </p>
         </div>
 

@@ -49,6 +49,14 @@ function taiwanDateKey(iso: string): string {
   return TW_DATE_FMT.format(new Date(iso));
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const STAFF_ORDER_SELECT = `id, order_code, scheduled_at, status, payment_method, settlement_status, total,
+         customer:customers(name, phone, phones:customer_phones(id, phone, label, is_primary)),
+         address:customer_addresses(county, district, address),
+         items:order_items(quantity, service:service_items(name))`;
+
 function formatDateHeader(dateKey: string): { main: string; isToday: boolean; isTomorrow: boolean } {
   const today = TW_DATE_FMT.format(new Date());
   const tomorrowD = new Date();
@@ -69,9 +77,26 @@ function formatDateHeader(dateKey: string): { main: string; isToday: boolean; is
   };
 }
 
-export default async function StaffHome() {
+export default async function StaffHome({
+  searchParams,
+}: {
+  searchParams: Promise<{ as?: string }>;
+}) {
   const me = await getCurrentUser();
   if (!me) redirect("/login");
+
+  // ── 老闆娘 / RC 預覽某師傅 PWA：?as=<techId> ──
+  // 防越權：是否能以他人身份預覽，完全由「真實登入者的角色」決定，不信任網址參數。
+  const sp = await searchParams;
+  const isPrivileged =
+    me.profile.role === "owner" ||
+    me.profile.role === "manager" ||
+    Boolean(me.profile.can_view_all);
+  const asId =
+    typeof sp.as === "string" && UUID_RE.test(sp.as) ? sp.as : null;
+  const impersonating = !!asId && isPrivileged && asId !== me.id;
+  const targetId = impersonating ? asId! : me.id;
+  let previewName: string | null = null;
 
   // 本月積分查詢區間
   const now = new Date();
@@ -82,61 +107,108 @@ export default async function StaffHome() {
   const startWindow = new Date();
   startWindow.setDate(startWindow.getDate() - 7);
 
-  const supabase = await createClient();
-  // RLS scopes orders to ones where this user has any order_item
-  const [
-    { data },
-    { data: pendingCashRows },
-    { data: myPromosThisMonth },
-    { data: kpiRow },
-  ] = await Promise.all([
-    supabase
-      .from("orders")
-      .select(
-        `id, order_code, scheduled_at, status, payment_method, settlement_status, total,
-         customer:customers(name, phone, phones:customer_phones(id, phone, label, is_primary)),
-         address:customer_addresses(county, district, address),
-         items:order_items(quantity, service:service_items(name))`,
-      )
-      .not("scheduled_at", "is", null)
-      .gte("scheduled_at", startWindow.toISOString())
-      .not("status", "in", "(cancelled)")
-      .order("scheduled_at"),
-    // 只算「我收的現金」：collected_by=我，或舊資料(null)回退（RLS 已限定我有參與的單）
-    supabase
-      .from("orders")
-      .select("total")
-      .eq("payment_method", "cash")
-      .eq("settlement_status", "pending")
-      .or(
-        `collected_by_technician_id.eq.${me.id},collected_by_technician_id.is.null`,
-      ),
-    supabase
-      .from("order_promotions")
-      .select("points_snapshot")
-      .eq("credited_to", me.id)
-      .gte("created_at", monthStart)
-      .lt("created_at", monthEnd),
-    supabase
-      .from("system_settings")
-      .select("value")
-      .eq("key", "monthly_promotion_kpi")
-      .maybeSingle(),
-  ]);
+  let orders: StaffOrder[] = [];
+  let pendingCashRows: { total: number }[] = [];
+  let myPromosThisMonth: { points_snapshot: number }[] = [];
+  let kpiRow: { value: unknown } | null = null;
 
-  const myPoints = ((myPromosThisMonth as { points_snapshot: number }[] | null) ?? [])
-    .reduce((s, r) => s + r.points_snapshot, 0);
+  if (impersonating) {
+    // 預覽模式：用 admin client 繞過 RLS，但明確以該師傅的 technician_id 過濾
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const admin = createAdminClient();
+
+    const [{ data: nameRow }, { data: itemRows }] = await Promise.all([
+      admin.from("user_profiles").select("name").eq("id", targetId).maybeSingle(),
+      admin.from("order_items").select("order_id").eq("technician_id", targetId),
+    ]);
+    previewName = (nameRow as { name: string } | null)?.name ?? "該師傅";
+    const orderIds = [
+      ...new Set(
+        ((itemRows as { order_id: string }[] | null) ?? []).map((r) => r.order_id),
+      ),
+    ];
+
+    const [ord, cash, promos, kpiQ] = await Promise.all([
+      orderIds.length
+        ? admin
+            .from("orders")
+            .select(STAFF_ORDER_SELECT)
+            .in("id", orderIds)
+            .not("scheduled_at", "is", null)
+            .gte("scheduled_at", startWindow.toISOString())
+            .not("status", "in", "(cancelled)")
+            .order("scheduled_at")
+        : Promise.resolve({ data: [] as unknown }),
+      admin
+        .from("orders")
+        .select("total")
+        .eq("payment_method", "cash")
+        .eq("settlement_status", "pending")
+        .eq("collected_by_technician_id", targetId),
+      admin
+        .from("order_promotions")
+        .select("points_snapshot")
+        .eq("credited_to", targetId)
+        .gte("created_at", monthStart)
+        .lt("created_at", monthEnd),
+      admin
+        .from("system_settings")
+        .select("value")
+        .eq("key", "monthly_promotion_kpi")
+        .maybeSingle(),
+    ]);
+    orders = ((ord as { data: unknown }).data as StaffOrder[] | null) ?? [];
+    pendingCashRows = (cash.data as { total: number }[] | null) ?? [];
+    myPromosThisMonth = (promos.data as { points_snapshot: number }[] | null) ?? [];
+    kpiRow = (kpiQ.data as { value: unknown } | null) ?? null;
+  } else {
+    const supabase = await createClient();
+    // RLS scopes orders to ones where this user has any order_item
+    const [a, b, c, d] = await Promise.all([
+      supabase
+        .from("orders")
+        .select(STAFF_ORDER_SELECT)
+        .not("scheduled_at", "is", null)
+        .gte("scheduled_at", startWindow.toISOString())
+        .not("status", "in", "(cancelled)")
+        .order("scheduled_at"),
+      // 只算「我收的現金」：collected_by=我，或舊資料(null)回退（RLS 已限定我有參與的單）
+      supabase
+        .from("orders")
+        .select("total")
+        .eq("payment_method", "cash")
+        .eq("settlement_status", "pending")
+        .or(
+          `collected_by_technician_id.eq.${me.id},collected_by_technician_id.is.null`,
+        ),
+      supabase
+        .from("order_promotions")
+        .select("points_snapshot")
+        .eq("credited_to", me.id)
+        .gte("created_at", monthStart)
+        .lt("created_at", monthEnd),
+      supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "monthly_promotion_kpi")
+        .maybeSingle(),
+    ]);
+    orders = (a.data as StaffOrder[] | null) ?? [];
+    pendingCashRows = (b.data as { total: number }[] | null) ?? [];
+    myPromosThisMonth = (c.data as { points_snapshot: number }[] | null) ?? [];
+    kpiRow = (d.data as { value: unknown } | null) ?? null;
+  }
+
+  const myPoints = myPromosThisMonth.reduce((s, r) => s + r.points_snapshot, 0);
   const kpi = typeof kpiRow?.value === "number" ? kpiRow.value : 30;
   const kpiPct = Math.min(100, Math.round((myPoints / Math.max(1, kpi)) * 100));
   const kpiAchieved = myPoints >= kpi;
 
-  const orders = (data as StaffOrder[] | null) ?? [];
-  const pendingCashTotal =
-    ((pendingCashRows as { total: number }[] | null) ?? []).reduce(
-      (s, o) => s + Number(o.total),
-      0,
-    );
-  const pendingCashCount = (pendingCashRows as unknown[] | null)?.length ?? 0;
+  const pendingCashTotal = pendingCashRows.reduce(
+    (s, o) => s + Number(o.total),
+    0,
+  );
+  const pendingCashCount = pendingCashRows.length;
 
   // 依台灣日期 group orders（已 ORDER BY scheduled_at ASC）
   const groups: { dateKey: string; orders: StaffOrder[] }[] = [];
@@ -149,7 +221,13 @@ export default async function StaffHome() {
 
   return (
     <div className="p-4 space-y-4">
-      {me.profile.can_view_all && (
+      {impersonating && (
+        <div className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-center text-sm text-indigo-800">
+          👁 預覽模式：正在以「{previewName}」的身份檢視（唯讀預覽，師傅實際操作請各自登入）
+        </div>
+      )}
+
+      {!impersonating && me.profile.can_view_all && (
         <Link href="/staff/all">
           <Card className="border-sky-300 bg-sky-50 transition-shadow active:shadow-md">
             <CardBody className="flex items-center justify-between gap-2 py-3">

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -20,6 +20,7 @@ import {
   Star,
   Smartphone,
   HardHat,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,34 +39,97 @@ const items: NavItem[] = [
   { href: "/payroll", label: "師傅薪資", icon: Wallet },
   { href: "/scores", label: "促銷積分排行", icon: Star },
   { href: "/demo/manager", label: "老闆娘 PWA", icon: Smartphone },
-  { href: "/demo/pwa", label: "師傅 PWA", icon: HardHat },
+  // 師傅 PWA 改成可展開次選單（見下方 StaffPwaMenu），不放在這個清單
   { href: "/settings", label: "系統設定", icon: Settings },
 ];
 
-export function Sidebar({ userName }: { userName: string }) {
+const itemClass = (active: boolean) =>
+  cn(
+    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+    active ? "bg-brand-50 text-brand-700" : "text-zinc-700 hover:bg-zinc-100",
+  );
+
+export function Sidebar({
+  userName,
+  technicians,
+}: {
+  userName: string;
+  technicians: { id: string; name: string }[];
+}) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
+  const onStaffPwa = pathname === "/demo/pwa";
+  const [techOpen, setTechOpen] = useState(onStaffPwa);
+  const activeTech = onStaffPwa ? searchParams.get("tech") : null;
+  const closeDrawer = () => setOpen(false);
 
   const NavList = (
     <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
       {items.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(href + "/");
-        return (
+        const node = (
           <Link
             key={href}
             href={href}
-            onClick={() => setOpen(false)}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              active
-                ? "bg-brand-50 text-brand-700"
-                : "text-zinc-700 hover:bg-zinc-100",
-            )}
+            onClick={closeDrawer}
+            className={itemClass(active)}
           >
             <Icon className="h-4 w-4" />
             {label}
           </Link>
         );
+        // 在「老闆娘 PWA」之後插入「師傅 PWA」次選單
+        if (href === "/demo/manager") {
+          return (
+            <div key="group-pwa" className="space-y-1">
+              {node}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setTechOpen((v) => !v)}
+                  className={cn(itemClass(onStaffPwa), "w-full")}
+                  aria-expanded={techOpen}
+                >
+                  <HardHat className="h-4 w-4" />
+                  <span className="flex-1 text-left">師傅 PWA</span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-zinc-400 transition-transform",
+                      techOpen && "rotate-180",
+                    )}
+                  />
+                </button>
+                {techOpen && (
+                  <div className="mt-1 ml-3 space-y-0.5 border-l border-zinc-200 pl-2">
+                    {technicians.length === 0 ? (
+                      <p className="px-3 py-1.5 text-xs text-zinc-400">
+                        尚無師傅
+                      </p>
+                    ) : (
+                      technicians.map((t) => (
+                        <Link
+                          key={t.id}
+                          href={`/demo/pwa?tech=${t.id}`}
+                          onClick={closeDrawer}
+                          className={cn(
+                            "block rounded-lg px-3 py-1.5 text-sm transition-colors",
+                            activeTech === t.id
+                              ? "bg-brand-50 font-medium text-brand-700"
+                              : "text-zinc-600 hover:bg-zinc-100",
+                          )}
+                        >
+                          {t.name}
+                        </Link>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+        return node;
       })}
     </nav>
   );
