@@ -55,6 +55,7 @@ type AdjustmentItem = {
   id: string;
   name: string;
   type: "addon" | "discount";
+  category: "service" | "parts" | "discount";
   default_amount: number;
 };
 
@@ -130,9 +131,6 @@ export function OrderWorkflow({
 
   // ── State ────────────────────────────────────────────────────────────
   const [localAdj, setLocalAdj] = useState<Adjustment[]>(initialAdjustments);
-  const [customName, setCustomName] = useState("");
-  const [customAmount, setCustomAmount] = useState("");
-  const [customType, setCustomType] = useState<"addon" | "discount">("addon");
 
   const [localPromos, setLocalPromos] =
     useState<OrderPromotion[]>(initialPromotions);
@@ -187,15 +185,13 @@ export function OrderWorkflow({
     });
   };
 
-  const addCustomAdj = () => {
-    const name = customName.trim();
-    const amount = parseInt(customAmount, 10);
-    if (!name) { alert("請填項目名稱"); return; }
-    if (isNaN(amount) || amount < 0) { alert("請填正確金額"); return; }
+  // 從下拉選 preset + 自填金額加入（服務加收 / 零件加收用；金額預設帶 preset 但可改）
+  const addAddonWithAmount = (item: AdjustmentItem, amount: number) => {
     startAdjTransition(async () => {
       const res = await addOrderAdjustmentAction(orderId, {
-        name_snapshot: name,
-        type: customType,
+        adjustment_item_id: item.id,
+        name_snapshot: item.name,
+        type: item.type,
         amount,
       });
       if (!res.ok) {
@@ -204,10 +200,8 @@ export function OrderWorkflow({
       }
       setLocalAdj((prev) => [
         ...prev,
-        { id: res.realId!, name_snapshot: name, type: customType, amount },
+        { id: res.realId!, name_snapshot: item.name, type: item.type, amount },
       ]);
-      setCustomName("");
-      setCustomAmount("");
     });
   };
 
@@ -334,8 +328,9 @@ export function OrderWorkflow({
     });
   };
 
-  const addonItems = adjustmentItems.filter((a) => a.type === "addon");
-  const discountItems = adjustmentItems.filter((a) => a.type === "discount");
+  const serviceAddons = adjustmentItems.filter((a) => a.category === "service");
+  const partsAddons = adjustmentItems.filter((a) => a.category === "parts");
+  const discountItems = adjustmentItems.filter((a) => a.category === "discount");
 
   // ─────────────────────────────────────────────────────────────────────
   return (
@@ -396,32 +391,30 @@ export function OrderWorkflow({
               <p className="text-xs text-zinc-500">尚無加減項</p>
             )}
 
-            {addonItems.length > 0 && (
-              <div>
-                <p className="mb-1.5 text-xs text-zinc-500">快速加收</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {addonItems.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      disabled={adjPending}
-                      onClick={() => addPresetAdj(item)}
-                      className="inline-flex items-center gap-1 rounded-full border border-orange-300 bg-orange-50 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-100 disabled:opacity-50"
-                    >
-                      <PlusCircle className="h-3.5 w-3.5" />
-                      {item.name}
-                      {item.default_amount > 0 && (
-                        <span className="font-mono text-xs">+{formatNTD(item.default_amount)}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* 服務加收：下拉選 + 金額（項目多，用下拉） */}
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-orange-700">服務加收</p>
+              <AddonPicker
+                items={serviceAddons}
+                pending={adjPending}
+                onAdd={addAddonWithAmount}
+              />
+            </div>
 
+            {/* 零件加收：下拉選 + 金額（零件價浮動，金額可改；清單沒有選「其他零件」） */}
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-amber-700">零件加收</p>
+              <AddonPicker
+                items={partsAddons}
+                pending={adjPending}
+                onAdd={addAddonWithAmount}
+              />
+            </div>
+
+            {/* 優惠折扣：項目少，維持快速 chip */}
             {discountItems.length > 0 && (
               <div>
-                <p className="mb-1.5 text-xs text-zinc-500">快速折扣</p>
+                <p className="mb-1.5 text-xs font-medium text-emerald-700">優惠折扣</p>
                 <div className="flex flex-wrap gap-1.5">
                   {discountItems.map((item) => (
                     <button
@@ -441,60 +434,6 @@ export function OrderWorkflow({
                 </div>
               </div>
             )}
-
-            <div className="space-y-2">
-              <p className="text-xs text-zinc-500">自訂項目</p>
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setCustomType("addon")}
-                  className={`rounded px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                    customType === "addon"
-                      ? "bg-orange-500 text-white"
-                      : "border border-zinc-300 text-zinc-600 hover:bg-zinc-50"
-                  }`}
-                >
-                  加收
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCustomType("discount")}
-                  className={`rounded px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                    customType === "discount"
-                      ? "bg-emerald-500 text-white"
-                      : "border border-zinc-300 text-zinc-600 hover:bg-zinc-50"
-                  }`}
-                >
-                  折扣
-                </button>
-              </div>
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  placeholder="項目名稱"
-                  className="min-w-0 flex-1 rounded border border-zinc-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
-                  maxLength={80}
-                />
-                <input
-                  type="number"
-                  value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
-                  placeholder="金額"
-                  min={0}
-                  className="w-24 rounded border border-zinc-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={addCustomAdj}
-                  disabled={adjPending || !customName.trim() || !customAmount}
-                  className="rounded bg-zinc-700 px-3 py-1.5 text-sm text-white hover:bg-zinc-900 disabled:opacity-40"
-                >
-                  加入
-                </button>
-              </div>
-            </div>
           </CardBody>
         </Card>
       )}
@@ -1052,5 +991,80 @@ function CompletionTagsAndNotesEditor({
         </p>
       </section>
     </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 服務加收 / 零件加收：下拉選 preset + 自填金額（金額預設帶 preset，可改）
+function AddonPicker({
+  items,
+  pending,
+  onAdd,
+}: {
+  items: AdjustmentItem[];
+  pending: boolean;
+  onAdd: (item: AdjustmentItem, amount: number) => void;
+}) {
+  const [selectedId, setSelectedId] = useState("");
+  const [amount, setAmount] = useState("");
+
+  if (items.length === 0) {
+    return <p className="text-xs text-zinc-400">老闆娘尚未設定此類項目</p>;
+  }
+
+  const onSelect = (val: string) => {
+    setSelectedId(val);
+    const it = items.find((i) => i.id === val);
+    setAmount(it ? String(it.default_amount) : "");
+  };
+
+  const submit = () => {
+    const it = items.find((i) => i.id === selectedId);
+    if (!it) {
+      alert("請先選擇項目");
+      return;
+    }
+    const amt = parseInt(amount, 10);
+    if (isNaN(amt) || amt < 0) {
+      alert("請填正確金額");
+      return;
+    }
+    onAdd(it, amt);
+    setSelectedId("");
+    setAmount("");
+  };
+
+  return (
+    <div className="flex gap-1.5">
+      <select
+        value={selectedId}
+        onChange={(e) => onSelect(e.target.value)}
+        className="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+      >
+        <option value="">— 選擇項目 —</option>
+        {items.map((i) => (
+          <option key={i.id} value={i.id}>
+            {i.name}
+            {i.default_amount > 0 ? `（預設 ${formatNTD(i.default_amount)}）` : ""}
+          </option>
+        ))}
+      </select>
+      <input
+        type="number"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        placeholder="金額"
+        min={0}
+        className="w-24 rounded border border-zinc-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+      />
+      <button
+        type="button"
+        onClick={submit}
+        disabled={pending || !selectedId}
+        className="shrink-0 rounded bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-40"
+      >
+        加入
+      </button>
+    </div>
   );
 }

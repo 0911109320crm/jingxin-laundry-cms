@@ -135,15 +135,16 @@ export default async function StaffOrderPage({
   // 加減項預設清單
   const { data: adjItemsData } = await supabase
     .from("adjustment_items")
-    .select("id, name, type, default_amount")
+    .select("id, name, type, category, default_amount")
     .eq("active", true)
-    .order("type")
+    .order("category")
     .order("name");
   const adjustmentItems =
     (adjItemsData as {
       id: string;
       name: string;
       type: "addon" | "discount";
+      category: "service" | "parts" | "discount";
       default_amount: number;
     }[] | null) ?? [];
 

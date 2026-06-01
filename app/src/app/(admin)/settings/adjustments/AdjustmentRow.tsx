@@ -10,14 +10,21 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { formatNTD } from "@/lib/utils";
+import { ADJ_CATEGORY_LABEL, type AdjCategory } from "./categories";
 
 export type Adjustment = {
   id: string;
   name: string;
-  type: "discount" | "addon";
+  category: AdjCategory;
   default_amount: number;
   active: boolean;
   affects_commission: boolean;
+};
+
+const CATEGORY_BADGE: Record<AdjCategory, string> = {
+  service: "bg-orange-50 text-orange-700",
+  parts: "bg-amber-50 text-amber-700",
+  discount: "bg-blue-50 text-blue-700",
 };
 
 export function AdjustmentRow({ adjustment }: { adjustment: Adjustment }) {
@@ -47,9 +54,10 @@ export function AdjustmentRow({ adjustment }: { adjustment: Adjustment }) {
         className="grid grid-cols-1 md:grid-cols-[1fr_110px_110px_110px_70px_auto] md:items-center gap-2 px-5 py-3"
       >
         <Input name="name" defaultValue={adjustment.name} required />
-        <Select name="type" defaultValue={adjustment.type}>
-          <option value="addon">加價</option>
-          <option value="discount">折扣</option>
+        <Select name="category" defaultValue={adjustment.category}>
+          <option value="service">服務加收</option>
+          <option value="parts">零件加收</option>
+          <option value="discount">優惠折扣</option>
         </Select>
         <Input
           name="default_amount"
@@ -94,15 +102,11 @@ export function AdjustmentRow({ adjustment }: { adjustment: Adjustment }) {
     <div className="grid grid-cols-1 md:grid-cols-[1fr_110px_110px_110px_70px_auto] md:items-center gap-2 px-5 py-3 text-sm">
       <div className="font-medium text-zinc-900">{adjustment.name}</div>
       <div>
-        {adjustment.type === "addon" ? (
-          <span className="rounded bg-orange-50 px-2 py-0.5 text-xs text-orange-700">
-            加價
-          </span>
-        ) : (
-          <span className="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
-            折扣
-          </span>
-        )}
+        <span
+          className={`rounded px-2 py-0.5 text-xs ${CATEGORY_BADGE[adjustment.category]}`}
+        >
+          {ADJ_CATEGORY_LABEL[adjustment.category]}
+        </span>
       </div>
       <div className="text-zinc-600">
         {formatNTD(adjustment.default_amount)}

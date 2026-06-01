@@ -5,9 +5,9 @@ import { Plus } from "lucide-react";
 import { createAdjustment } from "@/app/(admin)/settings/adjustments/actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { ADJ_CATEGORY_LABEL, type AdjCategory } from "./categories";
 
-export function NewAdjustmentForm() {
+export function NewAdjustmentForm({ category }: { category: AdjCategory }) {
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -23,13 +23,14 @@ export function NewAdjustmentForm() {
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-1 md:grid-cols-[1fr_110px_110px_110px_70px_auto] md:items-center gap-2"
+      className="grid grid-cols-1 md:grid-cols-[1fr_110px_110px_70px_auto] md:items-center gap-2"
     >
-      <Input name="name" placeholder="項目名稱" required />
-      <Select name="type" defaultValue="addon">
-        <option value="addon">加價</option>
-        <option value="discount">折扣</option>
-      </Select>
+      <input type="hidden" name="category" value={category} />
+      <Input
+        name="name"
+        placeholder={`新增${ADJ_CATEGORY_LABEL[category]}項目`}
+        required
+      />
       <Input
         name="default_amount"
         type="number"
