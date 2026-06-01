@@ -22,6 +22,7 @@ export default async function NewCustomerPage({
       .from("machine_brands")
       .select("category, name")
       .eq("active", true)
+      .order("category")
       .order("sort_order"),
   ]);
 

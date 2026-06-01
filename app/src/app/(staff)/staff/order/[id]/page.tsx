@@ -349,29 +349,34 @@ export default async function StaffOrderPage({
                     {formatNTD(it.subtotal)}
                   </span>
                 </div>
-                <div className="flex justify-end">
-                  <ExcludeToggle
-                    orderId={o.id}
-                    orderItemId={it.id}
-                    excluded={it.excluded}
-                  />
-                </div>
-                <ServiceItemSwapper
-                  orderId={o.id}
-                  orderItemId={it.id}
-                  currentServiceId={it.service_item_id}
-                  currentServiceCategory={it.service?.category ?? null}
-                  currentQuantity={it.quantity}
-                  services={allServices}
-                />
-                <MachineEditor
-                  orderId={o.id}
-                  orderItemId={it.id}
-                  customerId={o.customer_id}
-                  serviceCategory={it.service?.category ?? null}
-                  machine={it.machine}
-                  brands={brands}
-                />
+                {/* 案件完成後鎖定品項編輯（換品項/不服務/機器）——師傅不可再改 */}
+                {o.status !== "done" && (
+                  <>
+                    <div className="flex justify-end">
+                      <ExcludeToggle
+                        orderId={o.id}
+                        orderItemId={it.id}
+                        excluded={it.excluded}
+                      />
+                    </div>
+                    <ServiceItemSwapper
+                      orderId={o.id}
+                      orderItemId={it.id}
+                      currentServiceId={it.service_item_id}
+                      currentServiceCategory={it.service?.category ?? null}
+                      currentQuantity={it.quantity}
+                      services={allServices}
+                    />
+                    <MachineEditor
+                      orderId={o.id}
+                      orderItemId={it.id}
+                      customerId={o.customer_id}
+                      serviceCategory={it.service?.category ?? null}
+                      machine={it.machine}
+                      brands={brands}
+                    />
+                  </>
+                )}
               </li>
               );
             })}

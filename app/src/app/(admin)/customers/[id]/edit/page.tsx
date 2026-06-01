@@ -60,6 +60,7 @@ export default async function EditCustomerPage({
       .from("machine_brands")
       .select("category, name")
       .eq("active", true)
+      .order("category")
       .order("sort_order"),
   ]);
 

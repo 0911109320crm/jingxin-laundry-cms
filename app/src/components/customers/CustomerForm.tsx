@@ -80,10 +80,14 @@ export function CustomerForm({
   prefillAddress,
   prefillName,
 }: Props) {
-  // 去重後給 datalist 用（同名品牌可能跨多個 category，例如 LG 跨直立/滾筒）
-  const uniqueBrandNames = Array.from(
-    new Set(machineBrands.map((b) => b.name)),
-  ).sort();
+  // 依機型分類分組品牌，保留老闆娘在「機型品牌主檔」設定的 sort_order
+  //（machineBrands 由 server 端依 category, sort_order 帶入；此處不再自行排序）
+  const brandsByCategory = new Map<string, string[]>();
+  for (const b of machineBrands) {
+    const arr = brandsByCategory.get(b.category) ?? [];
+    if (!arr.includes(b.name)) arr.push(b.name);
+    brandsByCategory.set(b.category, arr);
+  }
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -137,6 +141,7 @@ export function CustomerForm({
   }, []);
   const watchedAddresses = watch("addresses");
   const watchedPhones = watch("phones");
+  const watchedMachines = watch("machines");
 
   // 點選某筆「設為主要」 → 把其他 phone 全部設為 false
   const setPrimary = useCallback(
@@ -464,6 +469,7 @@ export function CustomerForm({
             </p>
           )}
           {machineArr.fields.map((field, idx) => {
+            const machineType = watchedMachines?.[idx]?.type ?? "";
             const savedAddresses = (watchedAddresses ?? []).filter(
               (a) => a.id,
             );
@@ -499,7 +505,11 @@ export function CustomerForm({
                     <Input
                       {...register(`machines.${idx}.brand`)}
                       placeholder="例如 LG / 大同"
-                      list={uniqueBrandNames.length > 0 ? "machine-brands-list" : undefined}
+                      list={
+                        brandsByCategory.has(machineType)
+                          ? `brands-${machineType}`
+                          : undefined
+                      }
                     />
                   </Field>
                   <Field label="型號">
@@ -539,13 +549,14 @@ export function CustomerForm({
         </CardBody>
       </Card>
 
-      {uniqueBrandNames.length > 0 && (
-        <datalist id="machine-brands-list">
-          {uniqueBrandNames.map((b) => (
+      {/* 每個機型分類各一個 datalist，依老闆娘設定的 sort_order 呈現 */}
+      {Array.from(brandsByCategory.entries()).map(([cat, names]) => (
+        <datalist key={cat} id={`brands-${cat}`}>
+          {names.map((b) => (
             <option key={b} value={b} />
           ))}
         </datalist>
-      )}
+      ))}
 
       {serverError && (
         <Card className="border-red-300 bg-red-50">

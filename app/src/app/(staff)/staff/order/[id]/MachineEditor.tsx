@@ -108,16 +108,10 @@ export function MachineEditor({
     ? brands.filter((b) => b.category === brandCategoryHint)
     : brands;
   // 去重（跨 category 的同名品牌如 LG 在直立+滾筒+冷氣都有，只顯示一次）
+  // 不再自行排序：保留老闆娘在「機型品牌主檔」設定的 sort_order（brands 已依 sort_order 帶入）
   const uniqueBrandNames = Array.from(
     new Set(filteredBrands.map((b) => b.name)),
-  ).sort((a, b) => {
-    // 中文名 / 英文名都依照「優先有中文對照」排，再字母序
-    const aZh = BRAND_ZH[a];
-    const bZh = BRAND_ZH[b];
-    if (aZh && !bZh) return -1;
-    if (!aZh && bZh) return 1;
-    return a.localeCompare(b);
-  });
+  );
 
   // 「其他」選項 (free text input)：選中時顯示一個 input 讓師傅打字
   const isOtherBrand = brand !== "" && !uniqueBrandNames.includes(brand);

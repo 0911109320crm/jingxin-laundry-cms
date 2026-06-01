@@ -43,6 +43,15 @@ export async function swapOrderItemServiceAction(input: {
     if (!Array.isArray(owns) || owns.length === 0) {
       return { ok: false, error: "不是你負責的明細" };
     }
+    // 案件已完成 → 技師不可再改品項/金額（老闆娘可在後台修正）
+    const { data: ord } = await supabase
+      .from("orders")
+      .select("status")
+      .eq("id", parsed.data.order_id)
+      .single();
+    if ((ord as { status: string } | null)?.status === "done") {
+      return { ok: false, error: "案件已完成，無法修改，請聯絡老闆娘" };
+    }
   }
 
   // 取新 service_item 的 default_price
@@ -109,6 +118,14 @@ export async function toggleOrderItemExcludedAction(input: {
       .limit(1);
     if (!Array.isArray(owns) || owns.length === 0) {
       return { ok: false, error: "不是你負責的明細" };
+    }
+    const { data: ord } = await supabase
+      .from("orders")
+      .select("status")
+      .eq("id", parsed.data.order_id)
+      .single();
+    if ((ord as { status: string } | null)?.status === "done") {
+      return { ok: false, error: "案件已完成，無法修改，請聯絡老闆娘" };
     }
   }
 

@@ -77,7 +77,12 @@ export const CustomerSchema = z
       .max(40, "編號太長")
       .regex(/^[A-Za-z0-9_\-]+$/, "編號只能用英數、_、-"),
     name: z.string().min(1, "請填姓名").max(40),
-    source_id: z.string().uuid().optional().nullable(),
+    source_id: z
+      .string()
+      .uuid()
+      .nullable()
+      .optional()
+      .or(z.literal("").transform(() => null)),
     referrer_id: z
       .string()
       .uuid()
