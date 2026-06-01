@@ -367,8 +367,17 @@ async function technicianOwnsOrder(orderId: string, userId: string) {
 export async function setPaymentMethodAction(
   orderId: string,
   method: "unpaid" | "cash" | "transfer" | "card" | "line_pay",
+  transferLast5?: string,
 ): Promise<Res> {
   const me = await requireRole(["owner", "manager", "technician"]);
+  // 轉帳後五碼：有填就必須是 5 位數字（含前導 0）；留空＝客戶稍後才轉
+  const cleanLast5 =
+    method === "transfer" && transferLast5 && /^\d{5}$/.test(transferLast5)
+      ? transferLast5
+      : null;
+  if (method === "transfer" && transferLast5 && !cleanLast5) {
+    return { ok: false, error: "後五碼請填 5 位數字，或改勾「客戶稍後才轉」" };
+  }
   const isTech = me.profile.role === "technician";
   if (isTech) {
     const owns = await technicianOwnsOrder(orderId, me.id);
@@ -407,7 +416,11 @@ export async function setPaymentMethodAction(
     }
     const { error } = await admin
       .from("orders")
-      .update({ payment_method: "unpaid", collected_by_technician_id: null })
+      .update({
+        payment_method: "unpaid",
+        collected_by_technician_id: null,
+        transfer_last5: null,
+      })
       .eq("id", orderId);
     if (error) return { ok: false, error: error.message };
     revalidate();
@@ -437,6 +450,7 @@ export async function setPaymentMethodAction(
     .update({
       payment_method: method,
       collected_by_technician_id: method === "cash" ? me.id : null,
+      transfer_last5: cleanLast5,
     })
     .eq("id", orderId)
     .eq("payment_method", "unpaid")
@@ -767,6 +781,7 @@ export async function settleOrdersAction(orderIds: string[]): Promise<Res> {
     payload: { ids: orderIds, count: orderIds.length },
   });
   revalidatePath("/payroll/settlements");
+  revalidatePath("/payroll/transfers");
   revalidatePath("/orders");
   return { ok: true };
 }

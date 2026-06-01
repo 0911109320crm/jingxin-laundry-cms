@@ -53,6 +53,7 @@ type Detail = {
   status: OrderInput["status"];
   payment_method: OrderInput["payment_method"];
   settlement_status: "pending" | "settled" | "not_required";
+  transfer_last5: string | null;
   scheduled_at: string | null;
   service_at: string | null;
   subtotal: number;
@@ -100,7 +101,7 @@ export default async function OrderDetailPage({
   const { data } = await supabase
     .from("orders")
     .select(
-      `id, order_code, status, payment_method, settlement_status,
+      `id, order_code, status, payment_method, settlement_status, transfer_last5,
        scheduled_at, service_at, subtotal, adjustments_total, total,
        note, source, cancellation_reason, cancelled_at,
        service_tags, service_notes,
@@ -247,6 +248,11 @@ export default async function OrderDetailPage({
           <StatusBadge value={o.status} />
           <PaymentBadge value={o.payment_method} />
           <SettlementBadge value={o.settlement_status} />
+          {o.payment_method === "transfer" && (
+            <span className="rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+              {o.transfer_last5 ? `轉帳末五碼 ${o.transfer_last5}` : "轉帳·後五碼待補"}
+            </span>
+          )}
         </div>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-600">
           {o.customer && (

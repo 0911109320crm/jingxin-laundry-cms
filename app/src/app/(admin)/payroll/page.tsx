@@ -9,6 +9,7 @@ import {
   Coins,
   Download,
   Lock,
+  ArrowDownToLine,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -122,6 +123,18 @@ export default async function PayrollPage({
     prev.total += Number(o.total);
     pendingByTech.set(techId, prev);
   }
+
+  // 轉帳待對帳（payment_method=transfer 且未確認入帳）
+  const { data: transferRows } = await supabase
+    .from("orders")
+    .select("total")
+    .eq("payment_method", "transfer")
+    .eq("settlement_status", "pending");
+  const transferPending = ((transferRows as { total: number }[] | null) ?? []).reduce(
+    (s, o) => s + Number(o.total),
+    0,
+  );
+  const transferPendingCount = (transferRows as unknown[] | null)?.length ?? 0;
 
   // Points by technician for the month
   const pointsByTech = new Map<string, number>();
@@ -251,6 +264,25 @@ export default async function PayrollPage({
               </p>
               <p className="text-xs text-zinc-400">
                 {totalPendingCount} 筆 · 點此核帳
+              </p>
+            </CardBody>
+          </Card>
+        </Link>
+        <Link href="/payroll/transfers">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardBody className="py-3">
+              <p className="flex items-center gap-1 text-xs text-zinc-500">
+                <ArrowDownToLine className="h-3.5 w-3.5" /> 轉帳待對帳
+              </p>
+              <p
+                className={`font-mono text-xl font-bold ${
+                  transferPending > 0 ? "text-blue-700" : "text-zinc-900"
+                }`}
+              >
+                {formatNTD(transferPending)}
+              </p>
+              <p className="text-xs text-zinc-400">
+                {transferPendingCount} 筆 · 點此對帳
               </p>
             </CardBody>
           </Card>

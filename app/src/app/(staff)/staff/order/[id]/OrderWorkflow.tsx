@@ -152,6 +152,13 @@ export function OrderWorkflow({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [step, setStep] = useState<"checkout" | "complete" | "edit">("checkout");
 
+  // 轉帳收款面板
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [last5, setLast5] = useState("");
+  const [laterTransfer, setLaterTransfer] = useState(false);
+  // 二選一才可送出：填滿 5 碼 或 勾「客戶稍後才轉」
+  const canSubmitTransfer = laterTransfer || /^\d{5}$/.test(last5);
+
   // ── Derived ─────────────────────────────────────────────────────────
   const localAdjTotal = localAdj.reduce(
     (s, a) => s + (a.type === "addon" ? a.amount : -a.amount),
@@ -242,9 +249,9 @@ export function OrderWorkflow({
     }
   };
 
-  const choosePayment = (method: Method) => {
+  const choosePayment = (method: Method, transferLast5?: string) => {
     startTransition(async () => {
-      const res = await setPaymentMethodAction(orderId, method);
+      const res = await setPaymentMethodAction(orderId, method, transferLast5);
       if (!res.ok) {
         alert(res.error);
         return;
@@ -277,6 +284,9 @@ export function OrderWorkflow({
 
   const openCheckout = () => {
     setStep("checkout");
+    setTransferOpen(false);
+    setLast5("");
+    setLaterTransfer(false);
     setDialogOpen(true);
   };
 
@@ -706,13 +716,64 @@ export function OrderWorkflow({
                     <Button
                       type="button"
                       size="lg"
-                      variant="outline"
+                      variant={transferOpen ? "primary" : "outline"}
                       disabled={pending}
-                      onClick={() => choosePayment("transfer")}
+                      onClick={() => setTransferOpen((v) => !v)}
                     >
-                      <ArrowDownToLine className="h-5 w-5" /> 客戶已匯款
+                      <ArrowDownToLine className="h-5 w-5" /> 客戶轉帳
                     </Button>
                   </div>
+
+                  {/* 轉帳面板：填後五碼 或 勾「客戶稍後才轉」二選一 */}
+                  {transferOpen && (
+                    <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-zinc-600">
+                          轉帳帳號後五碼（請客人報帳號末 5 碼，方便老闆娘對帳）
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={last5}
+                          disabled={laterTransfer}
+                          onChange={(e) =>
+                            setLast5(e.target.value.replace(/\D/g, "").slice(0, 5))
+                          }
+                          placeholder="例如 12345"
+                          className="w-full rounded border border-zinc-300 px-3 py-2 text-center font-mono text-lg tracking-widest focus:border-brand-500 focus:outline-none disabled:bg-zinc-100 disabled:text-zinc-400"
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 text-sm text-zinc-700">
+                        <input
+                          type="checkbox"
+                          checked={laterTransfer}
+                          onChange={(e) => {
+                            setLaterTransfer(e.target.checked);
+                            if (e.target.checked) setLast5("");
+                          }}
+                          className="h-4 w-4"
+                        />
+                        客戶稍後才轉（先記轉帳，後五碼之後由老闆娘對帳補上）
+                      </label>
+                      <Button
+                        type="button"
+                        size="lg"
+                        className="w-full"
+                        disabled={pending || !canSubmitTransfer}
+                        onClick={() =>
+                          choosePayment("transfer", laterTransfer ? undefined : last5)
+                        }
+                      >
+                        <ArrowDownToLine className="h-5 w-5" />
+                        {laterTransfer ? "確認（客戶稍後轉帳）" : "確認轉帳"}
+                      </Button>
+                      {!canSubmitTransfer && (
+                        <p className="text-center text-xs text-zinc-400">
+                          請填 5 位後五碼，或勾「客戶稍後才轉」
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
 
