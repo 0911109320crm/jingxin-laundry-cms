@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>淨新清潔工坊 — 多位師傅同一家，現場收款怎麼算</title>
+<style>
+  :root{
+    --ink:#1c2530; --sub:#5a6675; --line:#e3e8ef; --bg:#eef1f5;
+    --brand:#0f766e; --brand-d:#115e59; --brand-soft:#e6f4f2;
+    --ok:#059669; --okbg:#ecfdf5; --warn:#b45309; --warnbg:#fef3e3;
+    --lock:#64748b; --lockbg:#f1f5f9; --gold:#b45309;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.75;padding:0 0 50px}
+  .wrap{max-width:920px;margin:0 auto;padding:0 16px}
+
+  header{background:linear-gradient(135deg,#0f766e 0%,#115e59 100%);color:#fff;
+    padding:38px 0 34px;text-align:center;margin-bottom:26px}
+  header .firm{font-size:13px;letter-spacing:2px;opacity:.85}
+  header h1{font-size:25px;margin:10px 0 6px;font-weight:700}
+  header p{font-size:15px;opacity:.92;max-width:640px;margin:0 auto;padding:0 16px}
+
+  .pain{background:#fff;border:1px solid var(--line);border-left:4px solid var(--gold);
+    border-radius:0 12px 12px 0;padding:18px 22px;margin-bottom:26px;font-size:15px;color:#5a4a30}
+  .pain b{color:var(--gold)}
+
+  h2{font-size:18px;color:var(--brand);margin:30px 0 16px;display:flex;align-items:center;gap:10px}
+  h2 .ic{font-size:20px}
+
+  /* 範例小條 */
+  .eg{background:#0f172a;color:#fff;border-radius:12px;padding:14px 20px;margin-bottom:20px;
+    display:flex;flex-wrap:wrap;gap:6px 24px;align-items:center;font-size:14px}
+  .eg .t{font-weight:700}
+  .eg .i b{color:#5eead4}
+
+  /* 步驟區 */
+  .step-block{background:#fff;border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px;margin-bottom:16px;box-shadow:0 4px 16px rgba(20,30,50,.05)}
+  .step-head{display:flex;align-items:center;gap:10px;font-size:16px;margin-bottom:14px}
+  .step-head .badge{width:30px;height:30px;border-radius:50%;background:var(--brand);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none}
+  .step-head .pill{font-size:12px;font-weight:600;background:var(--brand-soft);color:var(--brand);
+    padding:2px 10px;border-radius:20px}
+  .step-grid{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+  .step-text{flex:1;min-width:240px;font-size:14.5px;color:var(--sub)}
+  .step-text b{color:var(--ink)}
+  .step-text .hl{display:inline-block;margin-top:10px;background:var(--okbg);color:#065f46;
+    border:1px solid #a7f3d0;border-radius:8px;padding:7px 13px;font-size:13.5px}
+  .step-text .hl.gold{background:var(--warnbg);color:#7a4a12;border-color:#fcd9a8}
+
+  /* 手機畫面 mockup */
+  .phone{flex:none;width:248px;margin:0 auto;background:#1c2530;border-radius:30px;
+    padding:10px 8px 14px;box-shadow:0 12px 30px rgba(20,30,50,.22)}
+  .phone-notch{width:78px;height:5px;background:#3a4452;border-radius:3px;margin:2px auto 8px}
+  .screen{background:#f1f4f8;border-radius:20px;overflow:hidden;min-height:300px}
+  .pbar{background:linear-gradient(135deg,#0f766e,#115e59);color:#fff;padding:9px 13px;
+    font-size:12px;display:flex;justify-content:space-between;align-items:center}
+  .pbar .b{opacity:.85;font-size:10px}
+  .pbody{padding:10px;display:flex;flex-direction:column;gap:9px}
+
+  .pcard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .pcard.mine{border-color:var(--brand);background:#f3faf8}
+  .p-lbl{font-size:10.5px;color:var(--sub);margin-bottom:6px}
+  .p-lbl.mine{color:var(--brand);font-weight:700}
+  .p-row{display:flex;justify-content:space-between;font-size:13px;padding:2px 0}
+  .p-row .amt{font-family:ui-monospace,monospace;font-weight:600}
+  .p-row.add .amt{color:var(--warn)}
+  .p-tot{display:flex;justify-content:space-between;border-top:1px dashed var(--line);
+    margin-top:5px;padding-top:6px;font-size:13.5px}
+  .p-tot b{font-family:ui-monospace,monospace;font-size:16px}
+
+  .pbtn{display:block;width:100%;text-align:center;padding:11px;border-radius:10px;
+    font-size:13.5px;font-weight:700;border:none;color:#fff;line-height:1.3}
+  .pbtn.green{background:var(--brand)}
+  .pbtn.teal{background:#0d9488;font-size:14px}
+  .phint{font-size:10.5px;color:var(--sub);text-align:center;line-height:1.5}
+
+  .pwait{background:var(--warnbg);border:1px solid #fcd9a8;border-radius:10px;padding:12px;
+    text-align:center;font-size:12.5px;color:#7a4a12;font-weight:600}
+  .pwait .s{display:block;font-weight:400;font-size:10.5px;margin-top:3px}
+
+  .plock{background:var(--lockbg);border:1px dashed #c2cbd6;border-radius:12px;padding:18px 12px;
+    text-align:center}
+  .plock .ic{font-size:26px}
+  .plock .t{font-size:13px;font-weight:700;color:#475569;margin-top:6px;line-height:1.5}
+  .plock .s{font-size:10.5px;color:var(--sub);margin-top:5px}
+
+  /* 好處 */
+  .benefits{display:flex;gap:14px;flex-wrap:wrap}
+  .ben{flex:1;min-width:210px;background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:18px 20px;box-shadow:0 4px 16px rgba(20,30,50,.05)}
+  .ben .ic{font-size:24px}
+  .ben .t{font-size:15px;font-weight:700;margin:8px 0 4px}
+  .ben .d{font-size:13.5px;color:var(--sub)}
+
+  .safety{background:var(--lockbg);border:1px solid #d6dde6;border-radius:12px;padding:18px 22px;margin-top:24px}
+  .safety .t{font-size:15px;font-weight:700;color:var(--lock);display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .safety .d{font-size:14px;color:var(--sub)}
+  .safety .d b{color:var(--ink)}
+
+  footer{text-align:center;margin-top:36px;font-size:12.5px;color:var(--sub)}
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="firm">淨新清潔工坊　×　仁格數位科技工坊</div>
+    <h1>多位師傅去同一家，錢怎麼收、怎麼算？</h1>
+    <p>系統幫您把「誰做了哪幾項、各收多少、最後誰收錢」全部記清楚，不會再算錯、算不清。</p>
+  </header>
+
+  <div class="wrap">
+
+    <div class="pain">
+      以前最頭痛的：<b>兩三個師傅一起去同一個客戶家</b>，洗衣機一個人、冷氣一個人，
+      最後客戶把錢一次付給其中一個師傅——回來對帳時，<b>誰收了多少、這筆錢在誰身上</b>，常常要打電話一個個問、容易吵架也容易漏。
+    </div>
+
+    <h2><span class="ic">📱</span>師傅手機上實際長這樣（用「林太太家」當例子）</h2>
+
+    <div class="eg">
+      <span class="t">📋 林太太家</span>
+      <span class="i">🧺 洗衣機 → <b>阿明</b></span>
+      <span class="i">❄️ 冷氣 → <b>阿華</b></span>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="step-block">
+      <div class="step-head">
+        <span class="badge">1</span>
+        <span>阿明洗完洗衣機</span>
+        <span class="pill">先做完，要先走</span>
+      </div>
+      <div class="step-grid">
+        <div class="step-text">
+          阿明在手機上把<b>自己這一項</b>的金額確認好（現場多了內槽拆洗就自己加上去）。
+          確認完<b>直接走</b>，錢的事不用他管。
+          <span class="hl">✓ 金額是現場師傅自己確認的，最準</span>
+        </div>
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="screen">
+            <div class="pbar"><span>林太太家</span><span class="b">阿明</span></div>
+            <div class="pbody">
+              <div class="pcard mine">
+                <div class="p-lbl mine">我負責的品項（可改金額）</div>
+                <div class="p-row"><span>洗衣機清洗</span><span class="amt">1,500</span></div>
+                <div class="p-row add"><span>＋內槽拆洗</span><span class="amt">+300</span></div>
+                <div class="p-tot"><span>我這項</span><b>1,800</b></div>
+              </div>
+              <button class="pbtn green">✓ 確認我的金額</button>
+              <div class="phint">確認後直接走，等大家都確認，由最後一位收全額</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step-block">
+      <div class="step-head">
+        <span class="badge">2</span>
+        <span>阿華洗完冷氣</span>
+        <span class="pill">最後離開的人</span>
+      </div>
+      <div class="step-grid">
+        <div class="step-text">
+          阿華也把自己的冷氣金額確認好。這時候<b>大家都確認完了</b>，
+          他的手機就<b>自動跳出整單總金額</b>，按一下就收齊全額現金。
+          <span class="hl gold">⭐ 系統自動算好全額，不用心算</span>
+        </div>
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="screen">
+            <div class="pbar"><span>林太太家</span><span class="b">阿華</span></div>
+            <div class="pbody">
+              <div class="pcard">
+                <div class="p-lbl">整單金額（大家都確認了）</div>
+                <div class="p-row"><span>洗衣機（阿明）</span><span class="amt">1,800</span></div>
+                <div class="p-row"><span>冷氣（我）</span><span class="amt">1,400</span></div>
+                <div class="p-tot"><span>全額</span><b style="color:#0f766e">3,200</b></div>
+              </div>
+              <button class="pbtn teal">💵 結帳收款</button>
+              <div class="phint">點一下 → 跳出明細（全額 3,200）→ 選「收到現金」</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step-block">
+      <div class="step-head">
+        <span class="badge">3</span>
+        <span>收完款，其他師傅再打開</span>
+        <span class="pill">自動鎖定</span>
+      </div>
+      <div class="step-grid">
+        <div class="step-text">
+          錢一被阿華收走，<b>其他師傅的手機就變成唯讀</b>——看得到「這筆已經由阿華收了」，
+          但碰不到收款，<b>不可能手殘按錯把紀錄洗掉</b>。
+          <span class="hl">✓ 收完馬上鎖定，責任清清楚楚</span>
+        </div>
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="screen">
+            <div class="pbar"><span>林太太家</span><span class="b">阿明 再打開</span></div>
+            <div class="pbody">
+              <div class="plock">
+                <div class="ic">🔒</div>
+                <div class="t">此單現金 3,200<br>已由「阿華」收取</div>
+                <div class="s">收款只有阿華本人或老闆娘能更動</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2><span class="ic">💚</span>這樣做，您得到什麼</h2>
+    <div class="benefits">
+      <div class="ben">
+        <div class="ic">🎯</div>
+        <div class="t">金額算得準</div>
+        <div class="d">每一項多少錢，是當場做的師傅自己確認的，現場有加價、有折扣都直接反映，不會憑記憶。</div>
+      </div>
+      <div class="ben">
+        <div class="ic">🙋</div>
+        <div class="t">責任很清楚</div>
+        <div class="d">這筆現金到底在哪個師傅身上，系統清清楚楚，回繳對帳不用再一個個打電話問。</div>
+      </div>
+      <div class="ben">
+        <div class="ic">🔒</div>
+        <div class="t">不會被亂改</div>
+        <div class="d">錢一收就鎖定，其他師傅的手機只會看到「已由阿華收取」，不可能手殘按錯把紀錄洗掉。</div>
+      </div>
+      <div class="ben">
+        <div class="ic">📊</div>
+        <div class="t">您一眼掌握</div>
+        <div class="d">後台一看就知道：哪個師傅手上還有多少現金沒交回來，月底結算一鍵完成。</div>
+      </div>
+    </div>
+
+    <div class="safety">
+      <div class="t">🛟 萬一師傅忘了確認怎麼辦？</div>
+      <div class="d">如果有師傅做完忘了在手機確認金額就走了，<b>您在後台看得到「這單卡在誰還沒確認」</b>，可以直接幫他確認、放行收款——不會卡住收不了錢。</div>
+    </div>
+
+    <footer>
+      仁格數位科技工坊　|　為淨新清潔工坊客製化營運系統
+    </footer>
+
+  </div>
+</body>
+</html>

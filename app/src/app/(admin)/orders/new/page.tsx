@@ -25,16 +25,24 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
 
   const [
     { data: services },
+    { data: detailedServices },
     { data: adjustments },
     { data: techProfiles },
   ] = await Promise.all([
-    // 建單只列各 category 的「基本價代表」(is_basic_choice=true)
+    // 簡易模式：只列各 category 的「基本價代表」(is_basic_choice=true)
     // 老闆娘電話接單時不知道機型/品牌/容量，先選大類基本價，師傅現場補實際
     supabase
       .from("service_items")
       .select("id, code, name, default_price")
       .eq("active", true)
       .eq("is_basic_choice", true)
+      .order("sort_order"),
+    // 詳細模式：完整品項(含尺寸/變體)，老闆娘已知詳情時可切換選用，依 category 分組
+    supabase
+      .from("service_items")
+      .select("id, code, name, default_price, category")
+      .eq("active", true)
+      .order("category")
       .order("sort_order"),
     supabase
       .from("adjustment_items")
@@ -143,6 +151,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
       <OrderForm
         mode="create"
         services={(services ?? []) as { id: string; code: string; name: string; default_price: number }[]}
+        detailedServices={(detailedServices ?? []) as { id: string; code: string; name: string; default_price: number; category: string }[]}
         adjustments={(adjustments ?? []) as { id: string; name: string; type: "addon"|"discount"; default_amount: number }[]}
         technicians={(techProfiles ?? []) as { id: string; name: string }[]}
         defaultCustomerId={sp.customer ?? cloneInitial?.customer_id}

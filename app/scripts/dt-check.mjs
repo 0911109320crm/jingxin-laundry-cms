@@ -1,0 +1,25 @@
+import { chromium } from "playwright";
+import { mkdirSync } from "node:fs";
+import { resolve, join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+const OUT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "mobile-verify");
+mkdirSync(OUT, { recursive: true });
+const BASE = "http://localhost:3000";
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, locale: "zh-TW" });
+const page = await ctx.newPage();
+await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await page.fill('input[name="account"]', "ren.studio.dev@gmail.com");
+await page.fill('input[name="password"]', "admin1234");
+await Promise.all([page.waitForURL(u => !u.pathname.includes("/login"), { timeout: 30000 }), page.click('button[type="submit"]')]);
+await page.goto(`${BASE}/orders/new`, { waitUntil: "networkidle" });
+await page.waitForTimeout(1200);
+const dateInput = page.locator('input[type="date"]').first();
+await dateInput.fill("2026-05-31");
+await page.waitForTimeout(300);
+const box = await dateInput.boundingBox();
+console.log(`date input width = ${Math.round(box?.width ?? 0)}px (需 ~120px+ 才能完整顯示 年/月/日)`);
+// 截圖「客戶/排程」卡片區域
+await page.screenshot({ path: join(OUT, "datefield-desktop.png"), clip: { x: 0, y: 130, width: 760, height: 360 } });
+await b.close();
+console.log("DONE");

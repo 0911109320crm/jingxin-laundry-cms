@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多師傅同單 — 金額確認 + 收款流程</title>
+<style>
+  :root{
+    --ink:#1c2530; --sub:#5a6675; --line:#e3e8ef; --bg:#eef1f5;
+    --brand:#4f46e5; --brand-d:#4338ca; --ok:#059669; --okbg:#ecfdf5;
+    --warn:#b45309; --warnbg:#fef3e3; --lock:#64748b; --lockbg:#f1f5f9;
+    --cash:#0f766e; --cashbg:#e6f4f2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.65;padding:28px 16px}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:24px;letter-spacing:.5px;margin-bottom:6px}
+  .lead{color:var(--sub);font-size:14.5px;margin-bottom:20px}
+
+  /* 痛點重述 */
+  .pains{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-bottom:24px;
+    box-shadow:0 4px 18px rgba(20,30,50,.05)}
+  .pains h2{font-size:15px;color:var(--brand);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .pains .row{display:flex;gap:14px;flex-wrap:wrap}
+  .pains .p{flex:1;min-width:280px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .pains .p b{color:var(--ink)}
+  .pains .p .n{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--brand);color:#fff;
+    font-size:12px;align-items:center;justify-content:center;margin-right:6px;flex:none}
+  .pains .p .tag{font-size:12px;color:var(--sub);margin-top:6px}
+
+  /* 範例訂單 */
+  .order{background:#0f172a;color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:8px;
+    display:flex;flex-wrap:wrap;gap:8px 26px;align-items:center}
+  .order .ttl{font-size:15px;font-weight:700}
+  .order .it{font-size:13px;opacity:.9}
+  .order .it b{color:#a5b4fc}
+  .order .est{margin-left:auto;font-size:13px;opacity:.8}
+
+  .axis-label{text-align:center;color:var(--sub);font-size:13px;margin:18px 0 10px;
+    display:flex;align-items:center;gap:10px;justify-content:center}
+  .axis-label::before,.axis-label::after{content:"";height:1px;background:var(--line);flex:1;max-width:120px}
+
+  /* 三步驟 */
+  .steps{display:flex;gap:18px;flex-wrap:wrap;align-items:stretch}
+  .step{flex:1;min-width:300px;display:flex;flex-direction:column}
+  .step-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .step-h .badge{width:30px;height:30px;border-radius:50%;background:var(--brand);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none}
+  .step-h .who{font-weight:700;font-size:15px}
+  .step-h .when{font-size:12px;color:var(--sub)}
+
+  /* 手機畫面 */
+  .phone{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    box-shadow:0 8px 26px rgba(20,30,50,.08);flex:1;display:flex;flex-direction:column}
+  .phone-top{background:#f8fafc;border-bottom:1px solid var(--line);padding:9px 14px;font-size:11.5px;color:var(--sub);
+    display:flex;justify-content:space-between;align-items:center}
+  .phone-top .dot{width:8px;height:8px;border-radius:50%;background:#cbd5e1}
+  .phone-body{padding:16px;display:flex;flex-direction:column;gap:11px;flex:1}
+
+  .card{border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+  .card .lbl{font-size:11.5px;color:var(--sub);margin-bottom:7px}
+  .li{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;padding:3px 0}
+  .li .nm{color:var(--ink)}
+  .li .amt{font-family:ui-monospace,monospace;font-weight:600}
+  .li.add .amt{color:var(--warn)}
+  .li.cut .amt{color:var(--ok)}
+  .li .chip{font-size:10px;padding:1px 6px;border-radius:6px;margin-right:6px}
+  .chip.a{background:var(--warnbg);color:var(--warn)}
+  .chip.c{background:var(--okbg);color:var(--ok)}
+  .mine{border-color:var(--brand);background:#f5f5ff}
+  .mine .lbl{color:var(--brand);font-weight:700}
+
+  .sumline{display:flex;justify-content:space-between;align-items:center;border-top:1px dashed var(--line);
+    margin-top:5px;padding-top:8px;font-size:14px}
+  .sumline b{font-family:ui-monospace,monospace;font-size:17px}
+
+  .btn{display:block;width:100%;text-align:center;padding:11px;border-radius:10px;font-size:14px;
+    font-weight:700;border:none;cursor:default}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-cash{background:var(--cash);color:#fff;font-size:15px}
+  .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--sub);font-weight:600;font-size:12.5px}
+
+  .note{font-size:12px;border-radius:9px;padding:9px 12px;line-height:1.5}
+  .note-ok{background:var(--okbg);color:#065f46;border:1px solid #a7f3d0}
+  .note-warn{background:var(--warnbg);color:#7a4a12;border:1px solid #fcd9a8}
+  .note-lock{background:var(--lockbg);color:var(--lock);border:1px solid #cbd5e1}
+
+  .lockbox{background:var(--lockbg);border:1px dashed #cbd5e1;border-radius:11px;padding:16px 14px;text-align:center}
+  .lockbox .ic{font-size:24px}
+  .lockbox .t{font-size:13.5px;color:var(--lock);margin-top:5px;font-weight:600}
+  .lockbox .s{font-size:12px;color:var(--sub);margin-top:3px}
+
+  .caption{font-size:12.5px;color:var(--sub);margin-top:10px;padding:0 4px;line-height:1.55}
+  .caption b{color:var(--ink)}
+
+  /* 設計小結 */
+  .summary{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-top:28px;
+    box-shadow:0 4px 18px rgba(20,30,50,.05)}
+  .summary h2{font-size:16px;color:var(--brand);margin-bottom:14px}
+  .rule{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .rule:last-child{border-bottom:none}
+  .rule .k{flex:none;width:26px;height:26px;border-radius:7px;background:var(--cashbg);color:var(--cash);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+  .rule .v b{color:var(--ink)}
+  .confirm{margin-top:18px;background:#fffbeb;border:1px solid #fde68a;border-radius:11px;padding:16px 18px}
+  .confirm h3{font-size:14px;color:var(--warn);margin-bottom:8px}
+  .confirm ul{margin:0;padding-left:18px;font-size:13.5px;color:#7a4a12}
+  .confirm li{margin:5px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>多師傅同單 — 金額確認 ＋ 收款流程（草圖）</h1>
+  <p class="lead">RC，這是我理解你痛點後畫的流程。請看完最下面「我理解對嗎」那段，告訴我哪裡要修。</p>
+
+  <!-- 痛點重述 -->
+  <div class="pains">
+    <h2>🎯 你說的兩個核心痛點（我重述，確認我懂了）</h2>
+    <div class="row">
+      <div class="p">
+        <span class="n">1</span><b>金額要由「做那項的師傅」自己確認</b>
+        <div class="tag">現場實際金額只有師傅知道——可能臨時加項（拆洗）、給折扣、或某項機器拆不開要扣掉。老闆娘預估的不一定準，所以每位師傅要自己把「我這幾項」的金額調整 / 確認好。</div>
+      </div>
+      <div class="p">
+        <span class="n">2</span><b>多師傅同案家 → 最後一位收「全額」</b>
+        <div class="tag">客戶通常一次付清，由最後離開的那位師傅向客戶收走整單全額現金。全額 ＝ 每位師傅各自確認後的金額加總。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 範例訂單 -->
+  <div class="order">
+    <span class="ttl">📋 範例：林太太家</span>
+    <span class="it">🧺 洗衣機 → <b>阿明</b></span>
+    <span class="it">❄️ 冷氣 → <b>阿華</b></span>
+    <span class="est">老闆娘預估：NT$ 2,900</span>
+  </div>
+
+  <div class="axis-label">時間由左到右流動（誰先做完不一定）</div>
+
+  <!-- 三步驟 -->
+  <div class="steps">
+
+    <!-- STEP 1 -->
+    <div class="step">
+      <div class="step-h">
+        <div class="badge">1</div>
+        <div><div class="who">阿明（先做完，要先走）</div><div class="when">14:30 洗完洗衣機</div></div>
+      </div>
+      <div class="phone">
+        <div class="phone-top"><span>阿明的手機 · 林太太家</span><span class="dot"></span></div>
+        <div class="phone-body">
+          <div class="card mine">
+            <div class="lbl">我負責的品項（可改金額）</div>
+            <div class="li"><span class="nm">直立式洗衣機清洗</span><span class="amt">1,500</span></div>
+            <div class="li add"><span class="nm"><span class="chip a">加</span>內槽拆洗</span><span class="amt">+300</span></div>
+            <div class="sumline"><span>我這項小計</span><b>1,800</b></div>
+          </div>
+          <button class="btn btn-primary">✓ 確認我的金額（1,800）</button>
+          <div class="note note-warn">⏳ 我先走，這單還有「阿華」沒做完<br>→ 現在<b>不出現收款鈕</b>，錢留給最後的人收</div>
+        </div>
+      </div>
+      <div class="caption">阿明把自己的品項金額調好（現場加了內槽拆洗 +300）→ 按「確認我的金額」→ 因為他不是收錢的人，<b>不用、也看不到收款按鈕</b>，做完直接走。</div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step">
+      <div class="step-h">
+        <div class="badge">2</div>
+        <div><div class="who">阿華（後做完，最後離開）</div><div class="when">15:10 洗完冷氣</div></div>
+      </div>
+      <div class="phone">
+        <div class="phone-top"><span>阿華的手機 · 林太太家</span><span class="dot"></span></div>
+        <div class="phone-body">
+          <div class="card mine">
+            <div class="lbl">我負責的品項（可改金額）</div>
+            <div class="li"><span class="nm">分離式冷氣清洗</span><span class="amt">1,400</span></div>
+            <div class="sumline"><span>我這項小計</span><b>1,400</b></div>
+          </div>
+          <div class="card">
+            <div class="lbl">整單明細（含阿明已確認的）</div>
+            <div class="li"><span class="nm">洗衣機（阿明 ✓）</span><span class="amt">1,800</span></div>
+            <div class="li"><span class="nm">冷氣（我）</span><span class="amt">1,400</span></div>
+            <div class="sumline"><span>全額</span><b style="color:var(--cash)">3,200</b></div>
+          </div>
+          <button class="btn btn-cash">💵 我向客戶收了全額現金 3,200</button>
+          <div class="note note-ok">✓ 全部師傅都確認金額了，可安心收全額</div>
+        </div>
+      </div>
+      <div class="caption">阿華確認自己的冷氣金額後，畫面出現<b>整單全額</b>。他是最後收尾的人 → 按「收了全額現金」→ 系統記下<b>收款人＝阿華</b>。</div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step">
+      <div class="step-h">
+        <div class="badge">3</div>
+        <div><div class="who">收款後 — 大家看到的畫面</div><div class="when">收款瞬間鎖定</div></div>
+      </div>
+      <div class="phone">
+        <div class="phone-top"><span>阿明 / 任何其他師傅再打開</span><span class="dot"></span></div>
+        <div class="phone-body">
+          <div class="lockbox">
+            <div class="ic">🔒</div>
+            <div class="t">此單現金 NT$ 3,200<br>已由「阿華」收取</div>
+            <div class="s">收款相關按鈕已隱藏，<br>只有阿華本人或老闆娘能更動</div>
+          </div>
+          <div class="card">
+            <div class="lbl">阿明仍可做的事</div>
+            <button class="btn btn-ghost">查看 / 補我的品項備註</button>
+          </div>
+          <div class="note note-lock">阿明不會被誤算「待回繳現金」，也不可能手殘按錯把阿華的收款洗掉</div>
+        </div>
+      </div>
+      <div class="caption">錢一旦被阿華收了，<b>其他人的頁面立刻變唯讀</b>，看得到「誰收了多少」但不能動收款。萬一收錯人，老闆娘對帳頁可以改。</div>
+    </div>
+
+  </div>
+
+  <!-- 設計小結 -->
+  <div class="summary">
+    <h2>🧩 這張圖背後的設計規則</h2>
+    <div class="rule"><div class="k">A</div><div class="v"><b>金額確認：每位師傅各自做</b>　—　每個人只調整 / 確認「自己負責的品項」。這是 per-師傅的動作（要新增「我的金額已確認」狀態）。</div></div>
+    <div class="rule"><div class="k">B</div><div class="v"><b>收款：先到先得認領，不是排除法</b>　—　誰實際收了全額誰按一下，按下去就鎖定收款人，其他人變唯讀。<u>不依賴「每個人都要先聲明放棄」，所以不會卡死</u>。</div></div>
+    <div class="rule"><div class="k">C</div><div class="v"><b>全額 ＝ 各品項即時加總</b>　—　收款人看到的全額，永遠是當下所有師傅確認後的總和。</div></div>
+
+    <div class="confirm">
+      <h3>❓ 我理解對嗎？請幫我確認這幾點</h3>
+      <ul>
+        <li><b>① 金額確認</b>：每位師傅是要「<u>能改金額</u>（加項/折扣/不服務）」還是只是「<u>看一眼按確認</u>」不改數字？</li>
+        <li><b>② 先走的人沒收錢</b>：他確認完自己金額就走、不碰收款 —— 這樣對嗎？還是你要先走的人也按一顆「交給最後的人收」？</li>
+        <li><b>③ 收款人怎麼定</b>：用「誰收了全額誰按」就好（B 方案），還是你堅持要「系統算出最後一個人」才給他收款鈕？</li>
+        <li><b>④ 萬一有人還沒確認金額，最後的人就想收款</b>：要<u>擋住不給收</u>（怕金額不對），還是<u>提示一下但仍可收</u>（怕卡死）？</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

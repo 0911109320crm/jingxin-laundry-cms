@@ -58,10 +58,13 @@ export function AddressPicker({
 
   if (selected && !open) {
     return (
-      <div className="flex h-10 w-full items-center justify-between rounded-lg border border-zinc-300 bg-white px-3 text-sm">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <MapPin className="h-4 w-4 shrink-0 text-zinc-400" />
-          <span className="truncate text-zinc-900">{fullLabel(selected)}</span>
+      <div className="flex w-full items-start justify-between gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm">
+        <span className="flex min-w-0 flex-1 items-start gap-1.5">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+          {/* 完整呈現地址，不截斷，方便老闆娘確認 */}
+          <span className="min-w-0 flex-1 leading-relaxed text-zinc-900">
+            {fullLabel(selected)}
+          </span>
         </span>
         <button
           type="button"
@@ -69,7 +72,7 @@ export function AddressPicker({
             setOpen(true);
             setQuery("");
           }}
-          className="ml-2 shrink-0 rounded px-1.5 py-0.5 text-xs text-brand-700 hover:bg-brand-50"
+          className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-xs text-brand-700 hover:bg-brand-50"
         >
           變更
         </button>

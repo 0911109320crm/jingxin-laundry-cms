@@ -14,6 +14,7 @@ import {
   PAYMENT_METHOD_LABEL,
 } from "@/lib/validators/order";
 import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
+import { SERVICE_CATEGORY_LABEL } from "@/app/(admin)/settings/services/categories";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -38,6 +39,7 @@ type Service = {
   code: string;
   name: string;
   default_price: number;
+  category?: string;
 };
 type Adjustment = {
   id: string;
@@ -65,6 +67,8 @@ type Machine = {
 type Props = {
   technicians: Technician[];
   services: Service[];
+  /** 完整品項(含尺寸/變體)；提供時建單可切換「簡易/詳細」 */
+  detailedServices?: Service[];
   adjustments: Adjustment[];
   mode: "create" | "edit";
   /** Edit mode: full snapshot with id. Create mode (clone): no id required. */
@@ -94,6 +98,7 @@ const emptyItem = {
 export function OrderForm({
   technicians,
   services,
+  detailedServices,
   adjustments,
   mode,
   initial,
@@ -109,6 +114,14 @@ export function OrderForm({
   const [addresses, setAddresses] = useState<Address[]>(initial?.addresses ?? []);
   const [machines, setMachines] = useState<Machine[]>(initial?.machines ?? []);
   const [previewCode, setPreviewCode] = useState<string>("");
+
+  // 簡易 / 詳細品項切換（建單用）：簡易=7個基本大類；詳細=完整品項依分類分組
+  const [detailMode, setDetailMode] = useState(false);
+  const showDetailToggle =
+    mode === "create" && !!detailedServices && detailedServices.length > 0;
+  const serviceList = detailMode && detailedServices ? detailedServices : services;
+  // 查價用超集合（詳細清單含全部，簡易項也在內），切換模式都查得到
+  const serviceLookup = detailedServices ?? services;
 
   const {
     register,
@@ -317,9 +330,20 @@ export function OrderForm({
   };
 
   const setServiceDefaults = (idx: number, serviceId: string) => {
-    const svc = services.find((s) => s.id === serviceId);
+    const svc = serviceLookup.find((s) => s.id === serviceId);
     if (svc) setValue(`items.${idx}.unit_price`, svc.default_price);
   };
+
+  // 詳細模式：把品項依 category 分組（給 optgroup 用）
+  const groupedServices = (() => {
+    const groups = new Map<string, Service[]>();
+    for (const s of serviceList) {
+      const key = s.category ?? "other";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(s);
+    }
+    return Array.from(groups.entries());
+  })();
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -352,7 +376,7 @@ export function OrderForm({
               )}
             />
           </Field>
-          <Field label="服務地址" error={errors.address_id?.message}>
+          <Field label="服務地址" error={errors.address_id?.message} className="xl:col-span-2">
             <div className="flex gap-2">
               <div className="min-w-0 flex-1">
                 <Controller
@@ -394,20 +418,28 @@ export function OrderForm({
               )}
             />
           </Field>
-          <Field label="預計時長（分鐘）">
+          <Field label="預計時長（小時）">
             <div className="flex flex-wrap items-center gap-2">
               <Input
                 type="number"
                 min={0}
-                step={5}
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value) || 0)}
-                placeholder="自訂 45 / 80…"
+                step={0.5}
+                value={duration ? duration / 60 : ""}
+                onChange={(e) => {
+                  const h = Number(e.target.value);
+                  setDuration(Number.isFinite(h) && h > 0 ? Math.round(h * 60) : 0);
+                }}
+                placeholder="自訂 0.5 / 2.5…"
                 className="w-28"
               />
-              <span className="text-xs text-zinc-400">或快選：</span>
+              <span className="text-xs text-zinc-400">小時，或快選：</span>
               <div className="flex gap-1">
-                {[60, 90, 120, 180].map((m) => (
+                {[
+                  { h: 1, m: 60 },
+                  { h: 1.5, m: 90 },
+                  { h: 2, m: 120 },
+                  { h: 3, m: 180 },
+                ].map(({ h, m }) => (
                   <button
                     type="button"
                     key={m}
@@ -418,7 +450,7 @@ export function OrderForm({
                         : "border-zinc-300 bg-white text-zinc-600 hover:bg-zinc-50"
                     }`}
                   >
-                    {m} 分
+                    {h} 小時
                   </button>
                 ))}
               </div>
@@ -479,16 +511,44 @@ export function OrderForm({
 
       <div className="space-y-5">
       <Card>
-        <CardHeader className="flex items-center justify-between">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle>服務項目（可多項）</CardTitle>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => itemArr.append(emptyItem)}
-          >
-            <Plus className="h-4 w-4" /> 新增一項
-          </Button>
+          <div className="flex items-center gap-2">
+            {showDetailToggle && (
+              <div className="inline-flex overflow-hidden rounded-lg border border-zinc-300 text-sm">
+                <button
+                  type="button"
+                  onClick={() => setDetailMode(false)}
+                  className={`px-3 py-1.5 ${
+                    !detailMode
+                      ? "bg-brand-600 font-medium text-white"
+                      : "bg-white text-zinc-600 hover:bg-zinc-50"
+                  }`}
+                >
+                  簡易品項
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailMode(true)}
+                  className={`px-3 py-1.5 ${
+                    detailMode
+                      ? "bg-brand-600 font-medium text-white"
+                      : "bg-white text-zinc-600 hover:bg-zinc-50"
+                  }`}
+                >
+                  詳細品項
+                </button>
+              </div>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => itemArr.append(emptyItem)}
+            >
+              <Plus className="h-4 w-4" /> 新增一項
+            </Button>
+          </div>
         </CardHeader>
         {mode === "create" && (
           <div className="border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs text-amber-800 space-y-0.5">
@@ -534,12 +594,25 @@ export function OrderForm({
                         }}
                       >
                         <option value="">— 選擇 —</option>
-                        {services.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {/* WV-S/WTUB 這類英文代號是內部 SKU，老闆娘只看中文品名 + 價格 */}
-                            {s.name}（{formatNTD(s.default_price)}）
-                          </option>
-                        ))}
+                        {/* WV-S/WTUB 這類英文代號是內部 SKU，老闆娘只看中文品名 + 價格 */}
+                        {detailMode
+                          ? groupedServices.map(([cat, items]) => (
+                              <optgroup
+                                key={cat}
+                                label={SERVICE_CATEGORY_LABEL[cat] ?? cat}
+                              >
+                                {items.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name}（{formatNTD(s.default_price)}）
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ))
+                          : serviceList.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}（{formatNTD(s.default_price)}）
+                              </option>
+                            ))}
                       </Select>
                     )}
                   />

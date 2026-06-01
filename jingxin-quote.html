@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>淨新清潔工坊 — 數位化營運系統 報價單</title>
+<style>
+  :root{
+    --ink:#1c2530; --sub:#5a6675; --line:#e3e8ef; --bg:#f5f7fa;
+    --brand:#0f766e; --brand-soft:#e6f4f2; --accent:#b45309; --accent-soft:#fdf3e3;
+    --core:#0f766e; --opt:#7c3aed; --opt-soft:#f1ebfb;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.7;-webkit-font-smoothing:antialiased}
+  .sheet{max-width:880px;margin:32px auto;background:#fff;
+    box-shadow:0 10px 40px rgba(20,30,50,.08);border-radius:14px;overflow:hidden}
+  .pad{padding:44px 52px}
+
+  /* header */
+  header{background:linear-gradient(135deg,#0f766e 0%,#115e59 100%);color:#fff;padding:40px 52px}
+  .firm{font-size:13px;letter-spacing:2px;opacity:.85}
+  header h1{font-size:27px;margin:10px 0 4px;font-weight:700;letter-spacing:1px}
+  header .for{font-size:15px;opacity:.92}
+  .meta{display:flex;flex-wrap:wrap;gap:6px 28px;margin-top:20px;font-size:12.5px;opacity:.9}
+  .meta b{font-weight:600}
+
+  h2{font-size:17px;color:var(--brand);margin:34px 0 14px;padding-bottom:8px;
+    border-bottom:2px solid var(--brand-soft);display:flex;align-items:center;gap:9px}
+  h2 .n{background:var(--brand);color:#fff;width:24px;height:24px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:none}
+  p.lead{color:var(--sub);font-size:14.5px}
+
+  .story{background:var(--brand-soft);border-radius:10px;padding:18px 22px;font-size:14px;color:#274a46}
+  .story b{color:var(--brand)}
+
+  .grid3{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
+  .stat{flex:1;min-width:150px;background:#fafbfc;border:1px solid var(--line);
+    border-radius:10px;padding:16px 18px}
+  .stat .big{font-size:22px;font-weight:700;color:var(--brand)}
+  .stat .lbl{font-size:12.5px;color:var(--sub);margin-top:2px}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px}
+  th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12.5px;color:var(--sub);font-weight:600;background:#fafbfc}
+  td.price{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
+  .item-t{font-weight:600}
+  .item-d{font-size:12.5px;color:var(--sub);margin-top:3px}
+  .pain{font-size:12.3px;color:#7a4a12;margin-top:8px;background:var(--accent-soft);
+    border-radius:6px;padding:7px 11px;line-height:1.55}
+  .pain b{color:var(--accent);font-weight:700;margin-right:6px}
+
+  .blk{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:14px}
+  .blk-h{padding:13px 18px;font-weight:700;font-size:14.5px;display:flex;
+    justify-content:space-between;align-items:center}
+  .blk-core .blk-h{background:var(--brand-soft);color:var(--brand)}
+  .blk-opt .blk-h{background:var(--opt-soft);color:var(--opt)}
+  .blk-h .tag{font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:20px;background:#fff}
+  .blk-fin .blk-h{background:var(--accent-soft);color:var(--accent)}
+  .blk-core .tag{color:var(--brand);border:1px solid var(--brand)}
+  .blk-opt .tag{color:var(--opt);border:1px solid var(--opt)}
+  .blk-fin .tag{color:var(--accent);border:1px solid var(--accent)}
+  .blk table td:first-child{padding-left:18px}
+  .blk table td:last-child{padding-right:18px}
+  .sub td{background:#fafbfc;font-weight:600;border-top:1px solid var(--line)}
+
+  /* totals */
+  .totals{margin-top:22px;background:#0f172a;color:#fff;border-radius:12px;padding:22px 26px}
+  .trow{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;font-size:14.5px}
+  .trow.val{opacity:.75}
+  .trow.disc{opacity:.85;color:#fcd9a8}
+  .trow.final{border-top:1px dashed rgba(255,255,255,.25);margin-top:8px;padding-top:16px}
+  .trow.final .lbl{font-size:16px;font-weight:700}
+  .trow.final .amt{font-size:30px;font-weight:800;color:#5eead4}
+  .trow .strike{text-decoration:line-through;opacity:.6}
+  .note-final{font-size:12px;opacity:.7;margin-top:14px}
+  .pkgwrap{display:flex;gap:16px;flex-wrap:wrap}
+  .pkg{flex:1;min-width:190px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
+    border-radius:10px;padding:16px 18px}
+  .pkg .trow.final .amt{font-size:23px}
+  .pkg-rec{border-color:#5eead4;background:rgba(94,234,212,.08)}
+  .pkg-name{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .rec-tag{font-size:11px;font-weight:700;color:#0f172a;background:#5eead4;padding:2px 9px;border-radius:20px}
+  .pkg .trow{padding:4px 0;font-size:13.5px}
+  .pkg .trow.final{margin-top:6px;padding-top:10px}
+  .pkg .trow.final .lbl{font-size:14px}
+  .pkg .trow.final .amt{font-size:26px}
+
+  ul.clean{list-style:none;margin-top:4px}
+  ul.clean li{position:relative;padding:7px 0 7px 24px;font-size:13.8px;border-bottom:1px solid var(--line)}
+  ul.clean li:last-child{border-bottom:none}
+  ul.clean li::before{content:"";position:absolute;left:4px;top:14px;width:7px;height:7px;
+    border-radius:2px;background:var(--brand)}
+  ul.clean li b{color:var(--ink)}
+  ul.clean li .why{color:var(--sub);font-size:12.8px}
+
+  .pay{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+  .pay .opt{flex:1;min-width:220px;border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  .pay .opt h4{font-size:14px;color:var(--brand);margin-bottom:6px}
+  .pay .opt .row{display:flex;justify-content:space-between;font-size:13.5px;padding:3px 0;color:var(--sub)}
+  .pay .opt .row b{color:var(--ink)}
+
+  .terms{counter-reset:t;margin-top:6px}
+  .terms .t{position:relative;padding:12px 0 12px 38px;border-bottom:1px solid var(--line);font-size:13.8px}
+  .terms .t:last-child{border-bottom:none}
+  .terms .t::before{counter-increment:t;content:counter(t);position:absolute;left:0;top:11px;
+    width:25px;height:25px;background:var(--brand-soft);color:var(--brand);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700}
+  .terms .t b{color:var(--ink)}
+  .terms .t .d{color:var(--sub);font-size:13px}
+
+  .highlight{background:var(--accent-soft);border-left:3px solid var(--accent);
+    padding:13px 18px;border-radius:0 8px 8px 0;font-size:13.5px;color:#7a4a12;margin-top:8px}
+
+  .sign{display:flex;gap:30px;margin-top:18px;flex-wrap:wrap}
+  .sign .box{flex:1;min-width:240px}
+  .sign .box .lbl{font-size:12.5px;color:var(--sub);margin-bottom:30px}
+  .sign .line{border-top:1px solid var(--ink);padding-top:6px;font-size:12.5px;color:var(--sub)}
+  .bank{font-size:13px;color:var(--sub);margin-top:14px;background:#fafbfc;border:1px dashed var(--line);
+    border-radius:8px;padding:14px 18px}
+  .bank .fill{display:inline-block;min-width:160px;border-bottom:1px solid #c5cdd8;height:15px;margin:0 4px}
+
+  footer{padding:22px 52px;background:#fafbfc;border-top:1px solid var(--line);
+    font-size:12px;color:var(--sub);text-align:center}
+
+  @media print{
+    body{background:#fff}
+    .sheet{box-shadow:none;margin:0;max-width:100%;border-radius:0}
+    header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .totals,h2 .n,.blk-h,.terms .t::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+  @media (max-width:600px){.pad{padding:28px 22px}header{padding:28px 22px}}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header>
+    <div class="firm">仁格數位科技工坊　統一編號 61138241</div>
+    <h1>數位化營運系統　建置報價單</h1>
+    <div class="for">致：淨新清潔工坊　負責人　台照</div>
+    <div class="meta">
+      <span><b>報價單號</b>　JX-2026-0529</span>
+      <span><b>日期</b>　2026 / 05 / 29</span>
+      <span><b>有效期</b>　報價日起 30 天</span>
+    </div>
+  </header>
+
+  <div class="pad">
+
+    <!-- 緣起 -->
+    <h2><span class="n">1</span>專案緣起</h2>
+    <div class="story">
+      本案最初之需求，為將既有紙本客戶資料整理建檔，並建置高效率之<b>全域查詢功能</b>，
+      以利即時調閱客戶歷史服務紀錄；該階段範圍之評估費用約為新台幣 2–3 萬元。
+      <br><br>
+      其後於需求訪談過程中，陸續確認多項實際營運痛點——包含訂單管理、師傅排班、計件薪資計算、
+      現場現金結算對帳、客源管道效益分析等——經雙方逐一討論並導出對應解決方案，
+      專案範圍遂<b>逐步擴充</b>為涵蓋管理端、行政端與師傅行動端之完整營運管理系統。
+      下列明細即為本次合作所共同完成之系統範圍與對應費用。
+    </div>
+
+    <!-- 系統概覽 -->
+    <h2><span class="n">2</span>系統規模概覽</h2>
+    <p class="lead">這不是一個陽春的資料表，而是一套正式營運級的客製化系統：</p>
+    <div class="grid3">
+      <div class="stat"><div class="big">三種角色介面</div><div class="lbl">老闆娘 · 管理員 · 師傅，分權獨立操作</div></div>
+      <div class="stat"><div class="big">21 張資料表</div><div class="lbl">完整關聯式結構設計</div></div>
+      <div class="stat"><div class="big">26,000+ 行</div><div class="lbl">純客製程式碼，非套版模板</div></div>
+    </div>
+
+    <!-- 費用明細 -->
+    <h2><span class="n">3</span>費用明細</h2>
+    <p class="lead">核心基礎包為日常運轉必備；財務加值包（自動算薪 + 對帳結算）是舊系統做不到、最省時的關鍵功能；數據儀表板可依需求加購。本次另<b>加碼贈送</b>全新開發的師傅手機月曆畫面。</p>
+
+    <div class="blk blk-core">
+      <div class="blk-h"><span>① 核心基礎包</span><span class="tag">系統運轉必備基礎</span></div>
+      <table>
+        <tr>
+          <td><div class="item-t">資料庫架構設計與建置</div>
+            <div class="item-d">21 張資料表之完整關聯式結構規劃與建置——客戶、地址、機器、訂單、服務項目、薪資、積分等全部串連，是整套系統運作的地基</div>
+            <div class="pain"><b>原痛點</b>資料散落紙本與 Excel、格式不一難以串連，營運細節只能靠記憶、無法精確掌握</div></td>
+          <td class="price">20,000</td>
+        </tr>
+        <tr>
+          <td><div class="item-t">客戶建檔 + 全域查詢系統</div>
+            <div class="item-d">客戶 / 多地址 / 多機器 / 多電話建檔；Ctrl+K 一秒跳出客戶卡與訂單歷史，支援姓名、電話、編號、地址、備註查詢</div>
+            <div class="pain"><b>原痛點</b>客戶來電預約無法馬上識別老客戶、降低滿意度；同一客戶多地址機器紀錄分散、容易搞錯</div></td>
+          <td class="price">10,000</td>
+        </tr>
+        <tr>
+          <td><div class="item-t">訂單管理系統</div>
+            <div class="item-d">一單多機多服務、每項可指派不同師傅、訂單編號自動化；多重篩選（狀態 / 收款 / 回繳 / 師傅）、「同客戶再建一筆」快速建單</div>
+            <div class="pain"><b>原痛點</b>一通電話多地預約要重複輸入、過程被打斷就出包；訂單細節散落紙本難以彙整</div></td>
+          <td class="price">15,000</td>
+        </tr>
+        <tr>
+          <td><div class="item-t">師傅專用手機 PWA<span style="font-weight:400;color:var(--brand)">（含多師傅同單收款）</span></div>
+            <div class="item-d">現場查案、地址導航、改服務時間、填實收金額、選付款方式、回報完工；<b>多師傅同一案家時各自確認負責品項金額、由最後一位統一收款並自動鎖定收款人</b>，可加到手機桌面</div>
+            <div class="pain"><b>原痛點</b>手寫排班單有文字誤解風險、客戶資料外洩隱患；多位師傅同到一家收款，誰收了錢容易混亂</div></td>
+          <td class="price">6,000</td>
+        </tr>
+        <tr>
+          <td><div class="item-t">視覺化月曆排班</div>
+            <div class="item-d">月 / 週 / 日視圖，待派工清單拖曳派工、每位師傅獨立顏色、現場可快速查改時間</div>
+            <div class="pain"><b>原痛點</b>手寫排班單易文字誤解、派工不直覺，難以一眼掌握各師傅當日行程</div></td>
+          <td class="price">8,000</td>
+        </tr>
+        <tr>
+          <td><div class="item-t">舊系統資料抓取 + 清洗匯入<span style="font-weight:400;color:var(--sub)">（一次性工本）</span></div>
+            <div class="item-d">從原電子系統擷取客戶資料、格式清洗、去重、匯入新系統</div>
+            <div class="pain"><b>原痛點</b>2023 年前舊資料格式混亂、散落紙本，前一套系統查詢功能不全形同棄用</div></td>
+          <td class="price">3,000</td>
+        </tr>
+        <tr class="sub"><td>核心基礎包　原價值 → 首次合作優惠</td><td class="price"><span style="text-decoration:line-through;color:var(--sub);font-weight:400">62,000</span>　<span style="color:var(--brand)">30,000</span></td></tr>
+      </table>
+    </div>
+
+    <div class="blk blk-fin">
+      <div class="blk-h"><span>② 財務加值包</span><span class="tag">舊系統做不到 · 最省時</span></div>
+      <table>
+        <tr>
+          <td><div class="item-t">自動計件算薪 + 收款回繳對帳結算</div>
+            <div class="item-d">依完工狀態<b>自動計算每位師傅整月應發、抽成、加減項與積分</b>，不用拿計算機算半天還怕算錯；老闆娘端收款 / 回繳<b>雙欄逐筆勾選對帳、整月結算鎖定（snapshot）</b>、待回繳追蹤、可校正實際收款人，月底一鍵完成</div>
+            <div class="pain"><b>原痛點</b>月底算薪、對帳要拿紙本與 Excel 比對好幾天還容易出錯；多位師傅同到一家收款，回繳責任常算不清——這些都是舊系統完全做不到的</div></td>
+          <td class="price">15,000</td>
+        </tr>
+        <tr class="sub"><td>財務加值包　小計</td><td class="price">15,000</td></tr>
+      </table>
+    </div>
+
+    <div class="blk blk-opt">
+      <div class="blk-h"><span>③ 數據儀表板</span><span class="tag">選配 · 優化價</span></div>
+      <table>
+        <tr>
+          <td><div class="item-t">積分 KPI + 客源 / 營收分析儀表板</div>
+            <div class="item-d">師傅積分排行與 KPI 達成度、每月目標進度條；老顧客回流率、三大廣告管道效益比較、介紹效益榜、營收趨勢圖表，協助經營者由日常行政作業提升至以數據輔助營運決策</div>
+            <div class="pain"><b>原痛點</b>業績目標無具體指標只能靠主觀判斷；介紹人寫在備註欄無法回頭計算；營業狀況許多細節只能靠記憶</div></td>
+          <td class="price"><span style="text-decoration:line-through;color:var(--sub);font-weight:400">8,000</span>　<span style="color:var(--opt)">5,000</span></td>
+        </tr>
+        <tr class="sub"><td>數據儀表板　優化價</td><td class="price">5,000</td></tr>
+      </table>
+    </div>
+
+    <div class="blk" style="border-color:#5eead4">
+      <div class="blk-h" style="background:#ecfdf5;color:#0f766e"><span>🎁 首次合作加碼贈送</span><span class="tag" style="color:#0f766e;border:1px solid #0f766e">免費</span></div>
+      <table>
+        <tr>
+          <td><div class="item-t">師傅 PWA 月曆畫面<span style="font-weight:400;color:var(--sub)">（全新客製開發）</span></div>
+            <div class="item-d">師傅手機新增月曆視圖，一眼看出每天要跑哪些區域——以「時間．服務項目．地區」精簡顯示（例：<b>9　冷氣　田中</b>），方便師傅安排當日路線</div></td>
+          <td class="price"><span style="text-decoration:line-through;color:var(--sub);font-weight:400">8,000</span>　<span style="color:#0f766e">免費</span></td>
+        </tr>
+        <tr class="sub"><td>加碼贈送　價值</td><td class="price"><span style="text-decoration:line-through;color:var(--sub);font-weight:400">8,000</span>　<span style="color:#0f766e">0</span></td></tr>
+      </table>
+    </div>
+
+    <!-- 總價 -->
+    <div class="totals">
+      <div class="trow val"><span class="lbl">系統完整價值（基礎 ＋ 財務 ＋ 儀表板 ＋ 全新師傅月曆）</span><span class="amt strike">NT$ 93,000</span></div>
+      <div class="trow disc"><span class="lbl">首次合作優惠 ＋ 月曆排班納入基礎 ＋ 師傅月曆加碼贈送</span><span class="amt">− NT$ 43,000</span></div>
+      <div class="trow"><span class="lbl">首次合作專案價</span><span class="amt">NT$ 50,000</span></div>
+      <div class="trow disc"><span class="lbl">⏰ 報價日起 7 天內簽約，再享 77 折</span><span class="amt">− NT$ 11,500</span></div>
+      <div class="trow final"><span class="lbl">7 天內簽約 ＋ 一次付清價（含稅 · 開發票）</span><span class="amt">NT$ 38,500</span></div>
+      <div class="note-final">＊ NT$ 38,500 為含 5% 營業稅之總額，由仁格數位科技工坊開立統一發票；<b>77 折限「7 天內簽約且一次付清」</b>。逾 7 天則依首次合作專案價 NT$ 50,000 計（另加營業稅）。數據儀表板亦可日後再行加購。</div>
+    </div>
+
+    <!-- 付款 -->
+    <h2><span class="n">4</span>付款方式</h2>
+    <div class="pay">
+      <div class="opt" style="border-color:var(--brand)">
+        <h4 style="color:var(--brand)">⭐ 7 天內簽約・一次付清</h4>
+        <div class="row"><span>77 折優惠價（含稅）</span><b style="color:var(--brand);font-size:16px">NT$ 38,500</b></div>
+        <div class="row" style="color:var(--sub);font-size:12.5px;border-top:1px solid var(--line);margin-top:4px;padding-top:6px">簽約即享 77 折，系統交付、上線、教育訓練一次到位；尾款付清後移交原始碼與 Supabase 所有權</div>
+      </div>
+    </div>
+
+    <!-- 條款 -->
+    <h2><span class="n">5</span>服務條款與系統優勢</h2>
+    <div class="terms">
+      <div class="t"><b>系統所有權完整交付。</b><span class="d">本案為一次性買斷，原始碼與資料庫存取權限 100% 移交貴坊（Supabase 採貴坊自有帳號，數據所有權歸貴坊），不被任何廠商綁定，未來可自主二次開發。</span></div>
+      <div class="t"><b>軟體月費 0 元（專業規劃的成果）。</b><span class="d">系統採現代化 Serverless 雲端架構（Netlify ＋ Supabase），經專業規劃，於貴坊目前營運規模下完美運行於免費額度，實現月費 0 元。日後若業務量大幅成長超出免費額度，僅需依用量支付平台官方費用（由貴坊負擔），具高度擴展性。</span></div>
+      <div class="t"><b>保固期 60 天。</b><span class="d">系統驗收完成後 60 天內，提供非人為操作錯誤之 Bug 免費修復。保固期後之諮詢、系統調整、新功能開發，另行報價（或可洽談年度維護方案）。</span></div>
+      <div class="t"><b>舊資料匯入範圍。</b><span class="d">本報價之資料清洗匯入涵蓋現有資料一次性處理。日後若新增大量、需大量人工整理之資料，另行報價。</span></div>
+      <div class="t"><b>第二期可付費擴充功能。</b><span class="d">目前交付為 1.0 版。未來可加購：簡訊自動提醒、案件照片儲存、客戶自助查詢 / 線上預約、LINE Bot 自動回覆預約等。</span></div>
+    </div>
+    <div class="highlight">
+      相較市面上按月收費（SaaS）的軟體服務，本系統為一次買斷、永久使用、月費 0 元——長期下來為貴坊省下的，遠不只這次的建置費用。
+    </div>
+
+    <!-- 簽署 -->
+    <h2><span class="n">6</span>確認與簽署</h2>
+    <div class="sign">
+      <div class="box">
+        <div class="lbl">委託方（淨新清潔工坊）簽章：</div>
+        <div class="line">負責人簽名 / 日期</div>
+      </div>
+      <div class="box">
+        <div class="lbl">承製方（仁格數位科技工坊）簽章：</div>
+        <div class="line">張博仁 / 日期</div>
+      </div>
+    </div>
+    <div class="bank">
+      <b>匯款資訊</b>　戶名 張博仁　銀行 元大銀行（806）　帳號 21372700308383
+      <div style="margin-top:6px;font-size:12px;color:var(--sub)">＊ 統一發票由仁格數位科技工坊（統編 61138241）開立。</div>
+    </div>
+
+  </div>
+
+  <footer>
+    仁格數位科技工坊　|　統一編號 61138241　|　高雄市前鎮區武德街 153 巷 17 號　|　0976-858-794　|　ren.studio.dev@gmail.com
+  </footer>
+
+</div>
+</body>
+</html>
