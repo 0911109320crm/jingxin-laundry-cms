@@ -78,6 +78,20 @@ type PriorNote = {
   service_notes: string | null;
 };
 
+// 服務項目大分類 → 明顯色框（師傅一眼分辨機型）
+const CATEGORY_FRAME: Record<
+  string,
+  { border: string; chip: string; label: string }
+> = {
+  washing_vertical: { border: "border-blue-400", chip: "bg-blue-50 text-blue-700", label: "直立式洗衣機" },
+  washing_twin_tub: { border: "border-blue-400", chip: "bg-blue-50 text-blue-700", label: "雙槽式洗衣機" },
+  washing_drum: { border: "border-green-500", chip: "bg-green-50 text-green-700", label: "滾筒洗衣機" },
+  ac_split: { border: "border-orange-400", chip: "bg-orange-50 text-orange-700", label: "分離式冷氣" },
+  ac_hidden: { border: "border-orange-400", chip: "bg-orange-50 text-orange-700", label: "吊隱式冷氣" },
+  sofa: { border: "border-red-400", chip: "bg-red-50 text-red-700", label: "沙發" },
+  mattress: { border: "border-red-400", chip: "bg-red-50 text-red-700", label: "床墊" },
+};
+
 export default async function StaffOrderPage({
   params,
 }: {
@@ -284,10 +298,26 @@ export default async function StaffOrderPage({
             目前實際：<span className="font-mono font-medium text-zinc-900">{formatNTD(o.total)}</span>
           </div>
         )}
-        <CardBody className="p-0">
-          <ul className="divide-y divide-zinc-200">
-            {o.items.map((it) => (
-              <li key={it.id} className={`space-y-1.5 px-4 py-3 ${it.excluded ? "bg-zinc-50" : ""}`}>
+        <CardBody className="space-y-2 p-3">
+          <ul className="space-y-2">
+            {o.items.map((it) => {
+              const frame =
+                (it.service?.category && CATEGORY_FRAME[it.service.category]) ||
+                null;
+              return (
+              <li
+                key={it.id}
+                className={`space-y-1.5 rounded-lg border-2 px-3 py-3 ${
+                  frame ? frame.border : "border-zinc-200"
+                } ${it.excluded ? "bg-zinc-50" : ""}`}
+              >
+                {frame && (
+                  <span
+                    className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-medium ${frame.chip}`}
+                  >
+                    {frame.label}
+                  </span>
+                )}
                 {it.item_code && (
                   <div className="flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-2.5 py-1.5">
                     <span className="text-xs font-medium text-amber-900">📋 保固單編號</span>
@@ -338,7 +368,8 @@ export default async function StaffOrderPage({
                   brands={brands}
                 />
               </li>
-            ))}
+              );
+            })}
           </ul>
         </CardBody>
       </Card>
