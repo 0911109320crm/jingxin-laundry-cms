@@ -435,10 +435,10 @@ export function OrderForm({
               <span className="text-xs text-zinc-400">小時，或快選：</span>
               <div className="flex gap-1">
                 {[
-                  { h: 1, m: 60 },
                   { h: 1.5, m: 90 },
                   { h: 2, m: 120 },
                   { h: 3, m: 180 },
+                  { h: 4, m: 240 },
                 ].map(({ h, m }) => (
                   <button
                     type="button"
