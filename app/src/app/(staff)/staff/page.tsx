@@ -34,13 +34,13 @@ type StaffOrder = {
 
 // 服務項目大分類 → 卡片色框（與訂單詳情一致）：洗衣機藍、滾筒綠、冷氣橘、沙發/床墊紅
 const CATEGORY_CARD_BORDER: Record<string, string> = {
-  washing_vertical: "border-2 border-blue-400",
-  washing_twin_tub: "border-2 border-blue-400",
-  washing_drum: "border-2 border-green-500",
-  ac_split: "border-2 border-orange-400",
-  ac_hidden: "border-2 border-orange-400",
-  sofa: "border-2 border-red-400",
-  mattress: "border-2 border-red-400",
+  washing_vertical: "border-4 border-blue-400",
+  washing_twin_tub: "border-4 border-blue-400",
+  washing_drum: "border-4 border-green-500",
+  ac_split: "border-4 border-orange-400",
+  ac_hidden: "border-4 border-orange-400",
+  sofa: "border-4 border-red-400",
+  mattress: "border-4 border-red-400",
 };
 
 // 取訂單第一個有分類的品項決定卡片色框

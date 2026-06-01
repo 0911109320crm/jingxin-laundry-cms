@@ -307,7 +307,7 @@ export default async function StaffOrderPage({
               return (
               <li
                 key={it.id}
-                className={`space-y-1.5 rounded-lg border-2 px-3 py-3 ${
+                className={`space-y-1.5 rounded-lg border-4 px-3 py-3 ${
                   frame ? frame.border : "border-zinc-200"
                 } ${it.excluded ? "bg-zinc-50" : ""}`}
               >
