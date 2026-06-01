@@ -343,39 +343,50 @@ export default async function StaffHome({
                       <li key={o.id}>
                         <Link href={`/staff/order/${o.id}`}>
                           <Card className="transition-shadow active:shadow-md">
-                            <CardBody className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg font-bold text-zinc-900">
+                            <CardBody className="space-y-1.5 p-3">
+                              {/* 第一列：時間+編號(左) ／ 金額+箭頭(右，填補右上留白) */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex min-w-0 items-baseline gap-2">
+                                  <span className="text-lg font-bold leading-tight text-zinc-900">
                                     {time}
                                   </span>
-                                  <span className="font-mono text-xs text-zinc-400">
+                                  <span className="truncate font-mono text-xs text-zinc-400">
                                     {o.order_code}
                                   </span>
                                 </div>
-                                <ChevronRight className="h-5 w-5 text-zinc-400" />
+                                <div className="flex shrink-0 items-center gap-1">
+                                  <span className="font-mono text-lg font-bold leading-tight text-zinc-900">
+                                    {formatNTD(o.total)}
+                                  </span>
+                                  <ChevronRight className="h-5 w-5 text-zinc-400" />
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-base font-semibold text-zinc-900">
+
+                              {/* 第二列：姓名 + 電話 同一行 */}
+                              <p className="truncate text-sm text-zinc-900">
+                                <span className="text-base font-semibold">
                                   {o.customer?.name ?? "—"}
-                                </p>
-                                <p className="text-sm text-zinc-500">
-                                  {o.customer?.phone}
-                                  {o.customer?.phones && o.customer.phones.length > 1 && (
-                                    <span
-                                      className="ml-1 rounded bg-zinc-100 px-1 text-[10px] text-zinc-600"
-                                      title={o.customer.phones
-                                        .filter((p) => !p.is_primary)
-                                        .map((p) => `${p.phone}${p.label ? `（${p.label}）` : ""}`)
-                                        .join("、")}
-                                    >
-                                      +{o.customer.phones.length - 1}
-                                    </span>
-                                  )}
-                                </p>
-                              </div>
+                                </span>
+                                {o.customer?.phone && (
+                                  <span className="ml-2 font-normal text-zinc-500">
+                                    {o.customer.phone}
+                                  </span>
+                                )}
+                                {o.customer?.phones && o.customer.phones.length > 1 && (
+                                  <span
+                                    className="ml-1 rounded bg-zinc-100 px-1 text-[10px] text-zinc-600"
+                                    title={o.customer.phones
+                                      .filter((p) => !p.is_primary)
+                                      .map((p) => `${p.phone}${p.label ? `（${p.label}）` : ""}`)
+                                      .join("、")}
+                                  >
+                                    +{o.customer.phones.length - 1}
+                                  </span>
+                                )}
+                              </p>
+
                               {o.items.length > 0 && (
-                                <p className="text-sm text-zinc-700">
+                                <p className="truncate text-sm text-zinc-700">
                                   {o.items
                                     .map((it) =>
                                       it.service?.name
@@ -386,26 +397,26 @@ export default async function StaffHome({
                                     .join("、")}
                                 </p>
                               )}
+
+                              {/* 地址：一整行不斷行 */}
                               {o.address && (
-                                <p className="flex items-start gap-1 text-sm text-zinc-600">
-                                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
-                                  <span>
-                                    {o.address.county} {o.address.district}{" "}
+                                <p className="flex items-center gap-1 text-sm text-zinc-600">
+                                  <MapPin className="h-4 w-4 shrink-0 text-zinc-400" />
+                                  <span className="whitespace-nowrap">
+                                    {o.address.county}
+                                    {o.address.district}
                                     {o.address.address}
                                   </span>
                                 </p>
                               )}
-                              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                                <div className="flex flex-wrap gap-1">
-                                  <StatusBadge value={o.status} />
-                                  <PaymentBadge value={o.payment_method} />
-                                  {o.settlement_status !== "not_required" && (
-                                    <SettlementBadge value={o.settlement_status} />
-                                  )}
-                                </div>
-                                <span className="font-mono text-base font-semibold text-zinc-900">
-                                  {formatNTD(o.total)}
-                                </span>
+
+                              {/* 徽章列（金額已移到上方，這裡只留狀態） */}
+                              <div className="flex flex-wrap gap-1">
+                                <StatusBadge value={o.status} />
+                                <PaymentBadge value={o.payment_method} />
+                                {o.settlement_status !== "not_required" && (
+                                  <SettlementBadge value={o.settlement_status} />
+                                )}
                               </div>
                             </CardBody>
                           </Card>
