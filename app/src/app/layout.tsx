@@ -24,6 +24,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // 鎖住雙指縮放：避免老闆娘/師傅在手機上不小心放大頁面、導致畫面超出螢幕
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: "#4f46e5",
 };
