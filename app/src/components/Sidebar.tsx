@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
@@ -177,9 +178,12 @@ export function Sidebar({
     <>
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-3 lg:hidden">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-zinc-900">淨新清潔工坊</p>
-          <p className="truncate text-xs text-zinc-500">{userName}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <Image src="/logo.png" alt="淨新" width={36} height={36} className="h-9 w-9 shrink-0" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-zinc-900">淨新清潔工坊</p>
+            <p className="truncate text-xs text-zinc-500">{userName}</p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <button
@@ -211,9 +215,12 @@ export function Sidebar({
           />
           <aside className="absolute left-0 top-0 flex h-full w-72 flex-col bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
-              <div>
-                <p className="text-sm font-bold text-zinc-900">淨新清潔工坊</p>
-                <p className="text-xs text-zinc-500">管理系統</p>
+              <div className="flex items-center gap-2">
+                <Image src="/logo.png" alt="淨新" width={40} height={40} className="h-10 w-10 shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-zinc-900">淨新清潔工坊</p>
+                  <p className="text-xs text-zinc-500">管理系統</p>
+                </div>
               </div>
               <button
                 type="button"
@@ -233,9 +240,12 @@ export function Sidebar({
 
       {/* Desktop sidebar */}
       <aside className="hidden h-screen w-60 shrink-0 flex-col border-r border-zinc-200 bg-white lg:flex">
-        <div className="border-b border-zinc-200 px-5 py-4">
-          <p className="text-sm font-bold text-zinc-900">淨新清潔工坊</p>
-          <p className="text-xs text-zinc-500">管理系統</p>
+        <div className="flex items-center gap-2.5 border-b border-zinc-200 px-5 py-4">
+          <Image src="/logo.png" alt="淨新" width={44} height={44} className="h-11 w-11 shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-zinc-900">淨新清潔工坊</p>
+            <p className="text-xs text-zinc-500">管理系統</p>
+          </div>
         </div>
         {NavList}
         {SearchChip}

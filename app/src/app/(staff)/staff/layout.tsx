@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { CalendarDays, Star } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
@@ -20,9 +21,12 @@ export default async function StaffLayout({
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div className="flex items-center justify-between gap-2 px-4 py-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-zinc-900">淨新清潔工坊</p>
-            <p className="truncate text-xs text-zinc-500">師傅 · {user.profile.name}</p>
+          <div className="flex min-w-0 items-center gap-2">
+            <Image src="/logo.png" alt="淨新" width={36} height={36} className="h-9 w-9 shrink-0" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold text-zinc-900">淨新清潔工坊</p>
+              <p className="truncate text-xs text-zinc-500">師傅 · {user.profile.name}</p>
+            </div>
           </div>
           <form action={logoutAction} className="shrink-0">
             <button
