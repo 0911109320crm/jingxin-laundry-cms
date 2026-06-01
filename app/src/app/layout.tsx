@@ -14,6 +14,13 @@ export const metadata: Metadata = {
   title: "淨新清潔工坊管理系統",
   description: "淨新清潔工坊後台管理系統",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   appleWebApp: {
     capable: true,
     title: "淨新清潔工坊",
