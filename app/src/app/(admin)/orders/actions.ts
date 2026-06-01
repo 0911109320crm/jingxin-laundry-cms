@@ -494,6 +494,42 @@ export async function confirmMyItemsAction(orderId: string): Promise<Res> {
 }
 
 /**
+ * 解除確認（按錯了要重新調整金額）。把我可確認的品項 confirmed 設回 false。
+ * 已收款的單不可解除——請先「改回未收款」。
+ */
+export async function unconfirmMyItemsAction(orderId: string): Promise<Res> {
+  const me = await requireRole(["owner", "manager", "technician"]);
+  if (me.profile.role === "technician") {
+    const owns = await technicianOwnsOrder(orderId, me.id);
+    if (!owns) return { ok: false, error: "不是你的訂單" };
+  }
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { data: ord } = await admin
+    .from("orders")
+    .select("payment_method")
+    .eq("id", orderId)
+    .single();
+  const pm = (ord as { payment_method: string } | null)?.payment_method;
+  if (pm && pm !== "unpaid") {
+    return { ok: false, error: "已收款，請先按「改回未收款」再調整金額" };
+  }
+  let q = admin
+    .from("order_items")
+    .update({ confirmed: false })
+    .eq("order_id", orderId)
+    .eq("excluded", false);
+  if (me.profile.role === "technician") {
+    q = q.or(`technician_id.eq.${me.id},technician_id.is.null`);
+  }
+  const { error } = await q;
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/staff");
+  revalidatePath(`/staff/order/${orderId}`);
+  return { ok: true };
+}
+
+/**
  * 老闆娘兜底：代為確認整單所有品項金額（放行收款）。
  * 用於師傅做完忘了在手機確認就離開、導致最後收款師傅卡住收不了款的情況。
  */

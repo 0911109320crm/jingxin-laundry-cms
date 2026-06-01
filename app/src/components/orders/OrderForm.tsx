@@ -577,7 +577,7 @@ export function OrderForm({
                   </button>
                 )}
               </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-[2fr_1fr_80px_120px]">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[2fr_1fr_120px]">
                 <Field
                   label="服務項目"
                   error={errors.items?.[idx]?.service_item_id?.message}
@@ -627,13 +627,12 @@ export function OrderForm({
                     ))}
                   </Select>
                 </Field>
-                <Field label="數量">
-                  <Input
-                    type="number"
-                    min={1}
-                    {...register(`items.${idx}.quantity`, { valueAsNumber: true })}
-                  />
-                </Field>
+                {/* 數量欄移除：一個品項固定數量 1，要洗多台請新增多筆，
+                    這樣師傅才能逐台填品牌/型號（quantity 由 hidden 帶 1） */}
+                <input
+                  type="hidden"
+                  {...register(`items.${idx}.quantity`, { valueAsNumber: true })}
+                />
                 <Field label={mode === "create" ? "基本價（鎖定）" : "單價"}>
                   <Input
                     type="number"

@@ -15,6 +15,7 @@ import {
 import {
   setPaymentMethodAction,
   confirmMyItemsAction,
+  unconfirmMyItemsAction,
   completeOrderAction,
   addOrderAdjustmentAction,
   removeOrderAdjustmentAction,
@@ -311,6 +312,14 @@ export function OrderWorkflow({
     });
   };
 
+  // 按錯了要重新調整：解除確認
+  const unconfirmMine = () => {
+    startTransition(async () => {
+      const res = await unconfirmMyItemsAction(orderId);
+      if (!res.ok) alert(res.error);
+    });
+  };
+
   const openEditNotes = () => {
     setStep("edit");
     setSelectedTagIds(() => {
@@ -502,16 +511,38 @@ export function OrderWorkflow({
                 <div className="mt-0.5 text-xs text-amber-700">
                   等待其他師傅確認中…由最後完成的師傅向客戶收全額
                 </div>
+                {hasMyItems && (
+                  <button
+                    type="button"
+                    onClick={unconfirmMine}
+                    disabled={pending}
+                    className="mt-2 text-xs text-amber-700 underline disabled:opacity-40"
+                  >
+                    ↩ 按錯了？重新調整我的金額
+                  </button>
+                )}
               </div>
             ) : (
-              <Button
-                size="lg"
-                className="w-full"
-                disabled={pending}
-                onClick={openCheckout}
-              >
-                <Banknote className="h-5 w-5" /> 結帳收款
-              </Button>
+              <>
+                <Button
+                  size="lg"
+                  className="w-full"
+                  disabled={pending}
+                  onClick={openCheckout}
+                >
+                  <Banknote className="h-5 w-5" /> 結帳收款
+                </Button>
+                {hasMyItems && (
+                  <button
+                    type="button"
+                    onClick={unconfirmMine}
+                    disabled={pending}
+                    className="block w-full text-center text-xs text-zinc-400 underline disabled:opacity-40"
+                  >
+                    ↩ 重新調整我的金額（取消確認）
+                  </button>
+                )}
+              </>
             )
           ) : currentPayment === "cash" && !iAmCollector ? (
             <div className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-3 text-center">

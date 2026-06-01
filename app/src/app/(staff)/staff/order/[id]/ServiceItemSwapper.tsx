@@ -39,13 +39,11 @@ export function ServiceItemSwapper({
   orderItemId,
   currentServiceId,
   currentServiceCategory,
-  currentQuantity,
   services,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<string>(currentServiceId ?? "");
-  const [qty, setQty] = useState<number>(currentQuantity);
   const [filterCat, setFilterCat] = useState<string>(currentServiceCategory ?? "");
 
   const categories = useMemo(() => {
@@ -60,11 +58,10 @@ export function ServiceItemSwapper({
   }, [services, filterCat]);
 
   const selected = services.find((s) => s.id === selectedId);
-  const previewTotal = selected ? Number(selected.default_price) * qty : 0;
+  const previewTotal = selected ? Number(selected.default_price) : 0;
 
   const start = () => {
     setSelectedId(currentServiceId ?? "");
-    setQty(currentQuantity);
     setFilterCat(currentServiceCategory ?? "");
     setOpen(true);
   };
@@ -79,7 +76,7 @@ export function ServiceItemSwapper({
         order_id: orderId,
         order_item_id: orderItemId,
         service_item_id: selectedId,
-        quantity: qty,
+        quantity: 1,
       });
       if (!res.ok) {
         alert(res.error);
@@ -152,24 +149,11 @@ export function ServiceItemSwapper({
         </select>
       </div>
 
-      <div className="flex items-end gap-2">
-        <div className="flex-1">
-          <p className="mb-1 text-zinc-600">數量</p>
-          <input
-            type="number"
-            min={1}
-            max={99}
-            value={qty}
-            onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-            className="w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm"
-          />
-        </div>
-        <div className="flex-1 text-right">
-          <p className="mb-1 text-zinc-600">小計</p>
-          <p className="rounded border border-zinc-200 bg-white px-2 py-1.5 text-sm font-mono font-bold text-brand-700">
-            {formatNTD(previewTotal)}
-          </p>
-        </div>
+      <div className="flex items-center justify-between rounded border border-zinc-200 bg-white px-2 py-1.5">
+        <span className="text-zinc-600">金額</span>
+        <span className="text-sm font-mono font-bold text-brand-700">
+          {formatNTD(previewTotal)}
+        </span>
       </div>
 
       <div className="flex justify-end gap-2 pt-1">
