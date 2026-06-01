@@ -145,7 +145,8 @@ export function ServiceItemSwapper({
           <option value="">— 選擇實際品項 —</option>
           {visible.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.code} · {s.name}（{formatNTD(s.default_price)}）
+              {/* SKU code 是內部代號，師傅只看中文品名 + 價格 */}
+              {s.name}（{formatNTD(s.default_price)}）
             </option>
           ))}
         </select>
