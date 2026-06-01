@@ -14,7 +14,7 @@ export default async function StaffLayout({
   if (!user) redirect("/login");
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-100">
+    <div className="flex min-h-screen w-full flex-col overflow-x-hidden bg-zinc-100">
       <header
         className="sticky top-0 z-10 border-b border-zinc-200 bg-white"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
@@ -34,7 +34,7 @@ export default async function StaffLayout({
           </form>
         </div>
       </header>
-      <main className="flex-1 overflow-auto pb-24">{children}</main>
+      <main className="flex-1 overflow-x-hidden overflow-y-auto pb-24">{children}</main>
       <PWAInstallButton />
       <nav
         className="fixed bottom-0 left-0 right-0 z-10 grid grid-cols-2 border-t border-zinc-200 bg-white"

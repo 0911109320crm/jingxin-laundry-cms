@@ -417,7 +417,8 @@ export default async function StaffHome({
                               {o.address && (
                                 <p className="flex items-center gap-1 text-sm text-zinc-600">
                                   <MapPin className="h-4 w-4 shrink-0 text-zinc-400" />
-                                  <span className="whitespace-nowrap">
+                                  {/* truncate=不換行，過長用…截斷，避免撐破手機寬度產生橫向捲動 */}
+                                  <span className="min-w-0 flex-1 truncate">
                                     {o.address.county}
                                     {o.address.district}
                                     {o.address.address}
