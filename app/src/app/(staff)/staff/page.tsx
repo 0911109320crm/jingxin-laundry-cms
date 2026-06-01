@@ -26,8 +26,33 @@ type StaffOrder = {
     phones: { id: string; phone: string; label: string | null; is_primary: boolean }[];
   } | null;
   address: { county: string; district: string; address: string } | null;
-  items: { quantity: number; service: { name: string } | null }[];
+  items: {
+    quantity: number;
+    service: { name: string; category: string | null } | null;
+  }[];
 };
+
+// 服務項目大分類 → 卡片色框（與訂單詳情一致）：洗衣機藍、滾筒綠、冷氣橘、沙發/床墊紅
+const CATEGORY_CARD_BORDER: Record<string, string> = {
+  washing_vertical: "border-2 border-blue-400",
+  washing_twin_tub: "border-2 border-blue-400",
+  washing_drum: "border-2 border-green-500",
+  ac_split: "border-2 border-orange-400",
+  ac_hidden: "border-2 border-orange-400",
+  sofa: "border-2 border-red-400",
+  mattress: "border-2 border-red-400",
+};
+
+// 取訂單第一個有分類的品項決定卡片色框
+function orderCardBorder(
+  items: { service: { category: string | null } | null }[],
+): string {
+  for (const it of items) {
+    const c = it.service?.category;
+    if (c && CATEGORY_CARD_BORDER[c]) return CATEGORY_CARD_BORDER[c];
+  }
+  return "";
+}
 
 // 用台灣時區把 ISO 轉成 yyyy-mm-dd，避免跨日邊界誤判
 const TW_DATE_FMT = new Intl.DateTimeFormat("sv-SE", {
@@ -55,7 +80,7 @@ const UUID_RE =
 const STAFF_ORDER_SELECT = `id, order_code, scheduled_at, status, payment_method, settlement_status, total,
          customer:customers(name, phone, phones:customer_phones(id, phone, label, is_primary)),
          address:customer_addresses(county, district, address),
-         items:order_items(quantity, service:service_items(name))`;
+         items:order_items(quantity, service:service_items(name, category))`;
 
 function formatDateHeader(dateKey: string): { main: string; isToday: boolean; isTomorrow: boolean } {
   const today = TW_DATE_FMT.format(new Date());
@@ -339,10 +364,13 @@ export default async function StaffHome({
                 <ul className="space-y-2">
                   {groupOrders.map((o) => {
                     const time = TW_TIME_FMT.format(new Date(o.scheduled_at));
+                    const cardBorder = orderCardBorder(o.items);
                     return (
                       <li key={o.id}>
                         <Link href={`/staff/order/${o.id}`}>
-                          <Card className="transition-shadow active:shadow-md">
+                          <Card
+                            className={`transition-shadow active:shadow-md ${cardBorder}`}
+                          >
                             <CardBody className="space-y-1.5 p-3">
                               {/* 第一列：時間+編號(左) ／ 金額+箭頭(右，填補右上留白) */}
                               <div className="flex items-start justify-between gap-2">

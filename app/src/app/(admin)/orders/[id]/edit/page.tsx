@@ -163,7 +163,11 @@ export default async function EditOrderPage({
           <ChevronLeft className="h-4 w-4" /> {back.label}
         </Link>
         {o.status !== "cancelled" && (
-          <CancelOrderButton id={o.id} orderCode={o.order_code} />
+          <CancelOrderButton
+            id={o.id}
+            orderCode={o.order_code}
+            redirectTo={back.href}
+          />
         )}
       </div>
       <header>

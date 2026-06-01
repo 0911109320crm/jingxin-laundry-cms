@@ -21,9 +21,12 @@ const PRESET_REASONS = [
 export function CancelOrderButton({
   id,
   orderCode,
+  redirectTo,
 }: {
   id: string;
   orderCode: string;
+  /** 取消成功後導向此頁（編輯頁用）；不給則原地 refresh（詳情頁用） */
+  redirectTo?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -43,7 +46,13 @@ export function CancelOrderButton({
         return;
       }
       setOpen(false);
-      router.refresh();
+      if (redirectTo) {
+        // 編輯頁：取消後直接離開，不要停在表單
+        router.push(redirectTo);
+        router.refresh();
+      } else {
+        router.refresh();
+      }
     });
   };
 
