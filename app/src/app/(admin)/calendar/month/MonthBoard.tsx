@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { useTransition, useState } from "react";
 import { ChevronLeft, ChevronRight, MapPin, Plane } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { techHex } from "@/lib/tech-colors";
 import {
   setTechnicianLeave,
   removeTechnicianLeave,
   type LeavePeriod,
 } from "../leave-actions";
+
+const FALLBACK_HEX = ["#4f46e5", "#0891b2", "#16a34a", "#ea580c", "#db2777", "#9333ea"];
 
 export type TechOpt = { id: string; name: string };
 export type Assignment = {
@@ -76,21 +79,28 @@ export function MonthBoard({
 
   return (
     <div className="space-y-4">
-      {/* 師傅切換 */}
-      <div className="flex flex-wrap items-center gap-1 rounded-lg bg-zinc-100 p-1">
-        {techs.map((t) => (
-          <Link
-            key={t.id}
-            href={`/calendar/month?tech=${t.id}&month=${month}`}
-            data-active={t.id === selectedTech}
-            className={cn(
-              "inline-flex items-center rounded px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-white",
-              "data-[active=true]:bg-brand-600 data-[active=true]:text-white",
-            )}
-          >
-            {t.name}
-          </Link>
-        ))}
+      {/* 師傅切換（每顆＝該師傅代表色，與月曆排案一致；選中全亮+外框，未選中淡化） */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {techs.map((t, i) => {
+          const active = t.id === selectedTech;
+          const hex = techHex(t.name) ?? FALLBACK_HEX[i % FALLBACK_HEX.length];
+          return (
+            <Link
+              key={t.id}
+              href={`/calendar/month?tech=${t.id}&month=${month}`}
+              data-active={active}
+              style={{ backgroundColor: hex }}
+              className={cn(
+                "inline-flex items-center rounded px-3 py-1.5 text-sm font-medium text-white transition-all",
+                active
+                  ? "opacity-100 ring-2 ring-zinc-800 ring-offset-1"
+                  : "opacity-60 hover:opacity-90",
+              )}
+            >
+              {t.name}
+            </Link>
+          );
+        })}
       </div>
 
       {/* 月份切換 */}
