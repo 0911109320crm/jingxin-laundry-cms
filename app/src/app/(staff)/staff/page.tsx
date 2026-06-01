@@ -112,11 +112,11 @@ export default async function StaffHome({
 
   // ── 老闆娘 / RC 預覽某師傅 PWA：?as=<techId> ──
   // 防越權：是否能以他人身份預覽，完全由「真實登入者的角色」決定，不信任網址參數。
+  // 僅 owner / manager 可預覽他人；can_view_all 只給看排班總覽(/staff/all)，
+  // 不等於可看別人完整 PWA(含金額)，否則一般師傅就能越權看同事資料。
   const sp = await searchParams;
   const isPrivileged =
-    me.profile.role === "owner" ||
-    me.profile.role === "manager" ||
-    Boolean(me.profile.can_view_all);
+    me.profile.role === "owner" || me.profile.role === "manager";
   const asId =
     typeof sp.as === "string" && UUID_RE.test(sp.as) ? sp.as : null;
   const impersonating = !!asId && isPrivileged && asId !== me.id;

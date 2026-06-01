@@ -13,6 +13,8 @@ export default async function DemoPWAPage({
 }) {
   const me = await getCurrentUser();
   if (!me) redirect("/login?next=/demo/pwa");
+  // 預覽工具僅供老闆娘/管理者；師傅不得進入(否則可看到全師傅切換列＝越權)
+  if (me.profile.role === "technician") redirect("/staff");
 
   const sp = await searchParams;
   const tech = typeof sp.tech === "string" ? sp.tech : null;
