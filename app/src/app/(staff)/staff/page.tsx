@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, ChevronRight, Star, Eye } from "lucide-react";
+import { CalendarDays, MapPin, ChevronRight, Star, Eye, Smartphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/dal";
 import { redirect } from "next/navigation";
@@ -110,13 +110,15 @@ export default async function StaffHome({
   const me = await getCurrentUser();
   if (!me) redirect("/login");
 
-  // ── 老闆娘 / RC 預覽某師傅 PWA：?as=<techId> ──
-  // 防越權：是否能以他人身份預覽，完全由「真實登入者的角色」決定，不信任網址參數。
-  // 僅 owner / manager 可預覽他人；can_view_all 只給看排班總覽(/staff/all)，
-  // 不等於可看別人完整 PWA(含金額)，否則一般師傅就能越權看同事資料。
+  // ── 老闆娘 / RC / 主管 預覽某師傅 PWA：?as=<techId> ──
+  // 防越權：是否能以他人身份預覽，完全由「真實登入者的角色/旗標」決定，不信任網址參數。
+  // 可預覽者＝owner / manager / can_view_all(主管級)。
+  // ⚠ can_view_all 視為「主管級」權限：能看全部+預覽他人(含金額)，勿隨便給一般師傅。
   const sp = await searchParams;
   const isPrivileged =
-    me.profile.role === "owner" || me.profile.role === "manager";
+    me.profile.role === "owner" ||
+    me.profile.role === "manager" ||
+    Boolean(me.profile.can_view_all);
   const asId =
     typeof sp.as === "string" && UUID_RE.test(sp.as) ? sp.as : null;
   const impersonating = !!asId && isPrivileged && asId !== me.id;
@@ -253,19 +255,34 @@ export default async function StaffHome({
       )}
 
       {!impersonating && me.profile.can_view_all && (
-        <Link href="/staff/all">
-          <Card className="border-sky-300 bg-sky-50 transition-shadow active:shadow-md">
-            <CardBody className="flex items-center justify-between gap-2 py-3">
-              <div className="flex items-center gap-2">
-                <Eye className="h-5 w-5 text-sky-600" />
-                <span className="text-sm font-medium text-sky-900">
-                  查看所有師傅排班
-                </span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-sky-400" />
-            </CardBody>
-          </Card>
-        </Link>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Link href="/staff/all">
+            <Card className="border-sky-300 bg-sky-50 transition-shadow active:shadow-md">
+              <CardBody className="flex items-center justify-between gap-2 py-3">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-sky-600" />
+                  <span className="text-sm font-medium text-sky-900">
+                    查看所有師傅排班
+                  </span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-sky-400" />
+              </CardBody>
+            </Card>
+          </Link>
+          <Link href="/demo/pwa">
+            <Card className="border-indigo-300 bg-indigo-50 transition-shadow active:shadow-md">
+              <CardBody className="flex items-center justify-between gap-2 py-3">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-5 w-5 text-indigo-600" />
+                  <span className="text-sm font-medium text-indigo-900">
+                    預覽各師傅頁面
+                  </span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-indigo-400" />
+              </CardBody>
+            </Card>
+          </Link>
+        </div>
       )}
 
       {pendingCashCount > 0 && (
