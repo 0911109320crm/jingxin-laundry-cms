@@ -61,9 +61,18 @@ function defaultEnd(startIso: string) {
   return d.toISOString();
 }
 
+// 一律以台灣時區格式化，避免依賴執行環境時區。
+// 主月曆在 Vercel SSR(UTC) 算 getHours() 會把 09:00 顯示成 01:00、14:00 變 06:00；
+// 月檢視早已用 Asia/Taipei 寫死所以是對的，這裡比照修正。
+const TW_TIME_FMT = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Taipei",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
 function timeLabel(iso: string) {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const t = TW_TIME_FMT.format(new Date(iso));
+  return t.startsWith("24") ? `00${t.slice(2)}` : t;
 }
 
 /**
@@ -443,7 +452,7 @@ export function CalendarView({
             setActionTarget({ id: arg.event.id, customer });
           };
           return (
-            <div className="group relative overflow-hidden px-1 text-xs leading-tight space-y-0.5">
+            <div className="group relative px-1 text-xs leading-tight space-y-0.5">
               <button
                 type="button"
                 onClick={onCancel}
@@ -456,12 +465,14 @@ export function CalendarView({
               <div className="font-semibold tracking-tight">
                 {start}–{end}
               </div>
-              <div className="truncate">
+              <div className="whitespace-normal break-words">
                 {customer}
                 {area ? ` · ${area}` : ""}
               </div>
               {serviceSummary && (
-                <div className="truncate opacity-75">{serviceSummary}</div>
+                <div className="whitespace-normal break-words opacity-75">
+                  {serviceSummary}
+                </div>
               )}
             </div>
           );

@@ -71,6 +71,15 @@
   border-radius: 4px;
   padding: 1px 2px;
 }
+/* 月格事件預設 nowrap → 客戶/服務名稱被截成「…」。改為自動換行，整段看得到。 */
+.calendar-wrapper .fc-daygrid-event,
+.calendar-wrapper .fc-daygrid-event .fc-event-main {
+  white-space: normal;
+  overflow: visible;
+}
+.calendar-wrapper .fc-daygrid-event-harness {
+  overflow: visible;
+}
 .calendar-wrapper .fc-day-today {
   background-color: #eef2ff !important;
 }
