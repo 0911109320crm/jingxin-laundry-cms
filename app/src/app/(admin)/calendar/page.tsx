@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/dal";
-import { CalendarView, type CalendarOrder } from "./CalendarView";
+import {
+  CalendarView,
+  type CalendarOrder,
+  type CalendarLeave,
+} from "./CalendarView";
 import { PendingPanel, type PendingOrder } from "./PendingPanel";
 import { TechTabs, type TechOption } from "./TechTabs";
 
@@ -63,10 +67,14 @@ export default async function CalendarPage({
   const calWinEnd = new Date();
   calWinEnd.setMonth(calWinEnd.getMonth() + 4);
 
+  const calWinStartDate = calWinStart.toISOString().slice(0, 10);
+  const calWinEndDate = calWinEnd.toISOString().slice(0, 10);
+
   const [
     { data: techsRaw },
     { data: scheduledRaw },
     { data: pendingRaw },
+    { data: leavesRaw },
   ] = await Promise.all([
     admin
       .from("user_profiles")
@@ -99,6 +107,12 @@ export default async function CalendarPage({
       .eq("status", "pending")
       .order("scheduled_at", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false }),
+    // 休假（月曆視窗內）：全部師傅一起撈，下方再依 techFilter 過濾
+    supabase
+      .from("technician_leave")
+      .select("id, technician_id, leave_date, period")
+      .gte("leave_date", calWinStartDate)
+      .lte("leave_date", calWinEndDate),
   ]);
 
   const techs = (techsRaw as TechOption[] | null) ?? [];
@@ -119,6 +133,23 @@ export default async function CalendarPage({
       o.items.some((it) => it.technician_id === techFilter),
     );
   }
+
+  // 休假：全部 view 顯示所有師傅；指定師傅只顯示他的。帶上師傅名供月曆標示。
+  type LeaveRaw = {
+    id: string;
+    technician_id: string;
+    leave_date: string;
+    period: "full" | "am" | "pm";
+  };
+  const leaves: CalendarLeave[] = ((leavesRaw as LeaveRaw[] | null) ?? [])
+    .filter((lv) => techFilter === "all" || lv.technician_id === techFilter)
+    .map((lv) => ({
+      id: lv.id,
+      date: lv.leave_date,
+      period: lv.period,
+      technician_id: lv.technician_id,
+      technician_name: nameMap.get(lv.technician_id) ?? "師傅",
+    }));
 
   const orders: CalendarOrder[] = scheduledFiltered.map((o) => {
     const techId = o.items.find((it) => it.technician_id)?.technician_id ?? null;
@@ -194,6 +225,7 @@ export default async function CalendarPage({
           <TechTabs current={techFilter} techs={techs} />
           <CalendarView
             orders={orders}
+            leaves={leaves}
             technicianIds={technicianIds}
             techFilter={techFilter}
           />

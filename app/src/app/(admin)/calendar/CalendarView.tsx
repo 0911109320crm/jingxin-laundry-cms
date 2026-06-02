@@ -26,6 +26,14 @@ const TECH_COLORS = [
 ];
 const UNASSIGNED_COLOR = "#6b7280";
 
+export type CalendarLeave = {
+  id: string;
+  date: string; // YYYY-MM-DD
+  period: "full" | "am" | "pm";
+  technician_id: string;
+  technician_name: string;
+};
+
 export type CalendarOrder = {
   id: string;
   order_code: string;
@@ -146,12 +154,20 @@ function findFreeSlot(
 
 type ActionTarget = { id: string; customer: string };
 
+const LEAVE_PERIOD_LABEL: Record<CalendarLeave["period"], string> = {
+  full: "全日休",
+  am: "上午休",
+  pm: "下午休",
+};
+
 export function CalendarView({
   orders,
+  leaves = [],
   technicianIds,
   techFilter,
 }: {
   orders: CalendarOrder[];
+  leaves?: CalendarLeave[];
   technicianIds: string[];
   techFilter: string;
 }) {
@@ -227,6 +243,29 @@ export function CalendarView({
     };
   });
 
+  // 休假：以「全日事件」呈現在格子頂端，跟訂單(block)區隔，避免被誤認為「尚未排案」。
+  const leaveEvents: EventInput[] = leaves.map((lv) => {
+    const hex = techHex(lv.technician_name) ?? UNASSIGNED_COLOR;
+    return {
+      id: `leave-${lv.id}`,
+      start: lv.date,
+      allDay: true,
+      display: "block",
+      editable: false,
+      startEditable: false,
+      durationEditable: false,
+      backgroundColor: hex,
+      borderColor: hex,
+      extendedProps: {
+        isLeave: true,
+        techId: lv.technician_id,
+        techName: lv.technician_name,
+        periodLabel: LEAVE_PERIOD_LABEL[lv.period],
+      },
+    };
+  });
+  const allEvents = [...leaveEvents, ...events];
+
   // Pre-aggregate daily totals (for day-cell badge)
   // 用台灣時區計算「該訂單屬於哪一天」，避免 UTC slice 在跨日邊界誤判
   const TW_TZ_FMT = new Intl.DateTimeFormat("sv-SE", {
@@ -247,9 +286,12 @@ export function CalendarView({
   // FullCalendar 是包過的 vanilla JS 庫，events prop 改變時不一定會自動重畫。
   // 用 key 強制在 events 內容改變時 remount 整個 FullCalendar。
   // 缺點是會 reset 到 initialView，但拖曳後使用者本來就期待看到結果，可接受。
-  const eventsKey = orders
-    .map((o) => `${o.id}-${o.scheduled_at}-${o.scheduled_end_at}-${o.technician_id}-${o.status}`)
-    .join("|");
+  const eventsKey =
+    orders
+      .map((o) => `${o.id}-${o.scheduled_at}-${o.scheduled_end_at}-${o.technician_id}-${o.status}`)
+      .join("|") +
+    "#" +
+    leaves.map((lv) => `${lv.id}-${lv.date}-${lv.period}`).join("|");
 
   return (
     <div className="calendar-wrapper">
@@ -280,7 +322,7 @@ export function CalendarView({
           badge.textContent = `$${sum.toLocaleString()}`;
           top.appendChild(badge);
         }}
-        events={events}
+        events={allEvents}
         editable
         droppable
         eventDisplay="block"
@@ -289,9 +331,17 @@ export function CalendarView({
           const tip = info.event.extendedProps.tooltip as string | undefined;
           if (tip) info.el.setAttribute("title", tip);
         }}
-        eventClick={(info) =>
-          router.push(`/orders/${info.event.id}?from=calendar`)
-        }
+        eventClick={(info) => {
+          // 休假事件：點擊跳到「排班月檢視」管理該師傅休假，不要當成訂單
+          if (info.event.extendedProps.isLeave) {
+            const techId = info.event.extendedProps.techId as string | undefined;
+            router.push(
+              techId ? `/calendar/month?tech=${techId}` : "/calendar/month",
+            );
+            return;
+          }
+          router.push(`/orders/${info.event.id}?from=calendar`);
+        }}
         dateClick={(info) =>
           router.push(`/orders/new?date=${info.dateStr}T09:00&from=calendar`)
         }
@@ -439,6 +489,19 @@ export function CalendarView({
             return (
               <div className="px-1 text-xs opacity-70 truncate">
                 {arg.event.title || "派工中..."}
+              </div>
+            );
+          }
+          // 休假事件：明確標示「🏖 師傅·全日休」，與訂單區隔，避免誤認尚未排案
+          if (arg.event.extendedProps.isLeave) {
+            const techName = arg.event.extendedProps.techName as string;
+            const periodLabel = arg.event.extendedProps.periodLabel as string;
+            return (
+              <div className="flex items-center gap-1 px-1 text-xs font-medium leading-tight text-white">
+                <span>🏖</span>
+                <span className="whitespace-normal break-words">
+                  {techName}·{periodLabel}
+                </span>
               </div>
             );
           }
