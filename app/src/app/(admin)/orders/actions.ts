@@ -177,23 +177,32 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
     return { ok: false, error: orderErr?.message ?? "建立訂單失敗" };
   }
 
+  // 寫入品項並「依輸入順序」取回 id（PostgREST 多列 insert 的 RETURNING 與 VALUES 同序），
+  // 供品項級加減項用 index 對應到真正的 order_item_id。
+  let insertedItemIds: string[] = [];
   if (data.items.length > 0) {
-    const { error } = await supabase.from("order_items").insert(
-      data.items.map((it) => ({
-        order_id: orderRow.id,
-        // 建單時若老闆娘已知客戶機器可直接帶入（5a）；不知道就留 null 由師傅現場補
-        machine_id: it.machine_id ?? null,
-        service_item_id: it.service_item_id,
-        // 老闆娘 2026-05-27 起允許建單時直接指派師傅
-        technician_id: it.technician_id ?? null,
-        quantity: it.quantity,
-        unit_price: it.unit_price,
-        subtotal: it.quantity * it.unit_price,
-        tag: it.tag ?? null,
-        note: it.note ?? null,
-      })),
-    );
+    const { data: insertedItems, error } = await supabase
+      .from("order_items")
+      .insert(
+        data.items.map((it) => ({
+          order_id: orderRow.id,
+          // 建單時若老闆娘已知客戶機器可直接帶入（5a）；不知道就留 null 由師傅現場補
+          machine_id: it.machine_id ?? null,
+          service_item_id: it.service_item_id,
+          // 老闆娘 2026-05-27 起允許建單時直接指派師傅
+          technician_id: it.technician_id ?? null,
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+          subtotal: it.quantity * it.unit_price,
+          tag: it.tag ?? null,
+          note: it.note ?? null,
+        })),
+      )
+      .select("id");
     if (error) return { ok: false, error: `明細寫入失敗：${error.message}` };
+    insertedItemIds = ((insertedItems as { id: string }[] | null) ?? []).map(
+      (r) => r.id,
+    );
   }
 
   if (data.adjustments.length > 0) {
@@ -201,6 +210,11 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
       data.adjustments.map((a) => ({
         order_id: orderRow.id,
         adjustment_item_id: a.adjustment_item_id ?? null,
+        // 品項級：用 index 換成剛寫入的 order_item id；索引無效時退回訂單級(null)
+        order_item_id:
+          a.order_item_index != null
+            ? insertedItemIds[a.order_item_index] ?? null
+            : null,
         name_snapshot: a.name_snapshot,
         type: a.type,
         amount: a.amount,
@@ -246,21 +260,28 @@ export async function updateOrderAction(
 
   // Replace-all items and adjustments
   await supabase.from("order_items").delete().eq("order_id", id);
+  let insertedItemIds: string[] = [];
   if (data.items.length > 0) {
-    const { error } = await supabase.from("order_items").insert(
-      data.items.map((it) => ({
-        order_id: id,
-        machine_id: it.machine_id ?? null,
-        service_item_id: it.service_item_id,
-        technician_id: it.technician_id ?? null,
-        quantity: it.quantity,
-        unit_price: it.unit_price,
-        subtotal: it.quantity * it.unit_price,
-        tag: it.tag ?? null,
-        note: it.note ?? null,
-      })),
-    );
+    const { data: insertedItems, error } = await supabase
+      .from("order_items")
+      .insert(
+        data.items.map((it) => ({
+          order_id: id,
+          machine_id: it.machine_id ?? null,
+          service_item_id: it.service_item_id,
+          technician_id: it.technician_id ?? null,
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+          subtotal: it.quantity * it.unit_price,
+          tag: it.tag ?? null,
+          note: it.note ?? null,
+        })),
+      )
+      .select("id");
     if (error) return { ok: false, error: `明細寫入失敗：${error.message}` };
+    insertedItemIds = ((insertedItems as { id: string }[] | null) ?? []).map(
+      (r) => r.id,
+    );
   }
 
   await supabase.from("order_adjustments").delete().eq("order_id", id);
@@ -269,6 +290,10 @@ export async function updateOrderAction(
       data.adjustments.map((a) => ({
         order_id: id,
         adjustment_item_id: a.adjustment_item_id ?? null,
+        order_item_id:
+          a.order_item_index != null
+            ? insertedItemIds[a.order_item_index] ?? null
+            : null,
         name_snapshot: a.name_snapshot,
         type: a.type,
         amount: a.amount,
@@ -753,6 +778,8 @@ export async function addOrderAdjustmentAction(
     name_snapshot: string;
     type: "addon" | "discount";
     amount: number;
+    /** 綁定特定服務品項（品項級）；不傳＝訂單級 */
+    order_item_id?: string | null;
   },
 ): Promise<Res & { realId?: string }> {
   const me = await requireRole(["owner", "manager", "technician"]);
@@ -771,6 +798,7 @@ export async function addOrderAdjustmentAction(
     .insert({
       order_id: orderId,
       adjustment_item_id: payload.adjustment_item_id ?? null,
+      order_item_id: payload.order_item_id ?? null,
       name_snapshot: name,
       type: payload.type,
       amount: payload.amount,

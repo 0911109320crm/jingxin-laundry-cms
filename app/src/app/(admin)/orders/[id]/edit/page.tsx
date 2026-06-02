@@ -36,8 +36,8 @@ export default async function EditOrderPage({
          service_at, duration_minutes, status, payment_method, note, source,
          items:order_items(id, machine_id, service_item_id, technician_id,
                            quantity, unit_price, tag, note),
-         adjustments:order_adjustments(id, adjustment_item_id, name_snapshot,
-                                       type, amount, note)`,
+         adjustments:order_adjustments(id, adjustment_item_id, order_item_id,
+                                       name_snapshot, type, amount, note)`,
       )
       .eq("id", id)
       .single(),
@@ -85,6 +85,7 @@ export default async function EditOrderPage({
         adjustments: {
           id: string;
           adjustment_item_id: string | null;
+          order_item_id: string | null;
           name_snapshot: string;
           type: "addon" | "discount";
           amount: number;
@@ -141,14 +142,21 @@ export default async function EditOrderPage({
       tag: it.tag ?? "",
       note: it.note ?? "",
     })),
-    adjustments: o.adjustments.map((a) => ({
-      id: a.id,
-      adjustment_item_id: a.adjustment_item_id,
-      name_snapshot: a.name_snapshot,
-      type: a.type,
-      amount: Number(a.amount),
-      note: a.note ?? "",
-    })),
+    adjustments: o.adjustments.map((a) => {
+      // 還原品項級綁定：order_item_id → items 陣列索引（找不到＝訂單級 null）
+      const idx = a.order_item_id
+        ? o.items.findIndex((it) => it.id === a.order_item_id)
+        : -1;
+      return {
+        id: a.id,
+        adjustment_item_id: a.adjustment_item_id,
+        name_snapshot: a.name_snapshot,
+        type: a.type,
+        amount: Number(a.amount),
+        note: a.note ?? "",
+        order_item_index: idx >= 0 ? idx : null,
+      };
+    }),
     addresses: (addresses ?? []) as never,
     machines: (machines ?? []) as never,
   };

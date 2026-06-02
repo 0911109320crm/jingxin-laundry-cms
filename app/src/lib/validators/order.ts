@@ -76,6 +76,9 @@ export const OrderAdjustmentSchema = z.object({
   type: z.enum(["discount", "addon"]),
   amount: z.number().min(0),
   note: z.string().optional().nullable(),
+  // 綁定特定品項用：建單時 order_item 尚無 id，故以 items 陣列的「索引」表達，
+  // 由 server action 在 items 寫入後解析成真正的 order_item_id。null/undefined＝訂單級。
+  order_item_index: z.number().int().min(0).optional().nullable(),
 });
 
 // Form schema uses string for status to tolerate legacy 'in_progress' values

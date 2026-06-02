@@ -45,6 +45,7 @@ type Adjustment = {
   type: "addon" | "discount";
   amount: number;
   note: string | null;
+  order_item_id: string | null;
 };
 
 type Detail = {
@@ -113,7 +114,7 @@ export default async function OrderDetailPage({
                          technician_id,
                          service:service_items(code, name),
                          machine:machines(type, brand, model)),
-       adjustments:order_adjustments(id, name_snapshot, type, amount, note)`,
+       adjustments:order_adjustments(id, name_snapshot, type, amount, note, order_item_id)`,
     )
     .eq("id", id)
     .single();
@@ -455,6 +456,18 @@ export default async function OrderDetailPage({
                         折扣
                       </span>
                     )}
+                    <span
+                      className={`ml-2 rounded px-1.5 py-0.5 text-xs ${
+                        a.order_item_id
+                          ? "bg-sky-50 text-sky-700"
+                          : "bg-zinc-100 text-zinc-500"
+                      }`}
+                    >
+                      {a.order_item_id
+                        ? o.items.find((it) => it.id === a.order_item_id)?.service
+                            ?.name ?? "品項"
+                        : "整單"}
+                    </span>
                   </div>
                   <span className="font-mono text-zinc-900">
                     {a.type === "addon" ? "+" : "-"}

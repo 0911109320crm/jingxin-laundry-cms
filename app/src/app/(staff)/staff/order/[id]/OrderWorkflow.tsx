@@ -51,6 +51,8 @@ type Adjustment = {
   name_snapshot: string;
   type: "addon" | "discount";
   amount: number;
+  /** 綁定的服務品項 id；null＝整單級 */
+  order_item_id: string | null;
 };
 
 type AdjustmentItem = {
@@ -79,6 +81,8 @@ type ItemLite = {
   service_name: string | null;
   quantity: number;
   subtotal: number;
+  excluded: boolean;
+  unit_price: number;
 };
 
 type Props = {
@@ -135,6 +139,13 @@ export function OrderWorkflow({
   // ── State ────────────────────────────────────────────────────────────
   const [localAdj, setLocalAdj] = useState<Adjustment[]>(initialAdjustments);
 
+  // 加減項「套用對象」：'' = 整單；否則為某 order_item id（只可選未排除品項）
+  const [adjTarget, setAdjTarget] = useState<string>("");
+  const targetItems = items.filter((it) => !it.excluded);
+  const itemNameById = new Map(
+    items.map((it) => [it.id, it.service_name ?? "品項"] as const),
+  );
+
   const [localPromos, setLocalPromos] =
     useState<OrderPromotion[]>(initialPromotions);
   const activePromoMap = new Map(
@@ -162,10 +173,12 @@ export function OrderWorkflow({
   const canSubmitTransfer = laterTransfer || /^\d{5}$/.test(last5);
 
   // ── Derived ─────────────────────────────────────────────────────────
-  const localAdjTotal = localAdj.reduce(
-    (s, a) => s + (a.type === "addon" ? a.amount : -a.amount),
-    0,
-  );
+  const adjSum = (list: Adjustment[]) =>
+    list.reduce((s, a) => s + (a.type === "addon" ? a.amount : -a.amount), 0);
+  const localAdjTotal = adjSum(localAdj);
+  // 拆「品項級」與「訂單級」分別加總，讓小計看得出折扣歸在哪
+  const itemAdjTotal = adjSum(localAdj.filter((a) => a.order_item_id));
+  const orderAdjTotal = adjSum(localAdj.filter((a) => !a.order_item_id));
   const localTotal = subtotal + localAdjTotal;
   const totalPoints = localPromos.reduce((s, p) => s + p.points_snapshot, 0);
 
@@ -176,12 +189,14 @@ export function OrderWorkflow({
 
   // ── Handlers ────────────────────────────────────────────────────────
   const addPresetAdj = (item: AdjustmentItem) => {
+    const target = adjTarget || null;
     startAdjTransition(async () => {
       const res = await addOrderAdjustmentAction(orderId, {
         adjustment_item_id: item.id,
         name_snapshot: item.name,
         type: item.type,
         amount: item.default_amount,
+        order_item_id: target,
       });
       if (!res.ok) {
         alert(`新增失敗：${res.error}`);
@@ -189,19 +204,21 @@ export function OrderWorkflow({
       }
       setLocalAdj((prev) => [
         ...prev,
-        { id: res.realId!, name_snapshot: item.name, type: item.type, amount: item.default_amount },
+        { id: res.realId!, name_snapshot: item.name, type: item.type, amount: item.default_amount, order_item_id: target },
       ]);
     });
   };
 
   // 從下拉選 preset + 自填金額加入（服務加收 / 零件加收用；金額預設帶 preset 但可改）
   const addAddonWithAmount = (item: AdjustmentItem, amount: number) => {
+    const target = adjTarget || null;
     startAdjTransition(async () => {
       const res = await addOrderAdjustmentAction(orderId, {
         adjustment_item_id: item.id,
         name_snapshot: item.name,
         type: item.type,
         amount,
+        order_item_id: target,
       });
       if (!res.ok) {
         alert(`新增失敗：${res.error}`);
@@ -209,7 +226,7 @@ export function OrderWorkflow({
       }
       setLocalAdj((prev) => [
         ...prev,
-        { id: res.realId!, name_snapshot: item.name, type: item.type, amount },
+        { id: res.realId!, name_snapshot: item.name, type: item.type, amount, order_item_id: target },
       ]);
     });
   };
@@ -375,7 +392,7 @@ export function OrderWorkflow({
                     key={a.id}
                     className="flex items-center justify-between rounded bg-zinc-50 px-3 py-1.5 text-sm"
                   >
-                    <span className="flex items-center gap-1.5 text-zinc-700">
+                    <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-zinc-700">
                       <span
                         className={`rounded px-1.5 py-0.5 text-[10px] ${
                           a.type === "addon"
@@ -386,6 +403,17 @@ export function OrderWorkflow({
                         {a.type === "addon" ? "加" : "折"}
                       </span>
                       {a.name_snapshot}
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] ${
+                          a.order_item_id
+                            ? "bg-sky-100 text-sky-700"
+                            : "bg-zinc-200 text-zinc-600"
+                        }`}
+                      >
+                        {a.order_item_id
+                          ? itemNameById.get(a.order_item_id) ?? "品項"
+                          : "整單"}
+                      </span>
                     </span>
                     <div className="flex items-center gap-2">
                       <span
@@ -410,6 +438,30 @@ export function OrderWorkflow({
               </ul>
             ) : (
               <p className="text-xs text-zinc-500">尚無加減項</p>
+            )}
+
+            {/* 套用對象：多個品項時才需要選（單一品項時加減項本來就只能算它/整單） */}
+            {targetItems.length > 1 && (
+              <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2">
+                <label className="mb-1 block text-xs font-medium text-sky-800">
+                  以下要加的加減項，套用到：
+                </label>
+                <select
+                  value={adjTarget}
+                  onChange={(e) => setAdjTarget(e.target.value)}
+                  className="w-full rounded border border-sky-300 bg-white px-2.5 py-1.5 text-sm focus:border-sky-500 focus:outline-none"
+                >
+                  <option value="">整單（每一項都算）</option>
+                  {targetItems.map((it) => (
+                    <option key={it.id} value={it.id}>
+                      {it.service_name ?? "品項"}（牌價 {formatNTD(it.subtotal)}）
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-sky-700">
+                  例：定期客戶每台洗衣機各折 100，就先選某台洗衣機再按折扣；冷氣不折就別選它。
+                </p>
+              </div>
             )}
 
             {/* 服務加收：下拉選 + 金額（項目多，用下拉） */}
@@ -463,19 +515,32 @@ export function OrderWorkflow({
       <Card>
         <CardBody className="space-y-1">
           <div className="flex items-center justify-between text-sm text-zinc-600">
-            <span>項目小計</span>
+            <span>項目小計（牌價）</span>
             <span className="font-mono">{formatNTD(subtotal)}</span>
           </div>
-          {localAdjTotal !== 0 && (
+          {itemAdjTotal !== 0 && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-600">加減項合計</span>
+              <span className="text-zinc-600">品項加減（綁定品項）</span>
               <span
                 className={`font-mono ${
-                  localAdjTotal > 0 ? "text-orange-700" : "text-emerald-700"
+                  itemAdjTotal > 0 ? "text-orange-700" : "text-emerald-700"
                 }`}
               >
-                {localAdjTotal > 0 ? "+" : ""}
-                {formatNTD(localAdjTotal)}
+                {itemAdjTotal > 0 ? "+" : ""}
+                {formatNTD(itemAdjTotal)}
+              </span>
+            </div>
+          )}
+          {orderAdjTotal !== 0 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-zinc-600">訂單加減（整單）</span>
+              <span
+                className={`font-mono ${
+                  orderAdjTotal > 0 ? "text-orange-700" : "text-emerald-700"
+                }`}
+              >
+                {orderAdjTotal > 0 ? "+" : ""}
+                {formatNTD(orderAdjTotal)}
               </span>
             </div>
           )}
@@ -715,6 +780,11 @@ export function OrderWorkflow({
                                   {a.type === "addon" ? "加" : "折"}
                                 </span>
                                 {a.name_snapshot}
+                                {a.order_item_id && (
+                                  <span className="ml-1.5 rounded bg-sky-100 px-1 py-0.5 text-[10px] text-sky-700">
+                                    {itemNameById.get(a.order_item_id) ?? "品項"}
+                                  </span>
+                                )}
                               </span>
                               <span
                                 className={`font-mono ${

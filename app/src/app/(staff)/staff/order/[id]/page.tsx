@@ -64,6 +64,7 @@ type Detail = {
   }[];
   adjustments: {
     id: string;
+    order_item_id: string | null;
     name_snapshot: string;
     type: "addon" | "discount";
     amount: number;
@@ -114,7 +115,7 @@ export default async function StaffOrderPage({
                          technician_id,
                          service:service_items(code, name, category),
                          machine:machines(id, type, brand, model, code)),
-       adjustments:order_adjustments(id, name_snapshot, type, amount)`,
+       adjustments:order_adjustments(id, order_item_id, name_snapshot, type, amount)`,
     )
     .eq("id", id)
     .single();
@@ -474,6 +475,8 @@ export default async function StaffOrderPage({
           service_name: it.service?.name ?? null,
           quantity: it.quantity,
           subtotal: Number(it.subtotal),
+          excluded: it.excluded,
+          unit_price: Number(it.unit_price),
         }))}
         initialAdjustments={o.adjustments}
         adjustmentItems={adjustmentItems}

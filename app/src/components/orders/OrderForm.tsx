@@ -283,6 +283,15 @@ export function OrderForm({
   );
   const total = subtotal + adjTotal;
 
+  // 品項級加減項用：把某 index 的品項顯示成可讀標籤（給「套用對象」下拉）
+  const itemLabel = (i: number) => {
+    const it = watchedItems?.[i];
+    const svc = serviceLookup.find((s) => s.id === it?.service_item_id);
+    const base = svc?.name ?? `品項 ${i + 1}`;
+    const tag = it?.tag ? `（${it.tag}）` : "";
+    return `${i + 1}. ${base}${tag}`;
+  };
+
   // 把 datetime-local 字串 "YYYY-MM-DDTHH:mm"（瀏覽器當地時區）轉成帶時區的 ISO，
   // 避免 Postgres timestamptz 把無時區字串當 UTC 存（08:00 台灣會變成 16:00）。
   const localToIso = (s: string | null | undefined): string | null => {
@@ -732,6 +741,7 @@ export function OrderForm({
                   type: "addon",
                   amount: 0,
                   note: "",
+                  order_item_index: null,
                 })
               }
             >
@@ -747,6 +757,7 @@ export function OrderForm({
                   type: "discount",
                   amount: 0,
                   note: "",
+                  order_item_index: null,
                 })
               }
             >
@@ -761,7 +772,7 @@ export function OrderForm({
           {adjArr.fields.map((field, idx) => (
             <div
               key={field.id}
-              className="grid grid-cols-1 items-end gap-3 rounded-lg border border-zinc-200 p-3 md:grid-cols-[1fr_120px_120px_auto]"
+              className="grid grid-cols-1 items-end gap-3 rounded-lg border border-zinc-200 p-3 md:grid-cols-[1fr_100px_100px_150px_auto]"
             >
               <Field label="名稱">
                 <Controller
@@ -813,6 +824,29 @@ export function OrderForm({
                   type="number"
                   min={0}
                   {...register(`adjustments.${idx}.amount`, { valueAsNumber: true })}
+                />
+              </Field>
+              <Field label="套用對象">
+                <Controller
+                  control={control}
+                  name={`adjustments.${idx}.order_item_index`}
+                  render={({ field: f }) => (
+                    <Select
+                      value={f.value == null ? "" : String(f.value)}
+                      onChange={(e) =>
+                        f.onChange(
+                          e.target.value === "" ? null : Number(e.target.value),
+                        )
+                      }
+                    >
+                      <option value="">整單</option>
+                      {(watchedItems ?? []).map((_, i) => (
+                        <option key={i} value={i}>
+                          {itemLabel(i)}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
                 />
               </Field>
               <button
