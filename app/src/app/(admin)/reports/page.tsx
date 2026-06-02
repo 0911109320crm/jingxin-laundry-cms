@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Download, TrendingUp, ClipboardCheck, Users, Receipt } from "lucide-react";
+import { Download, TrendingUp, ClipboardCheck, Users, Receipt, Fuel, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/dal";
@@ -123,9 +123,35 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
 
   const orders = (ordersRaw as RawOrder[] | null) ?? [];
 
+  // 期間師傅代墊支出（成本）：依 expense_date 歸期
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dkey = (d: Date) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const { data: expRaw } = await supabase
+    .from("technician_expenses")
+    .select("name, amount, expense_date")
+    .gte("expense_date", dkey(start))
+    .lt("expense_date", dkey(end));
+  const expenses =
+    (expRaw as { name: string; amount: number; expense_date: string }[] | null) ??
+    [];
+  const expenseTotal = expenses.reduce((s, e) => s + Number(e.amount), 0);
+  const expByName = new Map<string, { name: string; count: number; amount: number }>();
+  for (const e of expenses) {
+    const key = e.name.trim() || "（未命名）";
+    if (!expByName.has(key)) expByName.set(key, { name: key, count: 0, amount: 0 });
+    const r = expByName.get(key)!;
+    r.count += 1;
+    r.amount += Number(e.amount);
+  }
+  const expenseRows = Array.from(expByName.values()).sort(
+    (a, b) => b.amount - a.amount,
+  );
+
   // === Aggregations ===
   const doneOrders = orders.filter((o) => o.status === "done");
   const totalRevenue = doneOrders.reduce((s, o) => s + Number(o.total), 0);
+  const netRevenue = totalRevenue - expenseTotal;
   const uniqueCustomers = new Set(doneOrders.map((o) => o.customer_id)).size;
   const avgTicket = doneOrders.length > 0
     ? Math.round(totalRevenue / doneOrders.length)
@@ -294,9 +320,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Kpi icon={<TrendingUp className="h-5 w-5 text-emerald-500" />}
           label="期間營業額" value={formatNTD(totalRevenue)} />
+        <Kpi icon={<Fuel className="h-5 w-5 text-rose-500" />}
+          label="期間支出（師傅代墊）" value={`- ${formatNTD(expenseTotal)}`} />
+        <Kpi icon={<Wallet className="h-5 w-5 text-indigo-500" />}
+          label="淨營收（營業額−支出）" value={formatNTD(netRevenue)} />
         <Kpi icon={<ClipboardCheck className="h-5 w-5 text-brand-500" />}
           label="完成案件數" value={`${doneOrders.length}`}
           sub={`期間總訂單 ${orders.length}`} />
@@ -421,6 +451,44 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Fuel className="h-4 w-4 text-rose-500" /> 師傅代墊支出明細（期間成本）
+          </CardTitle>
+        </CardHeader>
+        <CardBody className="space-y-2">
+          {expenseRows.length === 0 ? (
+            <p className="text-sm text-zinc-500">期間內無代墊支出</p>
+          ) : (
+            <>
+              {expenseRows.map((e) => (
+                <div
+                  key={e.name}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="text-zinc-700">
+                    {e.name}
+                    <span className="ml-1 text-xs text-zinc-400">
+                      × {e.count}
+                    </span>
+                  </span>
+                  <span className="font-mono text-rose-600">
+                    - {formatNTD(e.amount)}
+                  </span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between border-t border-zinc-200 pt-2 text-sm font-medium text-zinc-900">
+                <span>支出合計</span>
+                <span className="font-mono text-rose-600">
+                  - {formatNTD(expenseTotal)}
+                </span>
+              </div>
+            </>
+          )}
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader>

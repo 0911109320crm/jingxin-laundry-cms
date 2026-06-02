@@ -119,16 +119,18 @@ export default async function CalendarPage({
   const technicianIds = techs.map((t) => t.id);
   const nameMap = new Map(techs.map((t) => [t.id, t.name]));
 
-  // 預設顯示「全部」(所有師傅的案件 + 顏色區分)，老闆娘可切到特定師傅過濾
-  // 動機：原本預設第一位師傅時，指派給其他師傅的訂單看似「沒顯示」(實際被過濾)
+  // tab：「休假列表」(leave) 或 特定師傅。預設第一位師傅(原「全部師傅」已移除)。
   const techFilter =
-    sp.tech && (sp.tech === "all" || techs.some((t) => t.id === sp.tech))
+    sp.tech && (sp.tech === "leave" || techs.some((t) => t.id === sp.tech))
       ? sp.tech
-      : "all";
+      : techs[0]?.id ?? "leave";
+  const isLeaveView = techFilter === "leave";
 
-  // Filter scheduled by selected technician (items.some)
-  let scheduledFiltered = (scheduledRaw as ScheduledRaw[] | null) ?? [];
-  if (techFilter && techFilter !== "all") {
+  // 休假列表模式：完全不顯示訂單，只看全體休假。否則只顯示該師傅的訂單。
+  let scheduledFiltered = isLeaveView
+    ? []
+    : (scheduledRaw as ScheduledRaw[] | null) ?? [];
+  if (!isLeaveView) {
     scheduledFiltered = scheduledFiltered.filter((o) =>
       o.items.some((it) => it.technician_id === techFilter),
     );
@@ -142,7 +144,7 @@ export default async function CalendarPage({
     period: "full" | "am" | "pm";
   };
   const leaves: CalendarLeave[] = ((leavesRaw as LeaveRaw[] | null) ?? [])
-    .filter((lv) => techFilter === "all" || lv.technician_id === techFilter)
+    .filter((lv) => isLeaveView || lv.technician_id === techFilter)
     .map((lv) => ({
       id: lv.id,
       date: lv.leave_date,
@@ -205,24 +207,36 @@ export default async function CalendarPage({
     },
   );
 
-  const subtitle =
-    techFilter === "all"
-      ? "顯示所有師傅的案件（顏色區分）"
-      : techFilter
-        ? `只顯示「${nameMap.get(techFilter) ?? "未知"}」的案件`
-        : "尚未建立任何師傅";
+  const subtitle = isLeaveView
+    ? "全體師傅休假總覽（此模式不顯示訂單）"
+    : nameMap.get(techFilter)
+      ? `只顯示「${nameMap.get(techFilter)}」的案件`
+      : "尚未建立任何師傅";
 
   return (
     <div className="p-6 space-y-4">
       <header>
-        <h1 className="text-2xl font-bold text-zinc-900">月曆排案</h1>
+        <h1 className="text-2xl font-bold text-zinc-900">
+          {isLeaveView ? "休假列表" : "月曆排案"}
+        </h1>
         <p className="text-sm text-zinc-500">{subtitle}</p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
-        <PendingPanel orders={pending} />
+      <div
+        className={
+          isLeaveView
+            ? "grid grid-cols-1 gap-4"
+            : "grid grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]"
+        }
+      >
+        {!isLeaveView && <PendingPanel orders={pending} />}
         <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm space-y-3">
           <TechTabs current={techFilter} techs={techs} />
+          {isLeaveView && (
+            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              🏖 目前是「休假列表」模式，只顯示各師傅休假；要看／排訂單請切到上方某位師傅。
+            </p>
+          )}
           <CalendarView
             orders={orders}
             leaves={leaves}

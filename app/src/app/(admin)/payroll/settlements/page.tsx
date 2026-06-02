@@ -7,6 +7,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { formatNTD } from "@/lib/utils";
 import { resolveCollector, UNASSIGNED } from "@/lib/settlement";
 import { SettleGroup, type PendingOrderLite } from "./SettleButton";
+import { ExpensePanel, type ExpenseLite } from "./ExpensePanel";
 
 type PendingOrderRow = {
   id: string;
@@ -56,6 +57,28 @@ export default async function SettlementsPage() {
         ? `${o.address.county} ${o.address.district}`
         : null,
     });
+  }
+
+  // 未沖銷的師傅代墊支出（待回繳卡片要從應繳現金扣抵）
+  const { data: expensesRaw } = await supabase
+    .from("technician_expenses")
+    .select("id, technician_id, name, amount, expense_date")
+    .eq("is_reimbursed", false)
+    .order("expense_date", { ascending: false });
+  const expensesByTech = new Map<string, ExpenseLite[]>();
+  for (const e of (expensesRaw as
+    | { id: string; technician_id: string; name: string; amount: number; expense_date: string }[]
+    | null) ?? []) {
+    if (!expensesByTech.has(e.technician_id))
+      expensesByTech.set(e.technician_id, []);
+    expensesByTech.get(e.technician_id)!.push({
+      id: e.id,
+      name: e.name,
+      amount: Number(e.amount),
+      expense_date: e.expense_date,
+    });
+    // 有代墊支出但當前沒有待回繳訂單的師傅，也要顯示卡片(否則代墊金額會「不見」)
+    if (!grouped.has(e.technician_id)) grouped.set(e.technician_id, []);
   }
 
   // Resolve technician names
@@ -147,12 +170,26 @@ export default async function SettlementsPage() {
                 </p>
               </CardHeader>
               <CardBody className="p-0">
-                <SettleGroup
-                  technicianName={g.name}
-                  groupTechId={g.techId}
-                  orders={g.orders}
-                  technicians={technicians}
-                />
+                {g.orders.length > 0 ? (
+                  <SettleGroup
+                    technicianName={g.name}
+                    groupTechId={g.techId}
+                    orders={g.orders}
+                    technicians={technicians}
+                  />
+                ) : (
+                  <p className="px-5 py-3 text-sm text-zinc-500">
+                    目前無待回繳訂單，僅有代墊支出待沖銷。
+                  </p>
+                )}
+                {g.techId !== UNASSIGNED && (
+                  <ExpensePanel
+                    technicianId={g.techId}
+                    technicianName={g.name}
+                    cashTotal={g.total}
+                    initialExpenses={expensesByTech.get(g.techId) ?? []}
+                  />
+                )}
               </CardBody>
             </Card>
           ))}

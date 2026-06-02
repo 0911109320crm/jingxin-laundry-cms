@@ -16,9 +16,10 @@ export function TechTabs({
   techs: TechOption[];
 }) {
   if (techs.length === 0) return null;
-  // 把「全部」當第一個選項
+  // 第一個選項改成「休假列表」(原「全部師傅」已無意義：各師傅都有獨立頁)。
+  // 選它時月曆只顯示全體休假、不顯示任何訂單。
   const options: { id: string; name: string }[] = [
-    { id: "all", name: "全部師傅" },
+    { id: "leave", name: "休假列表" },
     ...techs,
   ];
   const currentIdx = Math.max(
@@ -40,7 +41,7 @@ export function TechTabs({
       <div className="flex flex-wrap items-center gap-1 rounded-lg bg-zinc-100 p-1">
         {options.map((t, idx) => {
           const active = t.id === current;
-          const isAll = t.id === "all";
+          const isAll = t.id === "leave";
           // 師傅按鈕整顆「持續」顯示代表色；被選中時全亮+外框，未選中時稍微淡化
           const hex = isAll ? null : techHex(t.name) ?? FALLBACK_HEX[(idx - 1) % FALLBACK_HEX.length];
           return (

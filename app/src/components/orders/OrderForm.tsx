@@ -503,12 +503,8 @@ export function OrderForm({
               ))}
             </Select>
           </Field>
-          <Field label="訂單來源">
-            <Input
-              {...register("source")}
-              placeholder="電話 / LINE / 官網表單..."
-            />
-          </Field>
+          {/* 訂單來源欄位移除：顧客已有「來源」(customers.source_id)，儀表板來源分析也是用它算，
+              訂單級 source 重複且易混淆。DB 欄位保留不動(歷史資料)，只移除建單/編輯 UI。 */}
           <Field label="備註" className="xl:col-span-2">
             <Textarea
               {...register("note")}

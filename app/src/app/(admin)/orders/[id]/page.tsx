@@ -283,7 +283,6 @@ export default async function OrderDetailPage({
         <p className="text-xs text-zinc-500">
           預約：{formatDateTime(o.scheduled_at)}
           {o.service_at && ` · 完工：${formatDateTime(o.service_at)}`}
-          {o.source && ` · 來源：${o.source}`}
         </p>
       </header>
 
