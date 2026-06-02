@@ -262,8 +262,16 @@ export function OrderWorkflow({
         if (!res.ok) {
           alert(res.error);
           setLocalPromos((prev) => prev.filter((p) => p.id !== tempId));
+          return;
         }
-        // 真實 ID 等下次 revalidate 就會帶回來，optimistic 暫保留
+        // 用真實 DB id 取代暫時 id，否則之後要取消時會拿 "__tmp__" 去刪 → uuid 格式錯誤、取消失敗
+        if (res.realId) {
+          setLocalPromos((prev) =>
+            prev.map((p) =>
+              p.id === tempId ? { ...p, id: res.realId! } : p,
+            ),
+          );
+        }
       });
     }
   };

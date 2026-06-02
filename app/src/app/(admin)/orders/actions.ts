@@ -655,7 +655,7 @@ export async function addOrderPromotionAction(
   orderId: string,
   promotionTypeId: string,
   creditedTo: string | null,
-): Promise<Res> {
+): Promise<Res & { realId?: string }> {
   const me = await requireRole(["owner", "manager", "technician"]);
   const supabase = await createClient();
 
@@ -684,12 +684,16 @@ export async function addOrderPromotionAction(
     credit = (items?.[0] as { technician_id: string } | undefined)?.technician_id ?? null;
   }
 
-  const { error } = await supabase.from("order_promotions").insert({
-    order_id: orderId,
-    promotion_type_id: promotionTypeId,
-    credited_to: credit,
-    points_snapshot: (pt as { points: number }).points,
-  });
+  const { data: insertedPromo, error } = await supabase
+    .from("order_promotions")
+    .insert({
+      order_id: orderId,
+      promotion_type_id: promotionTypeId,
+      credited_to: credit,
+      points_snapshot: (pt as { points: number }).points,
+    })
+    .select("id")
+    .single();
   if (error) return { ok: false, error: error.message };
   await logAudit({
     action: "order.add_promotion",
@@ -706,7 +710,7 @@ export async function addOrderPromotionAction(
   revalidatePath("/staff");
   revalidatePath("/staff/scores");
   revalidatePath("/scores");
-  return { ok: true };
+  return { ok: true, realId: (insertedPromo as { id: string }).id };
 }
 
 /** 移除一筆促銷積分紀錄（technician 只能刪自己的，由 RLS 強制） */
