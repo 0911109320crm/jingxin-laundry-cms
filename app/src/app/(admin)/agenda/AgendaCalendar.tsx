@@ -20,10 +20,14 @@ export function AgendaCalendar({ notes }: { notes: AgendaNote[] }) {
 
   const [editDate, setEditDate] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  // 開啟時這天本來有沒有內容（決定要不要顯示「刪除」鈕）
+  const [hadNote, setHadNote] = useState(false);
 
   const openDay = (date: string) => {
+    const existing = noteByDate.get(date) ?? "";
     setEditDate(date);
-    setDraft(noteByDate.get(date) ?? "");
+    setDraft(existing);
+    setHadNote(existing.trim().length > 0);
   };
 
   const save = () => {
@@ -33,6 +37,21 @@ export function AgendaCalendar({ notes }: { notes: AgendaNote[] }) {
       const res = await upsertCalendarNoteAction(date, draft);
       if (!res.ok) {
         alert(res.error ?? "儲存失敗");
+        return;
+      }
+      setEditDate(null);
+      router.refresh();
+    });
+  };
+
+  const removeNote = () => {
+    if (!editDate) return;
+    if (!confirm("確定刪除這天的行程？")) return;
+    const date = editDate;
+    startTransition(async () => {
+      const res = await upsertCalendarNoteAction(date, "");
+      if (!res.ok) {
+        alert(res.error ?? "刪除失敗");
         return;
       }
       setEditDate(null);
@@ -109,21 +128,36 @@ export function AgendaCalendar({ notes }: { notes: AgendaNote[] }) {
                 placeholder="這天的雜事，例如：汽車保養、保險繳費、繳水電…（多件事換行寫）"
               />
               <p className="mt-1 text-right text-xs text-zinc-400">
-                {draft.length} / 2000　清空並儲存＝刪除這天
+                {draft.length} / 2000
               </p>
             </div>
-            <div className="flex items-center justify-end gap-2 border-t border-zinc-200 px-4 py-3">
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={pending}
-                onClick={() => setEditDate(null)}
-              >
-                取消
-              </Button>
-              <Button type="button" disabled={pending} onClick={save}>
-                {pending ? "儲存中…" : "儲存"}
-              </Button>
+            <div className="flex items-center justify-between gap-2 border-t border-zinc-200 px-4 py-3">
+              <div>
+                {hadNote && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={removeNote}
+                    className="text-rose-600 hover:bg-rose-50"
+                  >
+                    刪除
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => setEditDate(null)}
+                >
+                  取消
+                </Button>
+                <Button type="button" disabled={pending} onClick={save}>
+                  {pending ? "儲存中…" : "儲存"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
