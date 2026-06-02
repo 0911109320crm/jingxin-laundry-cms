@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Banknote,
   ArrowDownToLine,
@@ -126,6 +127,7 @@ export function OrderWorkflow({
   iAmCollector,
   collectorName,
 }: Props) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [adjPending, startAdjTransition] = useTransition();
   const [promoPending, startPromoTransition] = useTransition();
@@ -279,6 +281,8 @@ export function OrderWorkflow({
         return;
       }
       setDialogOpen(false);
+      // 完成後直接跳回今日案件首頁（師傅在手機上不必再手動返回）
+      router.push("/staff");
     });
   };
 

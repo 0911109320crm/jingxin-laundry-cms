@@ -221,10 +221,11 @@ export default async function StaffOrderPage({
   const hasMyItems = myItems.length > 0;
   // 我這邊是否都確認了（沒有負責品項也視為 OK）
   const myConfirmed = myItems.every((it) => it.confirmed);
-  // 收款閘門：整單所有未排除品項皆已確認
+  // 收款閘門：整單所有未排除品項皆已確認。
+  // 注意：當「沒有任何未排除品項」時(例：唯一機器拆解後標記不服務、只收 300 拆解費)，
+  // 沒有金額要確認 → 閘門必須直接放行；若要求 length>0 會讓收款/完成鈕永遠卡死(灰字)。
   const activeItems = o.items.filter((it) => !it.excluded);
-  const allConfirmed =
-    activeItems.length > 0 && activeItems.every((it) => it.confirmed);
+  const allConfirmed = activeItems.every((it) => it.confirmed);
   const iAmCollector = o.collected_by_technician_id === me.id;
 
   // 已被別人收款時，查收款師傅名字（顯示「已由 X 收取」）
