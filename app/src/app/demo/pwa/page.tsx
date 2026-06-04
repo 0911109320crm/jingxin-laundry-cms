@@ -21,29 +21,30 @@ export default async function DemoPWAPage({
   const sp = await searchParams;
   const tech = typeof sp.tech === "string" ? sp.tech : null;
 
-  // 師傅清單（頁面上的切換列用，因為這頁沒有後台側邊欄）
-  const { createAdminClient } = await import("@/lib/supabase/admin");
-  const admin = createAdminClient();
-  const { data: techRows } = await admin
-    .from("user_profiles")
-    .select("id, name")
-    .eq("role", "technician")
-    .eq("active", true)
-    .order("name");
-  const technicians = (techRows as { id: string; name: string }[] | null) ?? [];
-  const previewName =
-    (tech && technicians.find((t) => t.id === tech)?.name) || null;
+  // 查預覽中師傅的名字（桌機展示側欄顯示用）。切換師傅改由後台側邊欄次選單／框內 /staff 內建切換器。
+  let previewName: string | null = null;
+  if (tech) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const { data: techRow } = await createAdminClient()
+      .from("user_profiles")
+      .select("name")
+      .eq("id", tech)
+      .maybeSingle();
+    previewName = (techRow as { name: string } | null)?.name ?? null;
+  }
 
   // 預覽指定師傅 → iframe 載入 /staff?as=<id>（越權防護在 /staff 內以登入者角色把關）
-  const previewSrc = tech ? `/staff?as=${encodeURIComponent(tech)}` : "/staff";
+  // embed=1：告訴被嵌入的 /staff 隱藏「查看所有排班/預覽各師傅」入口卡，
+  //          否則 iframe 內又出現「預覽各師傅頁面」→ 點下去巢狀載入 /demo/pwa → 切換列重複出現。
+  const previewSrc = tech
+    ? `/staff?as=${encodeURIComponent(tech)}&embed=1`
+    : "/staff?embed=1";
 
   return (
     <PhoneFrame
       userName={me.profile.name}
       previewSrc={previewSrc}
       previewName={previewName}
-      technicians={technicians}
-      activeTechId={tech}
     />
   );
 }

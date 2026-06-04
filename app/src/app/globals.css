@@ -83,6 +83,20 @@
 .calendar-wrapper .fc-day-today {
   background-color: #eef2ff !important;
 }
+/* 休假卡片：紅色粗框，與同色的排案卡片明確區別 */
+.calendar-wrapper .fc-leave-event {
+  outline: 2.5px solid #e11d48; /* rose-600 */
+  outline-offset: -1px;
+  border-width: 2px !important;
+  box-shadow: 0 0 0 1px #fff;
+}
+/* 拖曳待派案經過時的目標日期格高亮（PendingPanel 以 JS 加 .fc-drop-target） */
+.calendar-wrapper .fc-daygrid-day.fc-drop-target {
+  background-color: #dbeafe !important; /* blue-100 */
+  outline: 3px solid #2563eb; /* blue-600 */
+  outline-offset: -3px;
+  transition: background-color 0.08s ease;
+}
 .calendar-wrapper .fc-daygrid-day-top {
   display: flex;
   align-items: center;

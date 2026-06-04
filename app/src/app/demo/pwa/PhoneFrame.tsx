@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { useIsMobile } from "@/lib/use-is-mobile";
 
@@ -9,14 +8,10 @@ export function PhoneFrame({
   userName,
   previewSrc = "/staff",
   previewName = null,
-  technicians = [],
-  activeTechId = null,
 }: {
   userName: string;
   previewSrc?: string;
   previewName?: string | null;
-  technicians?: { id: string; name: string }[];
-  activeTechId?: string | null;
 }) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -27,31 +22,15 @@ export function PhoneFrame({
 
   const isMobile = useIsMobile();
 
-  // 真手機：不套桌機展示外框，內容直接全螢幕（保留頂部師傅切換列）
+  // 真手機：不套桌機展示外框，內容直接全螢幕。
+  // 切換不同師傅的功能已內建在 /staff 頁面內(主管級可見)，不再放外框頂部，避免重複切換列。
   if (isMobile) {
     return (
-      <div className="flex h-[100dvh] flex-col bg-zinc-900">
-        {technicians.length > 0 && (
-          <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-zinc-800 px-3 py-2">
-            {technicians.map((t) => (
-              <Link
-                key={t.id}
-                href={`/demo/pwa?tech=${t.id}`}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs ${
-                  t.id === activeTechId
-                    ? "bg-brand-500 font-medium text-white"
-                    : "bg-zinc-800 text-zinc-300"
-                }`}
-              >
-                {t.name}
-              </Link>
-            ))}
-          </div>
-        )}
+      <div className="h-[100dvh] bg-white">
         <iframe
           key={previewSrc}
           src={previewSrc}
-          className="w-full flex-1 border-0 bg-white"
+          className="h-full w-full border-0 bg-white"
           title="師傅 PWA"
         />
       </div>
@@ -60,33 +39,7 @@ export function PhoneFrame({
 
   return (
     <div className="min-h-screen bg-zinc-900 px-4 py-8 text-zinc-100">
-      {/* 師傅切換列（這頁沒有後台側邊欄，切換靠這裡） */}
-      {technicians.length > 0 && (
-        <div className="mx-auto mb-6 w-full max-w-4xl">
-          <p className="mb-2 text-center text-sm font-medium text-zinc-300 lg:text-left">
-            切換預覽師傅
-          </p>
-          <div className="flex flex-wrap justify-center gap-2 lg:justify-start">
-            {technicians.map((t) => {
-              const active = t.id === activeTechId;
-              return (
-                <Link
-                  key={t.id}
-                  href={`/demo/pwa?tech=${t.id}`}
-                  className={
-                    active
-                      ? "rounded-full bg-brand-500 px-4 py-1.5 text-sm font-medium text-white"
-                      : "rounded-full border border-zinc-700 bg-zinc-800 px-4 py-1.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-700"
-                  }
-                >
-                  {t.name}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
+      {/* 切換預覽師傅靠後台側邊欄「師傅 PWA」次選單；框內 /staff 也內建主管級切換器 */}
       <div className="flex flex-col items-center justify-start lg:flex-row lg:items-center lg:justify-center lg:gap-10">
       {/* Phone frame */}
       <div className="relative">

@@ -255,7 +255,9 @@ export function CalendarView({
       startEditable: false,
       durationEditable: false,
       backgroundColor: hex,
-      borderColor: hex,
+      // 休假卡與排案卡同為師傅代表色，加紅色粗框 + class 才能一眼區別「這是休假不是排案」
+      borderColor: "#e11d48",
+      classNames: ["fc-leave-event"],
       extendedProps: {
         isLeave: true,
         techId: lv.technician_id,

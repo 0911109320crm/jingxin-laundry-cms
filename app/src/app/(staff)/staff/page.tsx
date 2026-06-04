@@ -11,6 +11,7 @@ import {
 } from "@/components/orders/StatusBadges";
 import { formatNTD } from "@/lib/utils";
 import type { OrderInput } from "@/lib/validators/order";
+import { TechViewSwitcher } from "./TechViewSwitcher";
 
 type StaffOrder = {
   id: string;
@@ -105,7 +106,7 @@ function formatDateHeader(dateKey: string): { main: string; isToday: boolean; is
 export default async function StaffHome({
   searchParams,
 }: {
-  searchParams: Promise<{ as?: string }>;
+  searchParams: Promise<{ as?: string; embed?: string }>;
 }) {
   const me = await getCurrentUser();
   if (!me) redirect("/login");
@@ -121,9 +122,24 @@ export default async function StaffHome({
     Boolean(me.profile.can_view_all);
   const asId =
     typeof sp.as === "string" && UUID_RE.test(sp.as) ? sp.as : null;
+  // 被 /demo/pwa 預覽框 iframe 嵌入時隱藏後台入口卡（防巢狀遞迴＋切換列重複）
+  const embedded = sp.embed === "1";
   const impersonating = !!asId && isPrivileged && asId !== me.id;
   const targetId = impersonating ? asId! : me.id;
   let previewName: string | null = null;
+
+  // 主管級才載入「切換檢視師傅」清單；embed(被 /demo/pwa 框嵌入)時不顯示切換器。
+  let switcherTechs: { id: string; name: string }[] = [];
+  if (isPrivileged && !embedded) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const { data: techList } = await createAdminClient()
+      .from("user_profiles")
+      .select("id, name")
+      .eq("role", "technician")
+      .eq("active", true)
+      .order("name");
+    switcherTechs = (techList as { id: string; name: string }[] | null) ?? [];
+  }
 
   // 本月積分查詢區間
   const now = new Date();
@@ -248,13 +264,21 @@ export default async function StaffHome({
 
   return (
     <div className="p-4 space-y-4">
+      {switcherTechs.length > 0 && (
+        <TechViewSwitcher
+          technicians={switcherTechs}
+          currentId={targetId}
+          selfId={me.id}
+        />
+      )}
+
       {impersonating && (
         <div className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-center text-sm text-indigo-800">
           👁 預覽模式：正在以「{previewName}」的身份檢視（唯讀預覽，師傅實際操作請各自登入）
         </div>
       )}
 
-      {!impersonating && me.profile.can_view_all && (
+      {!impersonating && !embedded && me.profile.can_view_all && (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Link href="/staff/all">
             <Card className="border-sky-300 bg-sky-50 transition-shadow active:shadow-md">

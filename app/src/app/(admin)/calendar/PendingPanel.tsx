@@ -22,6 +22,40 @@ export type PendingOrder = {
   duration_minutes: number;
 };
 
+/**
+ * 拖曳期間高亮 FullCalendar 的目標日期格。
+ * FC v6 外部拖入時只顯示淡淡的 mirror、不會高亮整格，老闆娘反應看不出落在哪天；
+ * 這裡用 pointer + elementFromPoint 自行標示，不依賴 FC 內部 API。
+ */
+function startDropHighlight() {
+  let lastCell: Element | null = null;
+  const clear = () => {
+    if (lastCell) {
+      lastCell.classList.remove("fc-drop-target");
+      lastCell = null;
+    }
+  };
+  const move = (e: PointerEvent) => {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const cell = el?.closest(".fc-daygrid-day") ?? null;
+    if (cell === lastCell) return;
+    clear();
+    if (cell) {
+      cell.classList.add("fc-drop-target");
+      lastCell = cell;
+    }
+  };
+  const stop = () => {
+    clear();
+    document.removeEventListener("pointermove", move);
+    document.removeEventListener("pointerup", stop);
+    document.removeEventListener("pointercancel", stop);
+  };
+  document.addEventListener("pointermove", move);
+  document.addEventListener("pointerup", stop);
+  document.addEventListener("pointercancel", stop);
+}
+
 function formatTimeSlot(startIso: string | null, endIso: string | null): string | null {
   if (!startIso) return null;
   const s = new Date(startIso);
@@ -95,6 +129,7 @@ export function PendingPanel({ orders }: { orders: PendingOrder[] }) {
                   <div
                     key={o.id}
                     className="pending-draggable group relative cursor-grab select-none px-4 py-3 transition-colors hover:bg-amber-50 active:cursor-grabbing"
+                    onPointerDown={startDropHighlight}
                     data-order-id={o.id}
                     data-title={o.customer_name}
                     data-orig-start={o.scheduled_at ?? ""}
