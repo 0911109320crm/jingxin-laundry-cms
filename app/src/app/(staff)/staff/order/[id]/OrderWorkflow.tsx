@@ -109,6 +109,8 @@ type Props = {
   iAmCollector: boolean;
   /** 若現金已被別人收走，收款師傅的名字 */
   collectorName: string | null;
+  /** 預覽唯讀：只顯示金額/明細，隱藏所有操作（收款/完成/加減項/備註） */
+  readOnly?: boolean;
 };
 
 export function OrderWorkflow({
@@ -130,6 +132,7 @@ export function OrderWorkflow({
   allConfirmed,
   iAmCollector,
   collectorName,
+  readOnly = false,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -377,6 +380,128 @@ export function OrderWorkflow({
   const serviceAddons = adjustmentItems.filter((a) => a.category === "service");
   const partsAddons = adjustmentItems.filter((a) => a.category === "parts");
   const discountItems = adjustmentItems.filter((a) => a.category === "discount");
+
+  // ── 預覽唯讀：只顯示加減項明細 + 應收總額 + 收款狀態，不出任何操作 ──
+  if (readOnly) {
+    return (
+      <>
+        {localAdj.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>加收 / 折扣</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <ul className="space-y-1">
+                {localAdj.map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex items-center justify-between rounded bg-zinc-50 px-3 py-1.5 text-sm"
+                  >
+                    <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-zinc-700">
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] ${
+                          a.type === "addon"
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {a.type === "addon" ? "加" : "折"}
+                      </span>
+                      {a.name_snapshot}
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] ${
+                          a.order_item_id
+                            ? "bg-sky-100 text-sky-700"
+                            : "bg-zinc-200 text-zinc-600"
+                        }`}
+                      >
+                        {a.order_item_id
+                          ? itemNameById.get(a.order_item_id) ?? "品項"
+                          : "整單"}
+                      </span>
+                    </span>
+                    <span
+                      className={`font-mono ${
+                        a.type === "addon" ? "text-orange-700" : "text-emerald-700"
+                      }`}
+                    >
+                      {a.type === "addon" ? "+" : "-"}
+                      {formatNTD(a.amount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </CardBody>
+          </Card>
+        )}
+
+        <Card>
+          <CardBody className="space-y-1">
+            <div className="flex items-center justify-between text-sm text-zinc-600">
+              <span>項目小計（牌價）</span>
+              <span className="font-mono">{formatNTD(subtotal)}</span>
+            </div>
+            {itemAdjTotal !== 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-zinc-600">品項加減（綁定品項）</span>
+                <span
+                  className={`font-mono ${
+                    itemAdjTotal > 0 ? "text-orange-700" : "text-emerald-700"
+                  }`}
+                >
+                  {itemAdjTotal > 0 ? "+" : ""}
+                  {formatNTD(itemAdjTotal)}
+                </span>
+              </div>
+            )}
+            {orderAdjTotal !== 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-zinc-600">訂單加減（整單）</span>
+                <span
+                  className={`font-mono ${
+                    orderAdjTotal > 0 ? "text-orange-700" : "text-emerald-700"
+                  }`}
+                >
+                  {orderAdjTotal > 0 ? "+" : ""}
+                  {formatNTD(orderAdjTotal)}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between border-t border-zinc-200 pt-2">
+              <span className="text-sm font-medium text-zinc-800">應收總額</span>
+              <span className="font-mono text-3xl font-bold text-brand-700">
+                {formatNTD(localTotal)}
+              </span>
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody>
+            <p
+              className={`rounded px-3 py-2 text-center text-sm font-medium ${
+                isDone
+                  ? "bg-green-50 text-green-700"
+                  : currentPayment === "unpaid"
+                    ? "bg-zinc-50 text-zinc-600"
+                    : currentPayment === "cash"
+                      ? "bg-green-50 text-green-700"
+                      : "bg-blue-50 text-blue-700"
+              }`}
+            >
+              {isDone
+                ? "✓ 此案件已完成"
+                : currentPayment === "unpaid"
+                  ? "尚未收款"
+                  : currentPayment === "cash"
+                    ? `✓ 已收現金${collectorName ? `（${collectorName} 收取）` : ""}`
+                    : "✓ 客戶已付款"}
+            </p>
+          </CardBody>
+        </Card>
+      </>
+    );
+  }
 
   // ─────────────────────────────────────────────────────────────────────
   return (

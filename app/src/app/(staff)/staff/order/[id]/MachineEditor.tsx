@@ -80,6 +80,7 @@ export function MachineEditor({
   serviceCategory,
   machine,
   brands,
+  readOnly = false,
 }: {
   orderId: string;
   orderItemId: string;
@@ -88,6 +89,8 @@ export function MachineEditor({
   machine: MachineLite | null;
   /** machine_brands 全部清單，用於 datalist 自動完成（依機型分類） */
   brands: BrandOption[];
+  /** 預覽唯讀：顯示機器資訊但不出編輯/新增按鈕 */
+  readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -185,14 +188,18 @@ export function MachineEditor({
                 #{machine.code}
               </span>
             )}
-            <button
-              type="button"
-              onClick={startEdit}
-              className="inline-flex items-center gap-0.5 text-brand-600 hover:underline"
-            >
-              <Pencil className="h-3 w-3" /> 編輯
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={startEdit}
+                className="inline-flex items-center gap-0.5 text-brand-600 hover:underline"
+              >
+                <Pencil className="h-3 w-3" /> 編輯
+              </button>
+            )}
           </>
+        ) : readOnly ? (
+          <span className="text-zinc-400">未填機器資訊</span>
         ) : (
           <button
             type="button"

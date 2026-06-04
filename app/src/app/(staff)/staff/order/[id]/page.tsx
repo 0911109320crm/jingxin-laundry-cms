@@ -93,16 +93,40 @@ const CATEGORY_FRAME: Record<
   mattress: { border: "border-red-400", chip: "bg-red-50 text-red-700", label: "床墊" },
 };
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function StaffOrderPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ as?: string }>;
 }) {
   const me = await getCurrentUser();
   if (!me) redirect("/login");
   const { id } = await params;
+  const sp = await searchParams;
+
+  // ── 主管級預覽他人訂單：?as=<techId> → 純唯讀（看得到、不能操作）──
+  // 防越權同 /staff：能否預覽完全由「真實登入者角色/旗標」決定，不信任網址。
+  // 唯讀只做在前端（不出按鈕）：對受信任的 owner/manager 是「防誤按」而非「防弊」，
+  // 後端 action 維持 owner/manager 兜底全權不削弱（老闆娘代收款/修單仍要能用）。
+  const canPreview =
+    me.profile.role === "owner" ||
+    me.profile.role === "manager" ||
+    Boolean(me.profile.can_view_all);
+  const asId =
+    typeof sp.as === "string" && UUID_RE.test(sp.as) ? sp.as : null;
+  const previewing = !!asId && canPreview && asId !== me.id;
+  const backHref = previewing ? `/staff?as=${asId}` : "/staff";
+
   const supabase = await createClient();
-  const { data } = await supabase
+  // 預覽他人訂單時用 admin client 繞 RLS（已由 canPreview 把關）；自己的單走 RLS。
+  const db = previewing
+    ? (await import("@/lib/supabase/admin")).createAdminClient()
+    : supabase;
+  const { data } = await db
     .from("orders")
     .select(
       `id, order_code, status, payment_method, settlement_status, collected_by_technician_id,
@@ -244,11 +268,17 @@ export default async function StaffOrderPage({
   return (
     <div className="p-4 space-y-3">
       <Link
-        href="/staff"
+        href={backHref}
         className="inline-flex items-center gap-1 text-sm text-zinc-500"
       >
-        <ChevronLeft className="h-4 w-4" /> 回今日案件
+        <ChevronLeft className="h-4 w-4" /> {previewing ? "回預覽" : "回今日案件"}
       </Link>
+
+      {previewing && (
+        <div className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-center text-sm text-indigo-800">
+          👁 預覽唯讀：正在檢視其他師傅的訂單，只能看不能操作（收款 / 改機型 / 加減項皆由該師傅本人或老闆娘處理）
+        </div>
+      )}
 
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -351,8 +381,9 @@ export default async function StaffOrderPage({
                     {formatNTD(it.subtotal)}
                   </span>
                 </div>
-                {/* 案件完成後鎖定品項編輯（換品項/不服務/機器）——師傅不可再改 */}
-                {o.status !== "done" && (
+                {/* 案件完成後鎖定品項編輯（換品項/不服務/機器）——師傅不可再改。
+                    預覽模式：隱藏不服務/換品項，機器資訊仍顯示但唯讀。 */}
+                {o.status !== "done" && !previewing && (
                   <>
                     <div className="flex justify-end">
                       <ExcludeToggle
@@ -369,15 +400,18 @@ export default async function StaffOrderPage({
                       currentQuantity={it.quantity}
                       services={allServices}
                     />
-                    <MachineEditor
-                      orderId={o.id}
-                      orderItemId={it.id}
-                      customerId={o.customer_id}
-                      serviceCategory={it.service?.category ?? null}
-                      machine={it.machine}
-                      brands={brands}
-                    />
                   </>
+                )}
+                {o.status !== "done" && (
+                  <MachineEditor
+                    orderId={o.id}
+                    orderItemId={it.id}
+                    customerId={o.customer_id}
+                    serviceCategory={it.service?.category ?? null}
+                    machine={it.machine}
+                    brands={brands}
+                    readOnly={previewing}
+                  />
                 )}
               </li>
               );
@@ -491,6 +525,7 @@ export default async function StaffOrderPage({
         allConfirmed={allConfirmed}
         iAmCollector={iAmCollector}
         collectorName={collectorName}
+        readOnly={previewing}
       />
     </div>
   );
