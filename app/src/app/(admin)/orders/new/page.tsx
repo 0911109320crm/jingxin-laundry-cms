@@ -28,6 +28,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
     { data: detailedServices },
     { data: adjustments },
     { data: techProfiles },
+    { data: customerSources },
   ] = await Promise.all([
     // 簡易模式：只列各 category 的「基本價代表」(is_basic_choice=true)
     // 老闆娘電話接單時不知道機型/品牌/容量，先選大類基本價，師傅現場補實際
@@ -55,6 +56,12 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
       .eq("active", true)
       .in("role", ["technician", "manager", "owner"])
       .order("name"),
+    // 建單時可順手補/改客戶來源 → 帶來源清單給下拉
+    supabase
+      .from("customer_sources")
+      .select("id, name")
+      .eq("active", true)
+      .order("sort_order"),
   ]);
 
   // 客戶改用 CustomerPicker（即時搜尋），不再預載清單 — 因客戶數量上萬，下拉不可行。
@@ -158,6 +165,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams: SP 
         defaultScheduledAt={sp.date}
         initial={cloneInitial}
         backHref={back.href}
+        sources={(customerSources ?? []) as { id: string; name: string }[]}
       />
     </div>
   );

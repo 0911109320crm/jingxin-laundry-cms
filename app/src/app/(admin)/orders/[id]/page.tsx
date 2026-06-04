@@ -280,9 +280,8 @@ export default async function OrderDetailPage({
             </span>
           )}
         </p>
-        <p className="text-xs text-zinc-500">
+        <p className="text-lg font-bold text-zinc-900">
           預約：{formatDateTime(o.scheduled_at)}
-          {o.service_at && ` · 完工：${formatDateTime(o.service_at)}`}
         </p>
       </header>
 
@@ -329,7 +328,28 @@ export default async function OrderDetailPage({
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+        {o.customer && (
+          <aside className="lg:order-2 lg:col-span-1">
+            <div className="lg:sticky lg:top-4">
+              <CustomerContextPanel
+                customer={{
+                  id: o.customer.id,
+                  code: o.customer.code,
+                  name: o.customer.name,
+                  phone: o.customer.phone,
+                  note: o.customer.note,
+                  source: o.customer.source?.name ?? null,
+                  phones: o.customer.phones ?? undefined,
+                }}
+                address={o.address}
+                statsOrders={customerStatsOrders}
+                machines={customerMachines}
+                recentOrders={recentOrders}
+              />
+            </div>
+          </aside>
+        )}
+        <div className="space-y-4 lg:order-1 lg:col-span-2">
 
       <Card>
         <CardHeader>
@@ -384,51 +404,6 @@ export default async function OrderDetailPage({
           </ul>
         </CardBody>
       </Card>
-
-      {showConfirmGate && (
-        <Card
-          className={
-            hasUnconfirmed
-              ? "border-amber-300 bg-amber-50/40"
-              : "border-emerald-200 bg-emerald-50/40"
-          }
-        >
-          <CardHeader>
-            <CardTitle>金額確認進度（多師傅同單收款用）</CardTitle>
-          </CardHeader>
-          <CardBody className="space-y-2">
-            <ul className="space-y-1 text-sm">
-              {confirmGroups.map((g) => (
-                <li
-                  key={g.name}
-                  className="flex items-center justify-between gap-2"
-                >
-                  <span className="min-w-0 truncate text-zinc-700">{g.name}</span>
-                  {g.confirmed >= g.total ? (
-                    <span className="shrink-0 text-emerald-700">✓ 已確認</span>
-                  ) : (
-                    <span className="shrink-0 text-amber-700">
-                      ⏳ 未確認（{g.confirmed}/{g.total}）
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {hasUnconfirmed ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-amber-200 pt-2">
-                <p className="min-w-0 flex-1 text-xs text-amber-700">
-                  還有師傅未確認金額，收款鈕不會出現。若師傅已離場忘了確認，可代為放行：
-                </p>
-                <ConfirmAllButton orderId={o.id} />
-              </div>
-            ) : (
-              <p className="border-t border-emerald-200 pt-2 text-xs text-emerald-700">
-                ✓ 全部確認完成，最後收尾的師傅手機已可向客戶收全額
-              </p>
-            )}
-          </CardBody>
-        </Card>
-      )}
 
       {o.adjustments.length > 0 && (
         <Card>
@@ -544,29 +519,52 @@ export default async function OrderDetailPage({
         technicians={allTechList}
         defaultTechnicianId={defaultTechnicianId}
       />
-        </div>
 
-        {o.customer && (
-          <aside className="lg:col-span-1">
-            <div className="lg:sticky lg:top-4">
-              <CustomerContextPanel
-                customer={{
-                  id: o.customer.id,
-                  code: o.customer.code,
-                  name: o.customer.name,
-                  phone: o.customer.phone,
-                  note: o.customer.note,
-                  source: o.customer.source?.name ?? null,
-                  phones: o.customer.phones ?? undefined,
-                }}
-                address={o.address}
-                statsOrders={customerStatsOrders}
-                machines={customerMachines}
-                recentOrders={recentOrders}
-              />
-            </div>
-          </aside>
-        )}
+      {showConfirmGate && (
+        <Card
+          className={
+            hasUnconfirmed
+              ? "border-amber-300 bg-amber-50/40"
+              : "border-emerald-200 bg-emerald-50/40"
+          }
+        >
+          <CardHeader>
+            <CardTitle>各師傅金額確認狀況</CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-2">
+            <ul className="space-y-1 text-sm">
+              {confirmGroups.map((g) => (
+                <li
+                  key={g.name}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span className="min-w-0 truncate text-zinc-700">{g.name}</span>
+                  {g.confirmed >= g.total ? (
+                    <span className="shrink-0 text-emerald-700">✓ 已確認</span>
+                  ) : (
+                    <span className="shrink-0 text-amber-700">
+                      ⏳ 還沒確認（{g.total} 項中已好 {g.confirmed} 項）
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {hasUnconfirmed ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-amber-200 pt-2">
+                <p className="min-w-0 flex-1 text-xs text-amber-700">
+                  還有師傅沒在手機上確認金額，現在還不能收款。若師傅已離場、忘了確認，可由你代為確認：
+                </p>
+                <ConfirmAllButton orderId={o.id} />
+              </div>
+            ) : (
+              <p className="border-t border-emerald-200 pt-2 text-xs text-emerald-700">
+                ✓ 師傅都確認好金額了，現場收尾的師傅手機就能向客戶收全額
+              </p>
+            )}
+          </CardBody>
+        </Card>
+      )}
+        </div>
       </div>
     </div>
   );

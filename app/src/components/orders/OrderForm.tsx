@@ -30,6 +30,7 @@ import {
 } from "@/app/(admin)/orders/actions";
 import { AddAddressDialog } from "@/components/orders/AddAddressDialog";
 import { CustomerPicker } from "@/components/customers/CustomerPicker";
+import { updateCustomerSourceAction } from "@/app/(admin)/customers/actions";
 import { AddressPicker } from "@/components/orders/AddressPicker";
 import { formatNTD } from "@/lib/utils";
 
@@ -83,6 +84,8 @@ type Props = {
   backHref?: string;
   /** Edit mode: existing order_code for display. */
   orderCode?: string;
+  /** 客戶來源清單（建單時可順手補/改客戶來源）；不傳則不顯示該欄位。 */
+  sources?: { id: string; name: string }[];
 };
 
 const emptyItem = {
@@ -106,6 +109,7 @@ export function OrderForm({
   defaultScheduledAt,
   backHref,
   orderCode,
+  sources = [],
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -114,6 +118,9 @@ export function OrderForm({
   const [addresses, setAddresses] = useState<Address[]>(initial?.addresses ?? []);
   const [machines, setMachines] = useState<Machine[]>(initial?.machines ?? []);
   const [previewCode, setPreviewCode] = useState<string>("");
+  // 客戶來源（建單順手補/改）：initialSourceId 記載入時的值，onSubmit 只在有變動時才寫
+  const [sourceId, setSourceId] = useState<string>("");
+  const [initialSourceId, setInitialSourceId] = useState<string>("");
 
   // 簡易 / 詳細品項切換（建單用）：簡易=7個基本大類；詳細=完整品項依分類分組
   const [detailMode, setDetailMode] = useState(false);
@@ -243,6 +250,8 @@ export function OrderForm({
     if (!customerId) {
       setAddresses([]);
       setMachines([]);
+      setSourceId("");
+      setInitialSourceId("");
       return;
     }
     if (initial?.customer_id === customerId) return; // already populated
@@ -252,6 +261,9 @@ export function OrderForm({
       if (cancel) return;
       setAddresses(ctx.addresses);
       setMachines(ctx.machines);
+      // 帶出客戶現有來源當下拉預設；切換客戶時一律重設（客戶選擇優先）
+      setSourceId(ctx.source_id ?? "");
+      setInitialSourceId(ctx.source_id ?? "");
     })();
     return () => {
       cancel = true;
@@ -319,6 +331,14 @@ export function OrderForm({
         setServerError(res.error);
         return;
       }
+      // 建單成功後，若老闆娘有改客戶來源才寫入（值有變動才更新，避免誤把既有來源覆蓋成空）
+      if (
+        mode === "create" &&
+        values.customer_id &&
+        sourceId !== initialSourceId
+      ) {
+        await updateCustomerSourceAction(values.customer_id, sourceId || null);
+      }
       // 建單模式：永遠跳到 detail 頁顯示「同客戶再建一筆」CTA（即使有 backHref 也忽略）
       // 編輯模式：跳回使用者來源頁（backHref）
       let target: string;
@@ -343,7 +363,17 @@ export function OrderForm({
     if (svc) setValue(`items.${idx}.unit_price`, svc.default_price);
   };
 
-  // 詳細模式：把品項依 category 分組（給 optgroup 用）
+  // 詳細模式：把品項依 category 分組（給 optgroup 用）。
+  // optgroup 由上到下的順序依老闆娘指定的常用排序（非字母、非 DB 預設）。
+  const CATEGORY_ORDER = [
+    "washing_vertical", // 直立式洗衣機
+    "ac_split",         // 分離式冷氣
+    "washing_drum",     // 滾筒洗衣機
+    "mattress",         // 床墊（清洗 / 除蟎）
+    "sofa",             // 沙發
+    "ac_hidden",        // 吊隱式冷氣
+    "washing_twin_tub", // 雙槽式洗衣機
+  ];
   const groupedServices = (() => {
     const groups = new Map<string, Service[]>();
     for (const s of serviceList) {
@@ -351,7 +381,11 @@ export function OrderForm({
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(s);
     }
-    return Array.from(groups.entries());
+    const rank = (k: string) => {
+      const i = CATEGORY_ORDER.indexOf(k);
+      return i === -1 ? CATEGORY_ORDER.length : i;
+    };
+    return Array.from(groups.entries()).sort(([a], [b]) => rank(a) - rank(b));
   })();
 
   return (
@@ -385,6 +419,27 @@ export function OrderForm({
               )}
             />
           </Field>
+          {mode === "create" && sources.length > 0 && (
+            <Field label="客戶來源">
+              <Select
+                value={sourceId}
+                onChange={(e) => setSourceId(e.target.value)}
+                disabled={!customerId}
+              >
+                <option value="">— 未指定 —</option>
+                {sources.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+              <p className="mt-1 text-xs text-zinc-400">
+                {customerId
+                  ? "可順手補/改這位客戶的來源，存檔時一併更新客戶資料"
+                  : "選好客戶後可在這裡補來源"}
+              </p>
+            </Field>
+          )}
           <Field label="服務地址" error={errors.address_id?.message} className="xl:col-span-2">
             <div className="flex gap-2">
               <div className="min-w-0 flex-1">

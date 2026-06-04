@@ -128,16 +128,24 @@ export function PendingPanel({ orders }: { orders: PendingOrder[] }) {
                 return (
                   <div
                     key={o.id}
-                    className="pending-draggable group relative cursor-grab select-none px-4 py-3 transition-colors hover:bg-amber-50 active:cursor-grabbing"
-                    onPointerDown={startDropHighlight}
+                    className="pending-draggable group relative flex select-none transition-colors hover:bg-amber-50"
                     data-order-id={o.id}
                     data-title={o.customer_name}
                     data-orig-start={o.scheduled_at ?? ""}
                     data-orig-end={o.scheduled_end_at ?? ""}
                     data-duration-min={String(o.duration_minutes)}
-                    title="拖拉到月曆某日排定"
                   >
-                    <GripVertical className="absolute right-2 top-3 h-4 w-4 text-zinc-300 group-hover:text-zinc-500" />
+                    {/* 拖曳把手：手機 touch 要按住這條才能拖（touch-none 讓手勢交給
+                        FullCalendar，卡片其餘區域維持可捲動清單）。桌機滑鼠整卡都能拖。 */}
+                    <div
+                      className="drag-handle flex w-10 shrink-0 cursor-grab touch-none flex-col items-center justify-center gap-1 border-r border-amber-100 bg-amber-50 text-amber-500 active:cursor-grabbing"
+                      onPointerDown={startDropHighlight}
+                      title="按住這裡拖到月曆排定"
+                    >
+                      <GripVertical className="h-5 w-5" />
+                      <span className="text-[10px] font-medium leading-none">拖</span>
+                    </div>
+                    <div className="min-w-0 flex-1 px-4 py-3">
                     <div className="flex items-center justify-between text-xs text-zinc-400">
                       <span className="font-mono">{o.order_code}</span>
                       {!o.has_technician && (
@@ -186,6 +194,7 @@ export function PendingPanel({ orders }: { orders: PendingOrder[] }) {
                       >
                         編輯詳情 →
                       </Link>
+                    </div>
                     </div>
                   </div>
                 );

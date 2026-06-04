@@ -17,7 +17,7 @@ export function ConfirmAllButton({ orderId }: { orderId: string }) {
   const onClick = () => {
     if (
       !confirm(
-        "確認要代所有師傅標記「金額已確認」、放行收款嗎？\n（用於師傅忘了在手機上確認就離開的情況）",
+        "確認要代所有師傅標記「金額已確認」嗎？\n確認後現場收尾的師傅就能向客戶收款。",
       )
     )
       return;
@@ -33,7 +33,7 @@ export function ConfirmAllButton({ orderId }: { orderId: string }) {
 
   return (
     <Button variant="outline" size="sm" disabled={pending} onClick={onClick}>
-      <Check className="h-4 w-4" /> 代為確認、放行收款
+      <Check className="h-4 w-4" /> 代替師傅確認
     </Button>
   );
 }

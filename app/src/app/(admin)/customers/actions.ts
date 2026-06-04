@@ -216,6 +216,26 @@ export async function getCustomerByIdAction(
   return (data as CustomerPickerResult | null) ?? null;
 }
 
+/**
+ * 建單表單用：只更新某客戶的「來源」(customers.source_id)。
+ * 老顧客當初沒填來源，老闆娘建單時可順手補，不必切到編輯顧客頁。
+ * 刻意只動 source_id 一欄，避免覆蓋其他客戶資料。
+ */
+export async function updateCustomerSourceAction(
+  customerId: string,
+  sourceId: string | null,
+): Promise<ActionResult> {
+  await requireRole(["owner", "manager"]);
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("customers")
+    .update({ source_id: sourceId })
+    .eq("id", customerId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/customers/${customerId}`);
+  return { ok: true };
+}
+
 export async function createCustomerAction(
   input: CustomerInput,
 ): Promise<ActionResult> {

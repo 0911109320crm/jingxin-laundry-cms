@@ -13,18 +13,25 @@ export type Res = { ok: true; id?: string } | { ok: false; error: string };
 export async function getCustomerContext(customerId: string) {
   await requireRole(["owner", "manager"]);
   const supabase = await createClient();
-  const [{ data: addresses }, { data: machines }] = await Promise.all([
-    supabase
-      .from("customer_addresses")
-      .select("id, county, district, address, label, is_default")
-      .eq("customer_id", customerId)
-      .is("merged_into_id", null)
-      .order("is_default", { ascending: false }),
-    supabase
-      .from("machines")
-      .select("id, type, brand, model, sub_type, note, address_id")
-      .eq("customer_id", customerId),
-  ]);
+  const [{ data: addresses }, { data: machines }, { data: customer }] =
+    await Promise.all([
+      supabase
+        .from("customer_addresses")
+        .select("id, county, district, address, label, is_default")
+        .eq("customer_id", customerId)
+        .is("merged_into_id", null)
+        .order("is_default", { ascending: false }),
+      supabase
+        .from("machines")
+        .select("id, type, brand, model, sub_type, note, address_id")
+        .eq("customer_id", customerId),
+      // 建單時可順手補/改客戶來源，需先帶出目前值當下拉預設
+      supabase
+        .from("customers")
+        .select("source_id")
+        .eq("id", customerId)
+        .single(),
+    ]);
   return {
     addresses: (addresses as {
       id: string;
@@ -43,6 +50,8 @@ export async function getCustomerContext(customerId: string) {
       note: string | null;
       address_id: string | null;
     }[] | null) ?? [],
+    source_id:
+      (customer as { source_id: string | null } | null)?.source_id ?? null,
   };
 }
 

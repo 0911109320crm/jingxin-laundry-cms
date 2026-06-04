@@ -34,7 +34,7 @@ const items: NavItem[] = [
   { href: "/customers", label: "顧客", icon: Users },
   { href: "/orders", label: "訂單", icon: ClipboardList },
   { href: "/calendar", label: "月曆排案", icon: CalendarDays },
-  { href: "/calendar/month", label: "排班月檢視", icon: CalendarCheck },
+  { href: "/calendar/month", label: "班表檢視", icon: CalendarCheck },
   { href: "/reminders", label: "即將到期", icon: BellRing },
   { href: "/reports", label: "營業報表", icon: BarChart3 },
   { href: "/payroll", label: "師傅薪資", icon: Wallet },

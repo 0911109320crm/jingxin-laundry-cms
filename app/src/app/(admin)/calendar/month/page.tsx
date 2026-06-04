@@ -174,7 +174,7 @@ export default async function CalendarMonthPage({ searchParams }: { searchParams
         <ChevronLeft className="h-4 w-4" /> 回月曆排案（桌機拖曳）
       </Link>
       <header>
-        <h1 className="text-2xl font-bold text-zinc-900">排班月檢視</h1>
+        <h1 className="text-2xl font-bold text-zinc-900">班表檢視</h1>
         <p className="text-sm text-zinc-500">
           一頁看某位師傅整個月的派案與空檔，可直接設定休假。
         </p>
