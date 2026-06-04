@@ -245,7 +245,6 @@ export function CalendarView({
 
   // 休假：以「全日事件」呈現在格子頂端，跟訂單(block)區隔，避免被誤認為「尚未排案」。
   const leaveEvents: EventInput[] = leaves.map((lv) => {
-    const hex = techHex(lv.technician_name) ?? UNASSIGNED_COLOR;
     return {
       id: `leave-${lv.id}`,
       start: lv.date,
@@ -254,10 +253,9 @@ export function CalendarView({
       editable: false,
       startEditable: false,
       durationEditable: false,
-      backgroundColor: hex,
-      // 休假卡與排案卡同為師傅代表色，加紅色粗框 + class 才能一眼區別「這是休假不是排案」
+      // 休假卡一律統一紅色（不分師傅代表色），老闆娘一看就知道是休假
+      backgroundColor: "#e11d48",
       borderColor: "#e11d48",
-      classNames: ["fc-leave-event"],
       extendedProps: {
         isLeave: true,
         techId: lv.technician_id,
