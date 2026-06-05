@@ -254,7 +254,7 @@ export default async function OrderDetailPage({
               </Link>
               <a
                 href={`tel:${o.customer.phone}`}
-                className="inline-flex items-center gap-1 text-2xl font-bold text-blue-600"
+                className="inline-flex items-center gap-1 text-xl font-bold text-blue-600"
               >
                 <Phone className="h-5 w-5" />
                 {o.customer.phone}
