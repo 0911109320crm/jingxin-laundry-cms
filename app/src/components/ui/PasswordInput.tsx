@@ -32,7 +32,7 @@ export const PasswordInput = React.forwardRef<
         title={show ? "隱藏密碼" : "顯示密碼"}
         className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-zinc-400 hover:text-zinc-600 disabled:cursor-not-allowed"
       >
-        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        {show ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
       </button>
     </div>
   );
