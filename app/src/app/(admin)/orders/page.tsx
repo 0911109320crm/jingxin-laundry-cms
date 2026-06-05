@@ -12,7 +12,7 @@ import {
   PaymentBadge,
   SettlementBadge,
 } from "@/components/orders/StatusBadges";
-import { formatDate, formatNTD, cn } from "@/lib/utils";
+import { formatDate, formatDateTime, formatNTD, cn } from "@/lib/utils";
 import { type OrderInput } from "@/lib/validators/order";
 
 type SP = Promise<{
@@ -409,19 +409,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                     href={`/orders/${o.id}`}
                     className="flex flex-1 min-w-0 flex-col gap-2 px-5 py-3 transition-colors hover:bg-zinc-50 md:flex-row md:items-center md:justify-between"
                   >
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-xs text-zinc-500">
-                          {o.order_code}
-                        </span>
-                        <StatusBadge value={o.status} />
-                        {!isCancelledTab && (
-                          <>
-                            <PaymentBadge value={o.payment_method} />
-                            <SettlementBadge value={o.settlement_status} />
-                          </>
-                        )}
-                      </div>
+                    <div className="space-y-1 min-w-0">
+                      {/* 客戶名 · 電話 · 地址 */}
                       <p className="text-sm">
                         <span className="font-medium text-zinc-900">
                           {o.customer?.name ?? "—"}
@@ -445,6 +434,24 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                           </span>
                         )}
                       </p>
+                      {/* 狀態標籤 */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge value={o.status} />
+                        {!isCancelledTab && (
+                          <>
+                            <PaymentBadge value={o.payment_method} />
+                            <SettlementBadge value={o.settlement_status} />
+                          </>
+                        )}
+                      </div>
+                      {/* 預約時間：放大加色，老闆娘一眼看到 */}
+                      <p className="text-base font-bold text-red-600">
+                        預約 {formatDateTime(o.scheduled_at)}
+                      </p>
+                      {/* 訂單編號：往下排、縮小 */}
+                      <span className="font-mono text-xs text-zinc-400">
+                        {o.order_code}
+                      </span>
                       {isCancelledTab && o.cancellation_reason && (
                         <p className="text-xs text-red-600 bg-red-50 rounded px-2 py-0.5 inline-block">
                           取消原因：{o.cancellation_reason}
@@ -453,9 +460,6 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                     </div>
                     <div className="flex items-center gap-4 text-right">
                       <div>
-                        <p className="text-xs text-zinc-400">
-                          預約：{formatDate(o.scheduled_at)}
-                        </p>
                         {isCancelledTab && o.cancelled_at ? (
                           <p className="text-xs text-red-400">
                             取消：{formatDate(o.cancelled_at)}
