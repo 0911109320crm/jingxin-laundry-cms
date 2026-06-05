@@ -242,10 +242,39 @@ export default async function OrderDetailPage({
       </div>
 
       <header className="space-y-2">
+        {/* 第一行：客戶名(大/黑) 電話(大/藍) 地址(中/灰) */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          {o.customer && (
+            <>
+              <Link
+                href={`/customers/${o.customer.id}`}
+                className="text-2xl font-bold text-zinc-900 hover:underline"
+              >
+                {o.customer.name}
+              </Link>
+              <a
+                href={`tel:${o.customer.phone}`}
+                className="inline-flex items-center gap-1 text-2xl font-bold text-blue-600"
+              >
+                <Phone className="h-5 w-5" />
+                {o.customer.phone}
+              </a>
+            </>
+          )}
+          {o.address && (
+            <span className="inline-flex items-start gap-1 text-base text-zinc-500">
+              <MapPin className="mt-1 h-4 w-4 shrink-0 text-zinc-400" />
+              {o.address.county} {o.address.district} {o.address.address}
+            </span>
+          )}
+        </div>
+        {/* 第二行：預約日期時間(大/紅) */}
+        <p className="text-2xl font-bold text-red-600">
+          預約：{formatDateTime(o.scheduled_at)}
+        </p>
+        {/* 第三行：訂單編號(小/黑) + 標籤 */}
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold text-zinc-900 font-mono">
-            {o.order_code}
-          </h1>
+          <span className="font-mono text-xs text-zinc-900">{o.order_code}</span>
           <StatusBadge value={o.status} />
           <PaymentBadge value={o.payment_method} />
           <SettlementBadge value={o.settlement_status} />
@@ -255,34 +284,6 @@ export default async function OrderDetailPage({
             </span>
           )}
         </div>
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-600">
-          {o.customer && (
-            <>
-              <Link
-                href={`/customers/${o.customer.id}`}
-                className="font-medium text-zinc-900 hover:underline"
-              >
-                {o.customer.name}
-              </Link>
-              <a
-                href={`tel:${o.customer.phone}`}
-                className="inline-flex items-center gap-1 text-zinc-600"
-              >
-                <Phone className="h-3.5 w-3.5 text-zinc-400" />
-                {o.customer.phone}
-              </a>
-            </>
-          )}
-          {o.address && (
-            <span className="inline-flex items-start gap-1">
-              <MapPin className="mt-0.5 h-3.5 w-3.5 text-zinc-400" />
-              {o.address.county} {o.address.district} {o.address.address}
-            </span>
-          )}
-        </p>
-        <p className="text-lg font-bold text-zinc-900">
-          預約：{formatDateTime(o.scheduled_at)}
-        </p>
       </header>
 
       {o.status === "cancelled" && (
