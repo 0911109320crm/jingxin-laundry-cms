@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { loginAction, type LoginState } from "./actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Label } from "@/components/ui/Label";
 import { Card, CardBody } from "@/components/ui/Card";
 
@@ -35,10 +36,9 @@ export function LoginForm({ next }: { next: string }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password">密碼</Label>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete="current-password"
               required
               disabled={pending}
