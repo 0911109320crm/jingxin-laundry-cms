@@ -33,6 +33,7 @@ import { CustomerPicker } from "@/components/customers/CustomerPicker";
 import { updateCustomerSourceAction } from "@/app/(admin)/customers/actions";
 import { AddressPicker } from "@/components/orders/AddressPicker";
 import { formatNTD } from "@/lib/utils";
+import { taipeiInputToIso } from "@/lib/timezone";
 
 type Technician = { id: string; name: string };
 type Service = {
@@ -190,25 +191,9 @@ export function OrderForm({
     setValue("duration_minutes", duration);
   }, [duration, setValue]);
 
-  // 把 UTC ISO 轉成瀏覽器當地的 "YYYY-MM-DDTHH:mm"（供 DateTimeSelect 使用）。
-  // 修正 prod 上 server timezone ≠ 客戶端時的顯示偏移問題。
-  useEffect(() => {
-    const toLocal = (s: string | null | undefined): string | null => {
-      if (!s) return null;
-      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s)) return null; // 已是本地格式，不動
-      const d = new Date(s);
-      if (Number.isNaN(d.getTime())) return null;
-      const pad = (n: number) => String(n).padStart(2, "0");
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    };
-    for (const field of ["scheduled_at", "scheduled_end_at", "service_at"] as const) {
-      const cur = initial?.[field];
-      const local = toLocal(cur);
-      if (local) setValue(field, local);
-    }
-    // 只在 mount 跑一次（讓 ISO 轉成本地顯示），後續使用者輸入由 DateTimeSelect 管理
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // 註：edit 模式的 initial 時間值已由 server（edit/page.tsx）用 isoToTaipeiInput
+  // 轉成台灣本地 "YYYY-MM-DDTHH:mm" 傳入，這裡不再做任何時區轉換，
+  // 避免「server 轉一次、client 又轉一次」打架（先前正是這個雙重轉換造成時間偏移）。
 
   // Auto-derive scheduled_end_at from scheduled_at + duration
   useEffect(() => {
@@ -304,23 +289,15 @@ export function OrderForm({
     return `${i + 1}. ${base}${tag}`;
   };
 
-  // 把 datetime-local 字串 "YYYY-MM-DDTHH:mm"（瀏覽器當地時區）轉成帶時區的 ISO，
-  // 避免 Postgres timestamptz 把無時區字串當 UTC 存（08:00 台灣會變成 16:00）。
-  const localToIso = (s: string | null | undefined): string | null => {
-    if (!s) return null;
-    if (/[Z]|[+-]\d{2}:?\d{2}$/.test(s)) return s; // 已含時區
-    const d = new Date(s); // 瀏覽器當地時區解析
-    if (Number.isNaN(d.getTime())) return null;
-    return d.toISOString();
-  };
-
   const onSubmit = (values: OrderInput) => {
     setServerError(null);
+    // datetime-local 字串 "YYYY-MM-DDTHH:mm" 一律當台灣時間(+08:00)轉成 UTC ISO，
+    // 不依賴瀏覽器時區（師傅人在國外也正確）。
     const normalized: OrderInput = {
       ...values,
-      scheduled_at: localToIso(values.scheduled_at),
-      scheduled_end_at: localToIso(values.scheduled_end_at),
-      service_at: localToIso(values.service_at),
+      scheduled_at: taipeiInputToIso(values.scheduled_at),
+      scheduled_end_at: taipeiInputToIso(values.scheduled_end_at),
+      service_at: taipeiInputToIso(values.service_at),
     };
     startTransition(async () => {
       const res =

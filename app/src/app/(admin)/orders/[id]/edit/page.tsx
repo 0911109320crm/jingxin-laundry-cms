@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/dal";
 import { OrderForm } from "@/components/orders/OrderForm";
 import { CancelOrderButton } from "../CancelOrderButton";
 import { backTarget } from "@/lib/back";
+import { isoToTaipeiInput } from "@/lib/timezone";
 import type { OrderInput } from "@/lib/validators/order";
 
 export default async function EditOrderPage({
@@ -108,13 +109,10 @@ export default async function EditOrderPage({
       .eq("customer_id", o.customer_id),
   ]);
 
-  // Normalize date-time to "YYYY-MM-DDTHH:mm" for <input type="datetime-local">
-  const toLocalInput = (iso: string | null) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
+  // Normalize timestamptz → 台灣本地 "YYYY-MM-DDTHH:mm" 供 DateTimeSelect 預填。
+  // 必須用 Asia/Taipei 鎖定（此頁是 server component，Vercel 執行環境是 UTC，
+  // 直接 getHours() 會把 11:00 顯示成 03:00）。
+  const toLocalInput = isoToTaipeiInput;
 
   const initial: OrderInput & {
     id: string;

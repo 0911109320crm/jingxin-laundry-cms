@@ -11,7 +11,7 @@ import {
   PaymentBadge,
   SettlementBadge,
 } from "@/components/orders/StatusBadges";
-import { formatDateTime, formatNTD } from "@/lib/utils";
+import { formatDateTime, formatNTD, formatTaiwanDate } from "@/lib/utils";
 import type { OrderInput } from "@/lib/validators/order";
 import { OrderWorkflow } from "./OrderWorkflow";
 import { MachineEditor } from "./MachineEditor";
@@ -446,7 +446,7 @@ export default async function StaffOrderPage({
               >
                 <div className="flex items-center justify-between text-xs text-zinc-500">
                   <span className="font-mono">{p.order_code}</span>
-                  <span>{p.service_at?.slice(0, 10) ?? ""}</span>
+                  <span>{p.service_at ? formatTaiwanDate(p.service_at) : ""}</span>
                 </div>
                 {p.service_tags && p.service_tags.length > 0 && (
                   <div className="mt-1 flex flex-wrap gap-1">

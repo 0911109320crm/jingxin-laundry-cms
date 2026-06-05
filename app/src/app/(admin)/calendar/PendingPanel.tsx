@@ -6,6 +6,7 @@ import { Draggable } from "@fullcalendar/interaction";
 import { MapPin, ClipboardList, GripVertical, Clock } from "lucide-react";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PhoneList, type PhoneItem } from "@/components/customers/PhoneList";
+import { formatTaipeiTime, formatTaipeiMonthDay } from "@/lib/timezone";
 
 export type PendingOrder = {
   id: string;
@@ -56,17 +57,17 @@ function startDropHighlight() {
   document.addEventListener("pointercancel", stop);
 }
 
+// 一律用台灣時區格式化。此元件雖是 client component，Next.js App Router 仍會先
+// SSR 一次；在 Vercel(UTC) 上用 getHours() 會把 11:00 顯示成 03:00，且 hydration
+// 後無 state 變更不會 re-render、錯誤值會留著。改用鎖定 Asia/Taipei 的 formatter。
 function formatTimeSlot(startIso: string | null, endIso: string | null): string | null {
   if (!startIso) return null;
-  const s = new Date(startIso);
-  if (Number.isNaN(s.getTime())) return null;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const dateLabel = `${s.getMonth() + 1}/${s.getDate()}`;
-  const startTime = `${pad(s.getHours())}:${pad(s.getMinutes())}`;
+  const startTime = formatTaipeiTime(startIso);
+  if (!startTime) return null;
+  const dateLabel = formatTaipeiMonthDay(startIso);
   if (!endIso) return `${dateLabel} ${startTime}`;
-  const e = new Date(endIso);
-  if (Number.isNaN(e.getTime())) return `${dateLabel} ${startTime}`;
-  const endTime = `${pad(e.getHours())}:${pad(e.getMinutes())}`;
+  const endTime = formatTaipeiTime(endIso);
+  if (!endTime) return `${dateLabel} ${startTime}`;
   return `${dateLabel} ${startTime}–${endTime}`;
 }
 

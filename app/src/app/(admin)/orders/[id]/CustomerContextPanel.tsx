@@ -3,6 +3,7 @@ import { ArrowRight, Phone, Wrench, History, MapPin } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/orders/StatusBadges";
 import { formatNTD } from "@/lib/utils";
+import { formatTaipeiMonthDay } from "@/lib/timezone";
 import { computeCustomerStats, formatMonths } from "@/lib/customer-stats";
 import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
 import type { OrderInput } from "@/lib/validators/order";
@@ -54,12 +55,8 @@ type Props = {
   recentOrders: RecentOrder[];
 };
 
-function formatMonthDay(iso: string | null) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
+// 鎖定台灣時區（避免跨日邊界在 UTC 環境誤判日期）。
+const formatMonthDay = formatTaipeiMonthDay;
 
 export function CustomerContextPanel({
   customer,
