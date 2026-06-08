@@ -14,7 +14,7 @@ import {
   PAYMENT_METHOD_LABEL,
 } from "@/lib/validators/order";
 import { MACHINE_TYPE_LABEL } from "@/lib/validators/customer";
-import { SERVICE_CATEGORY_LABEL } from "@/app/(admin)/settings/services/categories";
+import { SERVICE_CATEGORY_LABEL, SERVICE_CATEGORY_ORDER } from "@/app/(admin)/settings/services/categories";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -341,16 +341,8 @@ export function OrderForm({
   };
 
   // 詳細模式：把品項依 category 分組（給 optgroup 用）。
-  // optgroup 由上到下的順序依老闆娘指定的常用排序（非字母、非 DB 預設）。
-  const CATEGORY_ORDER = [
-    "washing_vertical", // 直立式洗衣機
-    "ac_split",         // 分離式冷氣
-    "washing_drum",     // 滾筒洗衣機
-    "mattress",         // 床墊（清洗 / 除蟎）
-    "sofa",             // 沙發
-    "ac_hidden",        // 吊隱式冷氣
-    "washing_twin_tub", // 雙槽式洗衣機
-  ];
+  // optgroup 由上到下的順序依老闆娘指定的常用排序（單一來源 SERVICE_CATEGORY_ORDER）。
+  const CATEGORY_ORDER = SERVICE_CATEGORY_ORDER;
   const groupedServices = (() => {
     const groups = new Map<string, Service[]>();
     for (const s of serviceList) {

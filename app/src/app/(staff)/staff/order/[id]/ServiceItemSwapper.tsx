@@ -5,6 +5,10 @@ import { ArrowRightLeft, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatNTD } from "@/lib/utils";
 import { swapOrderItemServiceAction } from "./service-actions";
+import {
+  SERVICE_CATEGORY_LABEL as CATEGORY_LABEL,
+  SERVICE_CATEGORY_ORDER,
+} from "@/app/(admin)/settings/services/categories";
 
 type ServiceOption = {
   id: string;
@@ -24,16 +28,6 @@ type Props = {
   services: ServiceOption[];
 };
 
-const CATEGORY_LABEL: Record<string, string> = {
-  washing_vertical: "直立式洗衣機",
-  washing_twin_tub: "雙槽式洗衣機",
-  washing_drum: "滾筒洗衣機",
-  sofa: "沙發",
-  mattress: "床墊",
-  ac_split: "分離式冷氣",
-  ac_hidden: "吊隱式冷氣",
-};
-
 export function ServiceItemSwapper({
   orderId,
   orderItemId,
@@ -49,7 +43,11 @@ export function ServiceItemSwapper({
   const categories = useMemo(() => {
     const set = new Set<string>();
     for (const s of services) if (s.category) set.add(s.category);
-    return [...set];
+    const rank = (k: string) => {
+      const i = SERVICE_CATEGORY_ORDER.indexOf(k);
+      return i === -1 ? SERVICE_CATEGORY_ORDER.length : i;
+    };
+    return [...set].sort((a, b) => rank(a) - rank(b));
   }, [services]);
 
   const visible = useMemo(() => {
