@@ -478,8 +478,9 @@ def main():
                 "adjustments_total": f"{(final_total - subtotal):.2f}",
                 "total": f"{final_total:.2f}",
                 "source": r["source"],
-                "note": f"匯入自 {r['source_file']} {r['sheet']} row {r['row_no']}"
-                        + (f" | 服務人員: {r.get('staff_name', '')}" if r.get("staff_name") else ""),
+                # 只保留「服務人員」給人看；匯入來源（檔名/row）不寫進 note，
+                # 否則會在後台「建單備註」與師傅 PWA「老闆娘交辦」顯示成雜訊。
+                "note": (f"服務人員: {r['staff_name']}" if r.get("staff_name") else None),
                 "legacy_code": r.get("legacy_code", ""),
                 "staff_name_raw": r.get("staff_name", ""),  # 暫存，import.mjs 時對應 technician_id
             })

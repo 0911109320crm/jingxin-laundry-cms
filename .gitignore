@@ -60,3 +60,7 @@ payroll_template.txt
 
 # LINE 相簿參考圖（系統資料用，純參考不影響執行）
 photo/
+
+# DB 清洗前的本機快照（含客戶資料，純回滾用，絕不上版控）
+.backups/
+app/.backups/
