@@ -43,7 +43,6 @@ export default async function CustomersPage({
        source:customer_sources(name),
        addresses:customer_addresses(county, district, address),
        phones:customer_phones(id, phone, label, is_primary)`,
-      { count: "exact" },
     )
     .order("created_at", { ascending: false })
     .limit(100);
