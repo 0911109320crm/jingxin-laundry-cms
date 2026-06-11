@@ -83,6 +83,40 @@ export function formatTaipeiTime(iso: string | null | undefined): string {
   return `${p.hour}:${p.minute}`;
 }
 
+/** timestamptz ISO → 台灣 "YYYY-MM-DD"（供分日歸屬/分組，不看執行環境時區）。 */
+export function taipeiDateStr(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = taipeiParts(d);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+/**
+ * "YYYY-MM" → 該月在台灣時區的 UTC 起訖 ISO（半開區間 [start, end)）。
+ * 用於用 timestamptz 欄位篩「某台灣月份」的資料，避免在 UTC server 上用
+ * new Date(y, m-1, 1) 切出台北 08:00 才換月、凌晨的單歸錯月。
+ */
+export function taipeiMonthRange(monthStr: string): {
+  startIso: string;
+  endIso: string;
+} | null {
+  const m = monthStr.match(/^(\d{4})-(\d{2})$/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  if (!y || mo < 1 || mo > 12) return null;
+  const nextY = mo === 12 ? y + 1 : y;
+  const nextMo = mo === 12 ? 1 : mo + 1;
+  const startIso = new Date(
+    `${m[1]}-${m[2]}-01T00:00:00${TAIPEI_OFFSET}`,
+  ).toISOString();
+  const endIso = new Date(
+    `${nextY}-${String(nextMo).padStart(2, "0")}-01T00:00:00${TAIPEI_OFFSET}`,
+  ).toISOString();
+  return { startIso, endIso };
+}
+
 /** timestamptz ISO → 台灣 "M/D"，供精簡日期顯示。 */
 export function formatTaipeiMonthDay(iso: string | null | undefined): string {
   if (!iso) return "—";

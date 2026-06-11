@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>同一個地址有兩位客人，怎麼建檔比較好？</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    background: #f4f6f9; color: #1f2937; line-height: 1.75;
+    padding: 16px; max-width: 720px; margin: 0 auto;
+  }
+  h1 { font-size: 1.55rem; line-height: 1.4; margin-bottom: 8px; color: #0f172a; }
+  .sub { font-size: 1rem; color: #64748b; margin-bottom: 24px; }
+  .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 18px;
+          box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+  .scenario { background: #fffbeb; border: 2px solid #fcd34d; }
+  .scenario h2 { color: #b45309; }
+  h2 { font-size: 1.2rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  p { font-size: 1.02rem; margin-bottom: 10px; }
+  .big-emoji { font-size: 1.3rem; }
+
+  /* 情境圖 */
+  .diagram { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 14px;
+             padding: 18px; margin: 14px 0; text-align: center; }
+  .row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .node { background: #fff; border: 2px solid #e2e8f0; border-radius: 12px;
+          padding: 10px 14px; font-size: .98rem; min-width: 92px; }
+  .node .ico { font-size: 1.6rem; display: block; }
+  .node .nm { font-weight: 700; margin-top: 2px; }
+  .node .tag { font-size: .82rem; color: #64748b; }
+  .arrow { font-size: 1.4rem; color: #94a3b8; }
+  .house { border-color: #93c5fd; background: #eff6ff; }
+  .machine { border-color: #6ee7b7; background: #ecfdf5; }
+  .person { border-color: #fca5a5; background: #fef2f2; }
+  .stack { display: flex; flex-direction: column; gap: 8px; }
+
+  /* 方法卡片 */
+  .method-a { border-top: 6px solid #10b981; }
+  .method-b { border-top: 6px solid #3b82f6; }
+  .label { display: inline-block; font-size: .85rem; font-weight: 700; padding: 3px 12px;
+           border-radius: 999px; margin-bottom: 6px; }
+  .label-a { background: #d1fae5; color: #065f46; }
+  .label-b { background: #dbeafe; color: #1e40af; }
+
+  .pros, .cons { border-radius: 12px; padding: 12px 14px; margin-top: 12px; }
+  .pros { background: #f0fdf4; }
+  .cons { background: #fef2f2; }
+  .pros h3 { color: #15803d; font-size: 1rem; margin-bottom: 6px; }
+  .cons h3 { color: #b91c1c; font-size: 1rem; margin-bottom: 6px; }
+  ul { list-style: none; }
+  li { font-size: 1rem; padding: 5px 0 5px 26px; position: relative; }
+  .pros li::before { content: "👍"; position: absolute; left: 0; }
+  .cons li::before { content: "⚠️"; position: absolute; left: 0; }
+
+  /* 對照表 */
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .96rem; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #eef2f7; vertical-align: top; }
+  th { background: #f8fafc; font-size: .9rem; color: #475569; }
+  td:first-child { font-weight: 600; color: #334155; width: 34%; }
+  .ya { color: #059669; font-weight: 700; }
+  .yb { color: #2563eb; font-weight: 700; }
+
+  /* 決策 */
+  .decide { background: #eef2ff; border: 2px solid #c7d2fe; }
+  .decide h2 { color: #4338ca; }
+  .q { background: #fff; border-radius: 12px; padding: 14px 16px; margin: 10px 0; }
+  .q .ask { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
+  .q .ans { font-size: .98rem; color: #475569; }
+  .pick-a { color: #059669; font-weight: 700; }
+  .pick-b { color: #2563eb; font-weight: 700; }
+
+  .safe { background: #f0f9ff; border: 2px solid #bae6fd; text-align: center; }
+  .safe p { color: #0369a1; font-size: 1.02rem; margin: 0; }
+
+  footer { text-align: center; color: #94a3b8; font-size: .85rem; margin: 24px 0 12px; }
+</style>
+</head>
+<body>
+
+  <h1>🏠 同一個地址，遇到兩位客人<br>該怎麼建檔比較好？</h1>
+  <p class="sub">老闆娘專用白話說明 — 看完您自己選，沒有標準答案，只有「哪個比較適合您的習慣」</p>
+
+  <!-- 情境 -->
+  <div class="card scenario">
+    <h2>📌 您遇到的狀況</h2>
+    <p>您正在新增客人 <b>王小明</b>，填到地址時，系統發現這個地址<b>已經有一位舊客人 王大明</b>。</p>
+    <p>看名字像是<b>兄弟</b>，住<b>同一個地址</b>，洗衣機<b>好像是同一台</b>（還不能完全確定）。</p>
+    <div class="diagram">
+      <div class="row">
+        <div class="node house"><span class="ico">🏠</span><span class="nm">武德街 17 號</span><span class="tag">同一個地址</span></div>
+        <span class="arrow">←</span>
+        <div class="stack">
+          <div class="node person"><span class="ico">🧑</span><span class="nm">王大明</span><span class="tag">舊客人</span></div>
+          <div class="node person"><span class="ico">🧑</span><span class="nm">王小明</span><span class="tag">新要建的</span></div>
+        </div>
+      </div>
+      <p style="margin-top:12px; color:#64748b; font-size:.92rem;">🤔 兩個人、一個地址、可能一台洗衣機 — 到底要建成一筆還是兩筆？</p>
+    </div>
+  </div>
+
+  <p style="font-size:1.1rem; font-weight:700; margin:24px 0 8px; text-align:center;">您有兩種做法 👇</p>
+
+  <!-- 方法 A -->
+  <div class="card method-a">
+    <span class="label label-a">做法 A</span>
+    <h2>🤝 當成「同一戶」</h2>
+    <p>把<b>王小明的名字和電話</b>，直接加進<b>王大明</b>底下，當成這一戶的另一個聯絡人。系統裡<b>只有一位客人</b>。</p>
+    <div class="diagram">
+      <div class="node house" style="margin:0 auto 10px;"><span class="ico">🏠</span><span class="nm">武德街 17 號</span></div>
+      <div class="arrow">↓</div>
+      <div class="node machine" style="margin:6px auto;"><span class="ico">🌀</span><span class="nm">滾筒洗衣機</span><span class="tag">清洗紀錄全集中在這台</span></div>
+      <div class="arrow">↓</div>
+      <div class="row" style="margin-top:6px;">
+        <div class="node"><span class="ico">📞</span><span class="nm">王大明</span><span class="tag">本人</span></div>
+        <div class="node"><span class="ico">📞</span><span class="nm">王小明</span><span class="tag">弟弟</span></div>
+      </div>
+    </div>
+    <div class="pros">
+      <h3>好處</h3>
+      <ul>
+        <li>建檔最快，<b>一個按鈕</b>就把王小明加進去，不用重填一整張表</li>
+        <li>洗衣機的<b>清洗紀錄全部集中在一起</b>，下次該洗了只會提醒一次，不會亂</li>
+        <li>之後打<b>任何一個人的電話</b>都找得到這一戶</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h3>要注意</h3>
+      <ul>
+        <li>系統裡兄弟算<b>「一位客人」</b>，不是兩位</li>
+        <li>所有訂單都記在<b>王大明名下</b> — 就算是王小明叫修、王小明付錢，帳面上也看不出來是誰</li>
+        <li>業績、累積點數都<b>算在王大明身上</b></li>
+        <li>萬一以後兄弟分家、各自一台洗衣機，要<b>拆成兩位客人會比較費工</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 方法 B -->
+  <div class="card method-b">
+    <span class="label label-b">做法 B</span>
+    <h2>👬 當成「兩位客人」</h2>
+    <p>王大明、王小明<b>各自是一位獨立客人</b>，只是剛好住同一個地址。系統裡<b>有兩筆客人資料</b>。</p>
+    <div class="diagram">
+      <div class="row">
+        <div class="node person"><span class="ico">🧑</span><span class="nm">王大明</span><span class="tag">客人①</span></div>
+        <div class="node person"><span class="ico">🧑</span><span class="nm">王小明</span><span class="tag">客人②</span></div>
+      </div>
+      <div class="arrow">↓ &nbsp;&nbsp; ↓</div>
+      <div class="node house" style="margin:6px auto;"><span class="ico">🏠</span><span class="nm">武德街 17 號</span><span class="tag">同一個地址</span></div>
+    </div>
+    <div class="pros">
+      <h3>好處</h3>
+      <ul>
+        <li>兩兄弟<b>各算各的</b> — 各自的訂單、付款、業績<b>分得清清楚楚</b></li>
+        <li>誰叫修、誰付錢，一看就知道</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h3>要注意</h3>
+      <ul>
+        <li>系統裡會有<b>兩筆同地址</b>，看起來有點像重複資料</li>
+        <li>同一台洗衣機的清洗紀錄<b>會被拆成兩半</b>，提醒可能<b>各跳一次</b></li>
+        <li>建檔比較<b>花時間</b>（要完整填第二個人的資料）</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 對照表 -->
+  <div class="card">
+    <h2>⚖️ 一眼看懂差別</h2>
+    <table>
+      <tr><th>比較項目</th><th><span class="ya">A 同一戶</span></th><th><span class="yb">B 兩位客人</span></th></tr>
+      <tr><td>建檔速度</td><td class="ya">很快 ⚡</td><td>較慢</td></tr>
+      <tr><td>洗衣機清洗紀錄</td><td class="ya">集中、提醒乾淨</td><td>會拆開、可能重複提醒</td></tr>
+      <tr><td>分得清誰付錢</td><td>分不出</td><td class="yb">分得很清楚</td></tr>
+      <tr><td>各自業績/點數</td><td>都算王大明</td><td class="yb">各算各的</td></tr>
+      <tr><td>以後要拆開</td><td>較費工</td><td class="yb">本來就分開</td></tr>
+    </table>
+  </div>
+
+  <!-- 怎麼選 -->
+  <div class="card decide">
+    <h2>🧭 那我到底該選哪個？</h2>
+    <p style="text-align:center; color:#4338ca;">問自己這兩個問題就好 👇</p>
+    <div class="q">
+      <div class="ask">Q1. 這兩兄弟是「一起住、一家人、誰付錢都算同一家」嗎？</div>
+      <div class="ans">是 → 選 <span class="pick-a">做法 A（同一戶）</span>，省事又乾淨</div>
+    </div>
+    <div class="q">
+      <div class="ask">Q2. 兩人其實「各付各的、要分清楚誰是誰的生意」嗎？</div>
+      <div class="ans">是 → 選 <span class="pick-b">做法 B（兩位客人）</span>，帳才不會混</div>
+    </div>
+    <p style="text-align:center; margin-top:12px; font-weight:700; color:#4338ca;">
+      💡 大多數家用洗衣機清洗，選 <span class="pick-a">A</span> 就夠用了
+    </p>
+  </div>
+
+  <!-- 安心提醒 -->
+  <div class="card safe">
+    <p>🔒 不管選哪一個，<b>資料都不會不見</b>，之後也可以反悔調整<br>（只是 A 改成 B 會比較花一點時間，B 一直都是分開的）</p>
+  </div>
+
+  <footer>
+    仁格數位科技工坊 · 淨新清潔工坊系統說明<br>
+    有任何不清楚的地方，直接問我們就好 😊
+  </footer>
+
+</body>
+</html>

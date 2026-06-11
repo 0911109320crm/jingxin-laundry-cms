@@ -35,7 +35,8 @@ export async function createUser(fd: FormData): Promise<Res> {
   const accountRaw = String(fd.get("account") ?? fd.get("email") ?? "").trim();
   const parsed = CreateUserSchema.safeParse({
     account: accountRaw,
-    password: fd.get("password") || "admin1234",
+    // 密碼必填，不再 fallback 成共用預設值（避免把弱密碼帶進正式帳號）
+    password: fd.get("password") ?? "",
     name: fd.get("name"),
     phone: fd.get("phone") || null,
     role: fd.get("role"),

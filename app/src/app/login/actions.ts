@@ -28,7 +28,12 @@ export async function loginAction(
     return { error: "登入失敗：帳號或密碼錯誤" };
   }
 
-  redirect(next.startsWith("/") ? next : "/");
+  // 僅允許站內相對路徑；擋掉 //evil.com、/\evil.com 這類 protocol-relative 開放重導
+  const safeNext =
+    next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")
+      ? next
+      : "/";
+  redirect(safeNext);
 }
 
 export async function logoutAction() {

@@ -31,20 +31,19 @@ export async function finalizeTechMonth(
   if (!data) return { ok: false, error: "找不到該師傅" };
   if (data.finalized) return { ok: false, error: "該月已結算" };
 
-  // breakdown JSONB：完整凍結當下計算結果
-  const breakdown = {
-    rows: data.rows,
-    monthBaseCommission: data.monthBaseCommission,
-    monthAddon: data.monthAddon,
-    monthDiscount: data.monthDiscount,
-    monthBonus: data.monthBonus,
-    monthDeduction: data.monthDeduction,
-    monthTotal: data.monthTotal,
-    totalItems: data.totalItems,
-    monthlyAdjustments: data.monthlyAdjustments,
-    defaultCommissionType: data.defaultCommissionType,
-    defaultCommissionValue: data.defaultCommissionValue,
-  };
+  // breakdown JSONB：完整凍結當下計算結果（除身分/年月/finalized 外全部存入，
+  // fetchPayroll 讀回時直接 spread 還原）。
+  const {
+    technician: _t,
+    year: _y,
+    month: _mo,
+    finalized: _f,
+    ...breakdown
+  } = data;
+  void _t;
+  void _y;
+  void _mo;
+  void _f;
 
   const supabase = await createClient();
   const { error } = await supabase.from("payroll_snapshots").insert({

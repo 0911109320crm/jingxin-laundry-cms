@@ -1,51 +1,77 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { taipeiMonthRange, taipeiDateStr } from "@/lib/timezone";
 
-export type CommissionType = "default" | "percent" | "amount";
-export type DefaultCommissionType = "percent" | "amount";
+/**
+ * 算台數薪資模型（老闆娘 2026-06-10 版，取代舊的百分比抽成）。
+ *
+ *   本薪      固定 base_salary，未達 base_units 台仍領滿
+ *   台數獎金  第 (base_units+1) 台起，每台 overage_unit_rate
+ *   技術獎金  每台機型加給 = service_items.unit_bonus；未拆解每台 +undismantled_bonus
+ *   全勤      當月無休假登記 → +full_attendance_bonus
+ *   伙食津貼  meal_base + 出勤日 × meal_per_day
+ *   行銷獎金  打卡積分超過 marketing_threshold 後，每多 1 分 +marketing_per_point
+ *   維修/執行/浮動  走 payroll_adjustments（bonus/deduction）手動加減
+ *
+ * 台數 = 當月該師傅 order_items 筆數（排除 excluded / cancelled，一台機器一筆）。
+ * 月份與分日一律用台灣時區（scheduled_at），修掉 UTC server 凌晨歸錯月/日的問題。
+ */
 
-export type PayrollAdjustmentBreakdown = {
-  name: string;
-  amount: number;
+export type PayrollConstants = {
+  base_salary: number;
+  base_units: number;
+  overage_unit_rate: number;
+  undismantled_bonus: number;
+  full_attendance_bonus: number;
+  meal_base: number;
+  meal_per_day: number;
+  marketing_threshold: number;
+  marketing_per_point: number;
+};
+
+const DEFAULT_CONSTANTS: PayrollConstants = {
+  base_salary: 29900,
+  base_units: 65,
+  overage_unit_rate: 520,
+  undismantled_bonus: 100,
+  full_attendance_bonus: 2000,
+  meal_base: 1200,
+  meal_per_day: 50,
+  marketing_threshold: 30,
+  marketing_per_point: 10,
+};
+
+/** 技術獎金的一行明細（依品項/未拆解分組）。 */
+export type MachineBonusLine = {
+  label: string;
+  count: number;
+  rate: number;
+  subtotal: number;
 };
 
 export type PayrollItem = {
   id: string;
   order_id: string;
   order_code: string;
-  unit_price: number;
-  quantity: number;
-  subtotal: number;
-  /** 該筆對薪資的貢獻（已套抽成） */
-  commission_amount: number;
-  /** 顯示用：百分比或固定金額/件 */
-  commission_label: string;
-  tag: string | null;
-  service_code: string | null;
-  service_name: string | null;
   customer_name: string;
   customer_code: string;
+  service_name: string | null;
+  category: string | null;
+  /** 該台的機型技術獎金（service_items.unit_bonus） */
+  unit_bonus: number;
+  /** 是否未拆解（另計 undismantled_bonus） */
+  undismantled: boolean;
   payment_method: string;
-  /** order-level addons 對該日的貢獻（只算 affects_commission=true 的，合計） */
-  order_addons: number;
-  order_discount: number;
-  /** 加價明細（含名稱），UI 用來顯示「+300（加大 200、車馬 100）」 */
-  order_addons_detail: PayrollAdjustmentBreakdown[];
-  order_discount_detail: PayrollAdjustmentBreakdown[];
 };
 
 export type DailyRow = {
   day: number;
   date: string; // YYYY-MM-DD
   items: PayrollItem[];
-  /** 該日所有 item 的 commission_amount 加總 */
-  dayCommission: number;
-  /** 該日加價（進薪資的） */
-  dayAddon: number;
-  /** 該日折扣（進薪資的） */
-  dayDiscount: number;
-  /** 該日匯款訂單數（非現金） */
-  transferredCount: number;
+  /** 該日台數 */
+  dayUnits: number;
+  /** 該日技術獎金（unit_bonus + 未拆解） */
+  dayBonus: number;
 };
 
 export type PayrollMonthlyAdj = {
@@ -61,65 +87,60 @@ export type PayrollData = {
   year: number;
   month: number;
   rows: DailyRow[];
-  /** 基本計件抽成（每筆 item 加總） */
-  monthBaseCommission: number;
-  /** 進薪資的加價合計 */
-  monthAddon: number;
-  /** 進薪資的折扣合計 */
-  monthDiscount: number;
-  /** 本月獎勵合計 */
-  monthBonus: number;
-  /** 本月扣款合計 */
-  monthDeduction: number;
-  /** 應發 = base + addon − discount + bonus − deduction */
-  monthTotal: number;
-  totalItems: number;
+  /** 總台數 */
+  unitCount: number;
+  /** 本薪（保底） */
+  baseSalary: number;
+  /** 本薪內含台數 */
+  baseUnits: number;
+  /** 超額台數（第 base_units+1 台起） */
+  overageUnits: number;
+  /** 台數獎金 */
+  overageBonus: number;
+  /** 技術獎金合計 */
+  machineBonus: number;
+  /** 技術獎金明細（品項分組 + 未拆解） */
+  machineBonusLines: MachineBonusLine[];
+  /** 出勤日（當月有派案的不重複台北日期數） */
+  attendanceDays: number;
+  /** 當月休假登記天數（判全勤依據） */
+  leaveDays: number;
+  /** 是否全勤 */
+  fullAttendance: boolean;
+  /** 全勤獎金 */
+  attendanceBonus: number;
+  /** 伙食津貼 */
+  mealAllowance: number;
+  /** 本月打卡積分 */
+  marketingPoints: number;
+  /** 行銷獎金 */
+  marketingBonus: number;
+  /** 月度手動加減（維修/執行/浮動） */
   monthlyAdjustments: PayrollMonthlyAdj[];
-  /** 預設抽成設定，供 UI 顯示 fallback 是什麼 */
-  defaultCommissionType: DefaultCommissionType;
-  defaultCommissionValue: number;
+  /** 加項合計 */
+  monthBonus: number;
+  /** 扣項合計 */
+  monthDeduction: number;
+  /** 應發合計 */
+  monthTotal: number;
+  /** = unitCount，給總覽頁沿用 */
+  totalItems: number;
+  /** 費率常數（UI 顯示用） */
+  constants: PayrollConstants;
   /** 該月是否已 snapshot 鎖定 */
   finalized: boolean;
 };
-
-/**
- * 計算單筆抽成金額。
- * - percent: subtotal × value / 100
- * - amount:  value × quantity
- * - default: 套用全店預設值
- */
-function computeCommission(
-  subtotal: number,
-  quantity: number,
-  type: CommissionType,
-  value: number,
-  defaultType: DefaultCommissionType,
-  defaultValue: number,
-): { amount: number; label: string } {
-  const effectiveType = type === "default" ? defaultType : type;
-  const effectiveValue = type === "default" ? defaultValue : value;
-  if (effectiveType === "percent") {
-    return {
-      amount: Math.round((subtotal * effectiveValue) / 100),
-      label: `${effectiveValue}%${type === "default" ? "（預設）" : ""}`,
-    };
-  }
-  return {
-    amount: Math.round(effectiveValue * quantity),
-    label: `$${effectiveValue}/件${type === "default" ? "（預設）" : ""}`,
-  };
-}
 
 export async function fetchPayroll(
   technicianId: string,
   monthStr: string, // "YYYY-MM"
 ): Promise<PayrollData | null> {
+  const range = taipeiMonthRange(monthStr);
+  if (!range) return null;
   const [y, m] = monthStr.split("-").map(Number);
-  if (!y || !m) return null;
+  const { startIso, endIso } = range;
 
   const admin = createAdminClient();
-  const monthStart = new Date(y, m - 1, 1);
-  const monthEnd = new Date(y, m, 1);
 
   const { data: profile } = await admin
     .from("user_profiles")
@@ -129,38 +150,49 @@ export async function fetchPayroll(
   const tech = profile as { id: string; name: string } | null;
   if (!tech) return null;
 
-  // Parallel: order_items / system_settings / payroll_adjustments / snapshot
   const [
     { data: itemsRaw },
-    { data: settingsRaw },
+    { data: settingRow },
     { data: adjustmentsRaw },
+    { data: promosRaw },
+    { data: leavesRaw },
     { data: snapshotRow },
   ] = await Promise.all([
     admin
       .from("order_items")
       .select(
-        `id, order_id, unit_price, quantity, subtotal, tag,
-         service:service_items(code, name, commission_type, commission_value),
+        `id, order_id, undismantled, technician_id,
+         service:service_items(name, category, unit_bonus),
          order:orders(order_code, status, service_at, scheduled_at, payment_method,
-                      customer:customers(name, code),
-                      adjustments:order_adjustments(
-                        type, amount, name_snapshot,
-                        item:adjustment_items(affects_commission)
-                      ))`,
+                      customer:customers(name, code))`,
       )
       .eq("technician_id", technicianId)
-      .gte("orders.scheduled_at", monthStart.toISOString())
-      .lt("orders.scheduled_at", monthEnd.toISOString()),
+      .eq("excluded", false)
+      .gte("orders.scheduled_at", startIso)
+      .lt("orders.scheduled_at", endIso),
     admin
       .from("system_settings")
-      .select("key, value")
-      .in("key", ["default_commission_type", "default_commission_value"]),
+      .select("value")
+      .eq("key", "payroll_v2")
+      .maybeSingle(),
     admin
       .from("payroll_adjustments")
       .select("id, type, amount, reason, created_at")
       .eq("technician_id", technicianId)
       .eq("month", monthStr)
       .order("created_at", { ascending: false }),
+    admin
+      .from("order_promotions")
+      .select("points_snapshot")
+      .eq("credited_to", technicianId)
+      .gte("created_at", startIso)
+      .lt("created_at", endIso),
+    admin
+      .from("technician_leave")
+      .select("leave_date")
+      .eq("technician_id", technicianId)
+      .gte("leave_date", taipeiDateStr(startIso))
+      .lt("leave_date", taipeiDateStr(endIso)),
     admin
       .from("payroll_snapshots")
       .select("breakdown")
@@ -169,65 +201,34 @@ export async function fetchPayroll(
       .maybeSingle(),
   ]);
 
-  // 已結算：直接讀 snapshot 不再計算（freeze 歷史薪資）
+  // 已結算：直接讀 snapshot（freeze 歷史薪資）
   if (snapshotRow?.breakdown) {
-    const b = snapshotRow.breakdown as {
-      rows: DailyRow[];
-      monthBaseCommission: number;
-      monthAddon: number;
-      monthDiscount: number;
-      monthBonus: number;
-      monthDeduction: number;
-      monthTotal: number;
-      totalItems: number;
-      monthlyAdjustments: PayrollMonthlyAdj[];
-      defaultCommissionType: DefaultCommissionType;
-      defaultCommissionValue: number;
-    };
+    const b = snapshotRow.breakdown as Omit<
+      PayrollData,
+      "technician" | "year" | "month" | "finalized"
+    >;
     return {
+      ...b,
       technician: tech,
       year: y,
       month: m,
-      rows: b.rows,
-      monthBaseCommission: b.monthBaseCommission,
-      monthAddon: b.monthAddon,
-      monthDiscount: b.monthDiscount,
-      monthBonus: b.monthBonus,
-      monthDeduction: b.monthDeduction,
-      monthTotal: b.monthTotal,
-      totalItems: b.totalItems,
-      monthlyAdjustments: b.monthlyAdjustments,
-      defaultCommissionType: b.defaultCommissionType,
-      defaultCommissionValue: b.defaultCommissionValue,
       finalized: true,
     };
   }
 
-  // System settings
-  const settingsMap = new Map(
-    ((settingsRaw as { key: string; value: unknown }[] | null) ?? []).map(
-      (r) => [r.key, r.value],
-    ),
-  );
-  const defaultCommissionType =
-    (settingsMap.get("default_commission_type") as DefaultCommissionType) ??
-    "percent";
-  const defaultCommissionValue = Number(
-    settingsMap.get("default_commission_value") ?? 60,
-  );
+  const constants: PayrollConstants = {
+    ...DEFAULT_CONSTANTS,
+    ...((settingRow?.value as Partial<PayrollConstants> | null) ?? {}),
+  };
 
   type Raw = {
     id: string;
     order_id: string;
-    unit_price: number;
-    quantity: number;
-    subtotal: number;
-    tag: string | null;
+    undismantled: boolean;
     service: {
-      code: string;
       name: string;
-      commission_type: CommissionType;
-      commission_value: number;
+      category: string | null;
+      unit_bonus: number;
     } | null;
     order: {
       order_code: string;
@@ -236,139 +237,104 @@ export async function fetchPayroll(
       scheduled_at: string | null;
       payment_method: string;
       customer: { name: string; code: string } | null;
-      adjustments: {
-        type: "addon" | "discount";
-        amount: number;
-        name_snapshot: string;
-        item: { affects_commission: boolean } | null;
-      }[];
     } | null;
   };
 
   const items = (itemsRaw as Raw[] | null) ?? [];
 
-  // Build day rows
+  // 建立每日列
   const byDay = new Map<number, DailyRow>();
-  for (let d = 1; d <= 31; d++) {
-    const check = new Date(y, m - 1, d);
-    if (check.getMonth() !== m - 1) continue;
-    byDay.set(d, {
-      day: d,
-      date: `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
-      items: [],
-      dayCommission: 0,
-      dayAddon: 0,
-      dayDiscount: 0,
-      transferredCount: 0,
-    });
-  }
-
-  const seenOrderForAdjPerDay = new Map<string, Set<string>>();
-  const seenOrderForPayment = new Map<string, Set<string>>();
+  let unitCount = 0;
+  let machineBonus = 0;
+  // 技術獎金分組：品項名 → {count, rate}；未拆解獨立一組
+  const bonusGroups = new Map<string, { count: number; rate: number }>();
+  let undismantledCount = 0;
 
   for (const it of items) {
     if (!it.order) continue;
     if (it.order.status === "cancelled") continue;
-    const dateStr = (it.order.service_at ?? it.order.scheduled_at)?.slice(0, 10);
+    const dateStr = taipeiDateStr(it.order.scheduled_at ?? it.order.service_at);
     if (!dateStr) continue;
     const day = Number(dateStr.slice(8, 10));
-    const row = byDay.get(day);
-    if (!row) continue;
 
-    // affects_commission filter on adjustments
-    // null item (自訂無 master) → 視為 true（多做的工，沿用原行為）
-    const effectiveAdj = it.order.adjustments.filter(
-      (a) => a.item?.affects_commission ?? true,
-    );
-    const addonsDetail: PayrollAdjustmentBreakdown[] = effectiveAdj
-      .filter((a) => a.type === "addon")
-      .map((a) => ({ name: a.name_snapshot, amount: Number(a.amount) }));
-    const discountDetail: PayrollAdjustmentBreakdown[] = effectiveAdj
-      .filter((a) => a.type === "discount")
-      .map((a) => ({ name: a.name_snapshot, amount: Number(a.amount) }));
-    const addons = addonsDetail.reduce((s, a) => s + a.amount, 0);
-    const discount = discountDetail.reduce((s, a) => s + a.amount, 0);
-
-    // Count adjustments only once per order per day
-    if (!seenOrderForAdjPerDay.has(dateStr))
-      seenOrderForAdjPerDay.set(dateStr, new Set());
-    const seen = seenOrderForAdjPerDay.get(dateStr)!;
-    let orderAddon = 0;
-    let orderDiscount = 0;
-    let orderAddonDetail: PayrollAdjustmentBreakdown[] = [];
-    let orderDiscountDetail: PayrollAdjustmentBreakdown[] = [];
-    if (!seen.has(it.order_id)) {
-      seen.add(it.order_id);
-      orderAddon = addons;
-      orderDiscount = discount;
-      orderAddonDetail = addonsDetail;
-      orderDiscountDetail = discountDetail;
-      row.dayAddon += addons;
-      row.dayDiscount += discount;
+    let row = byDay.get(day);
+    if (!row) {
+      row = { day, date: dateStr, items: [], dayUnits: 0, dayBonus: 0 };
+      byDay.set(day, row);
     }
 
-    // Count transfer once per order per day
-    if (!seenOrderForPayment.has(dateStr))
-      seenOrderForPayment.set(dateStr, new Set());
-    const seenPay = seenOrderForPayment.get(dateStr)!;
-    if (!seenPay.has(it.order_id)) {
-      seenPay.add(it.order_id);
-      if (
-        it.order.payment_method === "transfer" ||
-        it.order.payment_method === "card" ||
-        it.order.payment_method === "line_pay"
-      ) {
-        row.transferredCount += 1;
-      }
-    }
+    const unitBonus = Number(it.service?.unit_bonus ?? 0);
+    const undismantledBonus = it.undismantled ? constants.undismantled_bonus : 0;
+    const lineBonus = unitBonus + undismantledBonus;
 
-    // 抽成計算
-    const { amount: commissionAmount, label: commissionLabel } =
-      computeCommission(
-        Number(it.subtotal),
-        Number(it.quantity) || 1,
-        (it.service?.commission_type ?? "default") as CommissionType,
-        Number(it.service?.commission_value ?? 0),
-        defaultCommissionType,
-        defaultCommissionValue,
-      );
-
+    unitCount += 1;
+    machineBonus += lineBonus;
+    row.dayUnits += 1;
+    row.dayBonus += lineBonus;
     row.items.push({
       id: it.id,
       order_id: it.order_id,
       order_code: it.order.order_code,
-      unit_price: Number(it.unit_price),
-      quantity: Number(it.quantity) || 1,
-      subtotal: Number(it.subtotal),
-      commission_amount: commissionAmount,
-      commission_label: commissionLabel,
-      tag: it.tag,
-      service_code: it.service?.code ?? null,
-      service_name: it.service?.name ?? null,
       customer_name: it.order.customer?.name ?? "—",
       customer_code: it.order.customer?.code ?? "",
+      service_name: it.service?.name ?? null,
+      category: it.service?.category ?? null,
+      unit_bonus: unitBonus,
+      undismantled: it.undismantled,
       payment_method: it.order.payment_method,
-      order_addons: orderAddon,
-      order_discount: orderDiscount,
-      order_addons_detail: orderAddonDetail,
-      order_discount_detail: orderDiscountDetail,
     });
-    row.dayCommission += commissionAmount;
+
+    if (unitBonus > 0) {
+      const key = it.service?.name ?? "未分類";
+      const g = bonusGroups.get(key) ?? { count: 0, rate: unitBonus };
+      g.count += 1;
+      bonusGroups.set(key, g);
+    }
+    if (it.undismantled) undismantledCount += 1;
   }
 
-  // Aggregate totals
-  let monthBaseCommission = 0;
-  let monthAddon = 0;
-  let monthDiscount = 0;
-  let totalItems = 0;
-  for (const row of byDay.values()) {
-    monthBaseCommission += row.dayCommission;
-    monthAddon += row.dayAddon;
-    monthDiscount += row.dayDiscount;
-    totalItems += row.items.length;
+  const machineBonusLines: MachineBonusLine[] = Array.from(bonusGroups.entries())
+    .map(([label, g]) => ({
+      label,
+      count: g.count,
+      rate: g.rate,
+      subtotal: g.count * g.rate,
+    }))
+    .sort((a, b) => b.subtotal - a.subtotal);
+  if (undismantledCount > 0) {
+    machineBonusLines.push({
+      label: "未拆解",
+      count: undismantledCount,
+      rate: constants.undismantled_bonus,
+      subtotal: undismantledCount * constants.undismantled_bonus,
+    });
   }
 
-  // 月度調整（bonus / deduction）
+  // 本薪 + 台數獎金
+  const baseSalary = constants.base_salary;
+  const overageUnits = Math.max(0, unitCount - constants.base_units);
+  const overageBonus = overageUnits * constants.overage_unit_rate;
+
+  // 出勤日：當月有派案的不重複台北日期數
+  const attendanceDays = byDay.size;
+
+  // 全勤：當月無休假登記
+  const leaveDays = (leavesRaw as { leave_date: string }[] | null)?.length ?? 0;
+  const fullAttendance = leaveDays === 0;
+  const attendanceBonus = fullAttendance ? constants.full_attendance_bonus : 0;
+
+  // 伙食津貼
+  const mealAllowance = constants.meal_base + attendanceDays * constants.meal_per_day;
+
+  // 行銷獎金
+  const marketingPoints = (
+    (promosRaw as { points_snapshot: number }[] | null) ?? []
+  ).reduce((s, p) => s + Number(p.points_snapshot), 0);
+  const marketingBonus =
+    Math.max(0, marketingPoints - constants.marketing_threshold) *
+    constants.marketing_per_point;
+
+  // 月度手動加減
   const monthlyAdjustments =
     (adjustmentsRaw as PayrollMonthlyAdj[] | null) ?? [];
   const monthBonus = monthlyAdjustments
@@ -379,9 +345,12 @@ export async function fetchPayroll(
     .reduce((s, a) => s + Number(a.amount), 0);
 
   const monthTotal =
-    monthBaseCommission +
-    monthAddon -
-    monthDiscount +
+    baseSalary +
+    overageBonus +
+    machineBonus +
+    attendanceBonus +
+    mealAllowance +
+    marketingBonus +
     monthBonus -
     monthDeduction;
 
@@ -390,16 +359,26 @@ export async function fetchPayroll(
     year: y,
     month: m,
     rows: Array.from(byDay.values()).sort((a, b) => a.day - b.day),
-    monthBaseCommission,
-    monthAddon,
-    monthDiscount,
+    unitCount,
+    baseSalary,
+    baseUnits: constants.base_units,
+    overageUnits,
+    overageBonus,
+    machineBonus,
+    machineBonusLines,
+    attendanceDays,
+    leaveDays,
+    fullAttendance,
+    attendanceBonus,
+    mealAllowance,
+    marketingPoints,
+    marketingBonus,
+    monthlyAdjustments,
     monthBonus,
     monthDeduction,
     monthTotal,
-    totalItems,
-    monthlyAdjustments,
-    defaultCommissionType,
-    defaultCommissionValue,
+    totalItems: unitCount,
+    constants,
     finalized: false,
   };
 }

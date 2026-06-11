@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { getCurrentUser } from "@/lib/dal";
 import { fetchPayroll } from "@/lib/payroll";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { taipeiMonthRange } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +38,10 @@ export async function GET(req: NextRequest) {
 
   // Fetch promotions + KPI for this technician/month
   const admin = createAdminClient();
-  const [y, m] = month.split("-").map(Number);
-  const monthStart = new Date(y, m - 1, 1).toISOString();
-  const monthEnd = new Date(y, m, 1).toISOString();
+  const range = taipeiMonthRange(month);
+  if (!range) return new Response("bad month", { status: 400 });
+  const monthStart = range.startIso;
+  const monthEnd = range.endIso;
 
   const [{ data: promosRaw }, { data: kpiRow }] = await Promise.all([
     admin
@@ -75,24 +77,44 @@ export async function GET(req: NextRequest) {
 
   // ── 建立工作表 1：薪資總覽 ──────────────────────────────────────────────
 
-  const defaultDesc =
-    data.defaultCommissionType === "percent"
-      ? `預設 ${data.defaultCommissionValue}%`
-      : `預設 NT$ ${data.defaultCommissionValue}/件`;
+  const c = data.constants;
+  const overageDesc =
+    data.overageUnits > 0
+      ? `${data.unitCount} 台，超額 ${data.overageUnits} 台 × ${c.overage_unit_rate}`
+      : `${data.unitCount} 台（未超過 ${data.baseUnits} 台）`;
+  const machineDesc =
+    data.machineBonusLines.length > 0
+      ? data.machineBonusLines
+          .map((l) => `${l.label} ${l.count}台×${l.rate}`)
+          .join("、")
+      : "本月無機型加給";
+  const attendanceDesc = data.fullAttendance
+    ? "本月無休假登記"
+    : `本月休假 ${data.leaveDays} 天，無全勤`;
+  const mealDesc = `${c.meal_base} + 出勤 ${data.attendanceDays} 日 × ${c.meal_per_day}`;
+  const marketingDesc =
+    data.marketingBonus > 0
+      ? `積分 ${data.marketingPoints}，超標 ${
+          data.marketingPoints - c.marketing_threshold
+        } 分 × ${c.marketing_per_point}`
+      : `積分 ${data.marketingPoints}（門檻 ${c.marketing_threshold}）`;
 
   const summary: (string | number)[][] = [
     ["淨新清潔工坊管理系統 — 師傅薪資對帳單"],
     [],
     ["師傅姓名", data.technician.name, "", "月份", monthLabel, "", "匯出日期", exportDate],
     [],
-    ["【本月薪資摘要】"],
+    ["【本月薪資摘要（算台數）】"],
     ["項目", "金額", "說明"],
-    ["服務案件總筆數", `${data.totalItems} 筆`, ""],
-    ["計件抽成合計", data.monthBaseCommission, defaultDesc],
-    ["加價合計（進薪資）", data.monthAddon, "在「設定 → 折扣 / 加價項目」勾選「進薪資」的項目"],
-    ["折扣合計（進薪資）", -data.monthDiscount, "客戶議價等扣師傅；節慶折扣等不算"],
-    ["本月獎勵合計", data.monthBonus, "老闆娘月度手動加的獎勵"],
-    ["本月扣款合計", -data.monthDeduction, "老闆娘月度手動加的扣款"],
+    ["本月台數", `${data.unitCount} 台`, `保底 ${data.baseUnits} 台`],
+    ["本薪", data.baseSalary, `${data.baseUnits} 台保底`],
+    ["台數獎金", data.overageBonus, overageDesc],
+    ["技術獎金", data.machineBonus, machineDesc],
+    ["全勤獎金", data.attendanceBonus, attendanceDesc],
+    ["伙食津貼", data.mealAllowance, mealDesc],
+    ["行銷獎金", data.marketingBonus, marketingDesc],
+    ["維修/執行/浮動加項", data.monthBonus, "老闆娘月度手動加的獎勵"],
+    ["維修/執行/浮動扣項", -data.monthDeduction, "老闆娘月度手動加的扣款"],
     ["本月應發薪資", data.monthTotal, data.finalized ? "✓ 已結算鎖定" : "未結算（即時計算）"],
     [],
     ["【業績目標（積分）】"],
@@ -101,17 +123,17 @@ export async function GET(req: NextRequest) {
     ["目標積分", `${kpi} 點`],
     ["達標狀態", achieved ? `✓ 已達標（${totalPoints}/${kpi}）` : `✗ 未達標（差 ${kpi - totalPoints} 點）`],
     [],
-    ["＊ 抽成方式依「設定 → 服務項目」每筆設定為準，未設則套用預設"],
+    ["＊ 技術獎金依「設定 → 服務項目」每台 unit_bonus + 未拆解加給計算"],
     ["＊ 實際應發薪資以老闆娘核准為準"],
   ];
 
   const wsSummary = XLSX.utils.aoa_to_sheet(summary);
   wsSummary["!cols"] = [
-    { wch: 22 }, { wch: 14 }, { wch: 36 }, { wch: 10 }, { wch: 14 }, { wch: 4 }, { wch: 10 }, { wch: 14 },
+    { wch: 22 }, { wch: 14 }, { wch: 40 }, { wch: 10 }, { wch: 14 }, { wch: 4 }, { wch: 10 }, { wch: 14 },
   ];
   wsSummary["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
 
-  // ── 建立工作表 2：案件計件明細 ─────────────────────────────────────────
+  // ── 建立工作表 2：每日台數明細 ─────────────────────────────────────────
 
   const detailHeader = [
     "日期",
@@ -119,62 +141,47 @@ export async function GET(req: NextRequest) {
     "客戶姓名",
     "客戶編號",
     "服務項目",
-    "代號",
-    "原價（小計）",
-    "抽成方式",
-    "計件抽成",
-    "加價（進薪資）",
-    "折扣（進薪資）",
-    "本筆小計",
+    "機型分類",
+    "機型獎金",
+    "未拆解",
+    "未拆解加給",
+    "本台技術獎金",
     "收款方式",
-    "備註",
   ];
 
   const detailRows: (string | number)[][] = [];
-  let totalSubtotal = 0;
 
   for (const row of data.rows) {
     if (row.items.length === 0) continue;
     for (const it of row.items) {
-      totalSubtotal += it.subtotal;
-      const lineSubtotal =
-        it.commission_amount + it.order_addons - it.order_discount;
+      const undismantledBonus = it.undismantled ? c.undismantled_bonus : 0;
       detailRows.push([
         row.date,
         it.order_code,
         it.customer_name,
         it.customer_code,
         it.service_name ?? "（未分類）",
-        it.tag ?? "",
-        it.subtotal,
-        it.commission_label,
-        it.commission_amount,
-        it.order_addons > 0 ? it.order_addons : "",
-        it.order_discount > 0 ? it.order_discount : "",
-        lineSubtotal,
+        it.category ?? "",
+        it.unit_bonus > 0 ? it.unit_bonus : "",
+        it.undismantled ? "是" : "",
+        undismantledBonus > 0 ? undismantledBonus : "",
+        it.unit_bonus + undismantledBonus,
         PAYMENT_LABEL[it.payment_method] ?? it.payment_method,
-        "",
       ]);
     }
   }
 
   detailRows.push([
-    "合計", "", "", "", "", "",
-    totalSubtotal,
+    "合計", `${data.unitCount} 台`, "", "", "", "", "", "", "",
+    data.machineBonus,
     "",
-    data.monthBaseCommission,
-    data.monthAddon,
-    data.monthDiscount > 0 ? data.monthDiscount : "",
-    data.monthBaseCommission + data.monthAddon - data.monthDiscount,
-    "", "",
   ]);
 
   const wsDetail = XLSX.utils.aoa_to_sheet([detailHeader, ...detailRows]);
   wsDetail["!cols"] = [
     { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 10 },
-    { wch: 20 }, { wch: 8 }, { wch: 12 }, { wch: 14 },
-    { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
-    { wch: 12 }, { wch: 16 },
+    { wch: 22 }, { wch: 14 }, { wch: 10 }, { wch: 8 },
+    { wch: 12 }, { wch: 14 }, { wch: 12 },
   ];
 
   // ── 建立工作表 3：月度獎勵 / 扣款 ─────────────────────────────────────
@@ -225,7 +232,7 @@ export async function GET(req: NextRequest) {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, wsSummary, "薪資總覽");
-  XLSX.utils.book_append_sheet(wb, wsDetail, "案件計件明細");
+  XLSX.utils.book_append_sheet(wb, wsDetail, "每日台數明細");
   XLSX.utils.book_append_sheet(wb, wsAdj, "月度獎勵扣款");
   XLSX.utils.book_append_sheet(wb, wsPromo, "積分明細");
 

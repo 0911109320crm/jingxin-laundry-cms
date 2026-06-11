@@ -18,6 +18,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { formatNTD } from "@/lib/utils";
 import { fetchPayroll } from "@/lib/payroll";
 import { resolveCollector, UNASSIGNED } from "@/lib/settlement";
+import { taipeiMonthRange } from "@/lib/timezone";
 import { FinalizeAllButton } from "./FinalizeAllButton";
 
 type SP = Promise<{ month?: string }>;
@@ -33,12 +34,6 @@ function shiftMonth(monthStr: string, delta: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function monthRange(monthStr: string) {
-  const [y, m] = monthStr.split("-").map(Number);
-  const start = new Date(y, m - 1, 1);
-  const end = new Date(y, m, 1);
-  return { start, end };
-}
 
 function daysLeftInMonth(monthStr: string) {
   const [y, m] = monthStr.split("-").map(Number);
@@ -59,9 +54,8 @@ export default async function PayrollPage({
   const isOwner = me.profile.role === "owner";
   const sp = await searchParams;
   const month = sp.month ?? currentMonthValue();
-  const { start, end } = monthRange(month);
-  const startIso = start.toISOString();
-  const endIso = end.toISOString();
+  const range = taipeiMonthRange(month) ?? taipeiMonthRange(currentMonthValue())!;
+  const { startIso, endIso } = range;
   const remaining = daysLeftInMonth(month);
 
   const supabase = await createClient();
@@ -157,9 +151,7 @@ export default async function PayrollPage({
     id: string;
     name: string;
     salary: number;
-    addon: number;
-    discount: number;
-    items: number;
+    units: number;
     points: number;
     achieved: boolean;
     pendingCount: number;
@@ -175,9 +167,7 @@ export default async function PayrollPage({
       id: t.id,
       name: t.name,
       salary: p?.monthTotal ?? 0,
-      addon: p?.monthAddon ?? 0,
-      discount: p?.monthDiscount ?? 0,
-      items: p?.totalItems ?? 0,
+      units: p?.unitCount ?? 0,
       points,
       achieved: points >= kpi,
       pendingCount: pend.count,
@@ -204,7 +194,7 @@ export default async function PayrollPage({
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-zinc-900">師傅薪資</h1>
           <p className="text-sm text-zinc-500">
-            計件抽成、積分達標、待回繳一覽 · {month}
+            算台數、積分達標、待回繳一覽 · {month}
             {finalizedCount > 0 && (
               <span className="ml-2 inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-700">
                 <Lock className="h-3 w-3" /> 已結算 {finalizedCount}/{techs.length}
@@ -329,7 +319,6 @@ export default async function PayrollPage({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {rows.map((r) => {
             const pct = Math.min(100, Math.round((r.points / kpi) * 100));
-            const netAddon = r.addon - r.discount;
             return (
               <Link
                 key={r.id}
@@ -363,15 +352,9 @@ export default async function PayrollPage({
                         <p className="font-mono text-2xl font-bold text-zinc-900">
                           {formatNTD(r.salary)}
                         </p>
-                        {(r.addon > 0 || r.discount > 0) && (
-                          <p className="text-xs text-zinc-400">
-                            +{formatNTD(r.addon)} / -{formatNTD(r.discount)}
-                            <span className="ml-1">
-                              （{netAddon >= 0 ? "+" : ""}
-                              {formatNTD(netAddon)}）
-                            </span>
-                          </p>
-                        )}
+                        <p className="text-xs text-zinc-400">
+                          本月 {r.units} 台
+                        </p>
                       </div>
                       <div>
                         <div className="mb-1 flex items-center justify-between text-xs">
@@ -403,7 +386,7 @@ export default async function PayrollPage({
                     {/* Footer: 件數 + 待回繳 */}
                     <div className="flex items-center justify-between border-t border-zinc-100 pt-2 text-xs">
                       <span className="text-zinc-500">
-                        本月接案 <span className="font-semibold text-zinc-700">{r.items}</span> 件
+                        本月 <span className="font-semibold text-zinc-700">{r.units}</span> 台
                       </span>
                       {r.pendingTotal > 0 ? (
                         <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 font-medium text-amber-800">

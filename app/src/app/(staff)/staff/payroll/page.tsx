@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/dal";
 import { fetchPayroll } from "@/lib/payroll";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
-import { formatNTD } from "@/lib/utils";
 
 type SP = Promise<{ month?: string }>;
 
@@ -31,13 +30,6 @@ export default async function StaffPayroll({
 
   const prev = shiftMonth(month, -1);
   const next = shiftMonth(month, 1);
-
-  // 師傅只看「完成幾件 + 總服務金額」，不看抽成 / 加減項 / 獎金
-  const monthServiceTotal =
-    data?.rows.reduce(
-      (s, r) => s + r.items.reduce((ss, it) => ss + it.subtotal, 0),
-      0,
-    ) ?? 0;
 
   return (
     <div className="p-4 space-y-4">
@@ -74,11 +66,9 @@ export default async function StaffPayroll({
             <CardBody className="space-y-1 text-center">
               <p className="text-xs text-zinc-500">本月完成</p>
               <p className="text-3xl font-bold text-brand-700 font-mono">
-                {data.totalItems} <span className="text-xl">件</span>
+                {data.unitCount} <span className="text-xl">台</span>
               </p>
-              <p className="text-xs text-zinc-500">
-                服務總額 {formatNTD(monthServiceTotal)}
-              </p>
+              <p className="text-xs text-zinc-500">出勤 {data.attendanceDays} 日</p>
             </CardBody>
           </Card>
 
@@ -93,7 +83,7 @@ export default async function StaffPayroll({
                   .map((row) => (
                     <li key={row.day} className="px-4 py-3 space-y-2">
                       <div className="text-sm font-semibold text-zinc-700">
-                        {row.date.slice(5)}（{row.items.length} 件）
+                        {row.date.slice(5)}（{row.items.length} 台）
                       </div>
                       <ul className="space-y-1.5">
                         {row.items.map((it) => (
@@ -107,9 +97,9 @@ export default async function StaffPayroll({
                               </p>
                               <p className="text-zinc-700">
                                 {it.service_name ?? "—"}
-                                {it.tag && (
-                                  <span className="ml-1 text-zinc-500">
-                                    ({it.tag})
+                                {it.undismantled && (
+                                  <span className="ml-1 text-amber-600">
+                                    (未拆解)
                                   </span>
                                 )}
                               </p>
