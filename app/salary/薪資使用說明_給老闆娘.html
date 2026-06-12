@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>薪資系統使用說明</title>
+<style>
+  body {
+    font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+    color: #27272a;
+    line-height: 1.9;
+    font-size: 16px;
+  }
+  h1 { font-size: 24px; border-bottom: 3px solid #10b981; padding-bottom: 8px; }
+  h2 {
+    font-size: 19px;
+    background: #ecfdf5;
+    border-left: 5px solid #10b981;
+    padding: 6px 12px;
+    margin-top: 36px;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #d4d4d8; padding: 8px 10px; text-align: left; }
+  th { background: #f4f4f5; }
+  .money { color: #059669; font-weight: bold; white-space: nowrap; }
+  .warn {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 12px 0;
+  }
+  .warn strong { color: #b45309; }
+  ol li, ul li { margin-bottom: 8px; }
+  .step { font-weight: bold; color: #047857; }
+  @media print { body { font-size: 13px; } h2 { margin-top: 20px; } }
+</style>
+</head>
+<body>
+
+<h1>薪資系統使用說明</h1>
+<p>這份說明告訴您：系統怎麼幫您算薪水、開始用之前要先做哪幾件事、每個月要做哪幾件事。照著做，每個月按幾個按鈕就能算好全部師傅的薪水。</p>
+
+<h2>一、系統怎麼算薪水</h2>
+<p>每位師傅每個月的薪水，系統會自動加總下面這些：</p>
+<table>
+  <tr><th>項目</th><th>規則</th></tr>
+  <tr><td>本薪</td><td>固定 <span class="money">29,900</span>（含 65 台），就算做不到 65 台也領全額</td></tr>
+  <tr><td>台數獎金</td><td>從第 66 台開始，每台加 <span class="money">520</span></td></tr>
+  <tr><td>機型獎金</td><td>做到特定機型每台另外加，例如滾筒 <span class="money">760</span>、吊隱式 <span class="money">340</span>（金額您可以自己改，見下面第二段）</td></tr>
+  <tr><td>未拆解</td><td>沒拆開洗的機器每台加 <span class="money">100</span>（師傅在手機上自己勾）</td></tr>
+  <tr><td>全勤</td><td>當月完全沒有請假紀錄，加 <span class="money">2,000</span></td></tr>
+  <tr><td>伙食</td><td>固定 <span class="money">1,200</span>，再加「有出班的天數 × 50」</td></tr>
+  <tr><td>行銷獎金</td><td>客人打卡積分超過 30 分之後，每多 1 分加 <span class="money">10</span></td></tr>
+  <tr><td>維修獎金、執行獎金、其他加減</td><td>系統不會自動算，由您每個月手動填（見下面第三段）</td></tr>
+</table>
+<p>台數的算法：派給該師傅的每一台機器算一台。標了「不服務」的機器、取消的訂單，都不算台數也不算獎金。</p>
+
+<h2>二、開始用之前，請先做這兩件事（只要做一次）</h2>
+<ol>
+  <li>
+    <span class="step">把每個機型的獎金金額填齊。</span><br>
+    到「設定 → 服務項目」，每個項目右邊有一欄「每台獎金」。
+    目前只有滾筒（760）和吊隱式（340）已經填好，
+    其他像加大冷氣（100）、躍動式（140）這些，請您點鉛筆把金額填進去。
+    <div class="warn"><strong>注意：</strong>沒填的項目，師傅做了也不會有機型獎金（等於 0 元）。</div>
+  </li>
+  <li>
+    <span class="step">補這個月已經做完的「未拆解」。</span><br>
+    「未拆解」的勾選功能是這個月中才加上的，之前做完的案件師傅都沒勾到。
+    這個月已經完工的案件如果有沒拆解的機器，請到該師傅的薪資頁最下面，
+    用「本月獎勵」手動補，一台補 100，原因寫「補未拆解」即可。下個月開始就不用了。
+  </li>
+</ol>
+
+<h2>三、每個月要做的事</h2>
+<ol>
+  <li>
+    <span class="step">師傅有請假就要登記。</span><br>
+    在排班月曆上登記休假。系統是看「這個月有沒有請假紀錄」來決定全勤 2,000 要不要發。
+    口頭請假沒登記，系統會以為他全勤，就會多發 2,000。
+  </li>
+  <li>
+    <span class="step">月底核對「出班天數」。</span><br>
+    伙食的「天數 × 50」是用「這個月有派案的日子」來算的。
+    如果師傅有來上班但那天剛好沒派到案，系統會少算那天的 50。
+    每個師傅的薪資頁上看得到天數，覺得不對就用「本月獎勵」補差額。
+  </li>
+  <li>
+    <span class="step">填手動的獎金和扣款。</span><br>
+    維修獎金、執行獎金（師傅拍照回傳、您認可的，一次 500）、
+    保險自付額之類的扣款，都在師傅薪資頁最下面手動加，每筆要寫原因。
+  </li>
+  <li>
+    <span class="step">確定沒問題後，按「結算本月」。</span><br>
+    按下去這個月的薪水就定案了，之後改任何設定都不會影響已經結算的月份。
+    沒按結算的月份，金額會一直跟著最新設定變動，所以發薪前一定要按。
+  </li>
+</ol>
+
+<h2>四、要交代師傅的一件事</h2>
+<p>現場遇到<strong>沒辦法拆開洗</strong>的機器，要在手機的案件頁面、那台機器上勾「<strong>未拆解</strong>」。
+這個勾關係到他自己每台 100 的獎金，而且<strong>案件完成之後就不能再勾了</strong>，請師傅養成做完當下就勾的習慣。</p>
+
+<h2>五、常見問題</h2>
+<table>
+  <tr><th>問題</th><th>原因和處理</th></tr>
+  <tr>
+    <td>這台機器怎麼沒有機型獎金？</td>
+    <td>多半是「設定 → 服務項目」裡那個項目的「每台獎金」還是 0，填上金額就好（只影響還沒結算的月份）。</td>
+  </tr>
+  <tr>
+    <td>師傅忘了勾未拆解，案件已完成補不了</td>
+    <td>到他的薪資頁用「本月獎勵」補 100，原因寫「補未拆解」。</td>
+  </tr>
+  <tr>
+    <td>全勤怎麼沒發？</td>
+    <td>那個月有休假紀錄就不會發。如果是登記錯了，把休假紀錄刪掉就會自動恢復。</td>
+  </tr>
+  <tr>
+    <td>想調整本薪、台數獎金這些金額</td>
+    <td>到「設定 → 薪資設定」改，改完只影響還沒結算的月份。</td>
+  </tr>
+  <tr>
+    <td>想留底或印出來</td>
+    <td>薪資頁右上角可以匯出 Excel，裡面有每位師傅的總表和每天的台數明細。</td>
+  </tr>
+</table>
+
+<div class="warn">
+<strong>第一個月建議：</strong>正式發薪前，挑一兩位師傅，把系統算的金額和您自己手算的對一次。
+數字都對得上，之後就可以放心交給系統。有對不上的地方，請聯絡仁格數位（張先生 0976-858-794）。
+</div>
+
+</body>
+</html>
