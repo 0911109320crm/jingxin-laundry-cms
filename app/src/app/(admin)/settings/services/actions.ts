@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/dal";
+import { requireWriteRole } from "@/lib/dal";
 
 const ServiceSchema = z.object({
   code: z
@@ -17,14 +17,14 @@ const ServiceSchema = z.object({
   sort_order: z.coerce.number().int().default(0),
   active: z.coerce.boolean().default(true),
   is_basic_choice: z.coerce.boolean().default(false),
-  commission_type: z.enum(["default", "percent", "amount"]).default("default"),
-  commission_value: z.coerce.number().min(0, "抽成數值不可為負").default(0),
+  // 算台數薪資：師傅做這個品項每台的技術獎金（滾筒 760、吊隱式 340…）
+  unit_bonus: z.coerce.number().min(0, "每台獎金不可為負").default(0),
 });
 
 export type Res = { ok: true } | { ok: false; error: string };
 
 export async function createService(fd: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = ServiceSchema.safeParse({
     code: fd.get("code"),
     name: fd.get("name"),
@@ -33,8 +33,7 @@ export async function createService(fd: FormData): Promise<Res> {
     sort_order: fd.get("sort_order") ?? 0,
     active: fd.get("active") === "on",
     is_basic_choice: fd.get("is_basic_choice") === "on",
-    commission_type: fd.get("commission_type") ?? "default",
-    commission_value: fd.get("commission_value") ?? 0,
+    unit_bonus: fd.get("unit_bonus") ?? 0,
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const supabase = await createClient();
@@ -45,7 +44,7 @@ export async function createService(fd: FormData): Promise<Res> {
 }
 
 export async function updateService(id: string, fd: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = ServiceSchema.safeParse({
     code: fd.get("code"),
     name: fd.get("name"),
@@ -54,8 +53,7 @@ export async function updateService(id: string, fd: FormData): Promise<Res> {
     sort_order: fd.get("sort_order") ?? 0,
     active: fd.get("active") === "on",
     is_basic_choice: fd.get("is_basic_choice") === "on",
-    commission_type: fd.get("commission_type") ?? "default",
-    commission_value: fd.get("commission_value") ?? 0,
+    unit_bonus: fd.get("unit_bonus") ?? 0,
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const supabase = await createClient();
@@ -69,7 +67,7 @@ export async function updateService(id: string, fd: FormData): Promise<Res> {
 }
 
 export async function deleteService(id: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase.from("service_items").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };

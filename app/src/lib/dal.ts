@@ -44,3 +44,14 @@ export async function requireRole(roles: UserRole[]): Promise<AuthedUser> {
   if (!roles.includes(user.profile.role)) redirect("/unauthorized");
   return user;
 }
+
+/**
+ * 寫入型 server action 專用：requireRole + 擋 readonly 帳號（查帳用唯讀 manager）。
+ * 很多寫入 action 用 admin client 繞 RLS，唯讀只擋頁面 UI 不夠，
+ * readonly 帳號直接對 action 發 POST 仍可寫入。頁面載入(讀)請繼續用 requireRole。
+ */
+export async function requireWriteRole(roles: UserRole[]): Promise<AuthedUser> {
+  const user = await requireRole(roles);
+  if (user.profile.readonly) redirect("/unauthorized");
+  return user;
+}

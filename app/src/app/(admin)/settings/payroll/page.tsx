@@ -3,7 +3,23 @@ import { Wallet, Info } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/dal";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
-import { DefaultCommissionForm } from "./DefaultCommissionForm";
+import {
+  PayrollConstantsForm,
+  type PayrollConstantsProps,
+} from "./PayrollConstantsForm";
+
+// 與 lib/payroll.ts 的 DEFAULT_CONSTANTS 一致（DB 沒設定時的 fallback）
+const DEFAULTS: PayrollConstantsProps = {
+  base_salary: 29900,
+  base_units: 65,
+  overage_unit_rate: 520,
+  undismantled_bonus: 100,
+  full_attendance_bonus: 2000,
+  meal_base: 1200,
+  meal_per_day: 50,
+  marketing_threshold: 30,
+  marketing_per_point: 10,
+};
 
 export default async function PayrollSettingsPage() {
   await requireRole(["owner"]);
@@ -11,27 +27,18 @@ export default async function PayrollSettingsPage() {
 
   const { data } = await supabase
     .from("system_settings")
-    .select("key, value")
-    .in("key", [
-      "default_commission_type",
-      "default_commission_value",
-      "payroll_kpi_disclaimer",
-    ]);
+    .select("value")
+    .eq("key", "payroll_v2")
+    .maybeSingle();
 
-  const map = new Map(
-    ((data as { key: string; value: unknown }[] | null) ?? []).map((r) => [
-      r.key,
-      r.value,
-    ]),
-  );
-
-  const defaultType =
-    (map.get("default_commission_type") as "percent" | "amount" | undefined) ??
-    "percent";
-  const defaultValue = Number(map.get("default_commission_value") ?? 60);
-  const formula =
-    (map.get("payroll_kpi_disclaimer") as string | undefined) ??
-    "薪資 = Σ(每件抽成) + Σ(進薪資的加價) − Σ(進薪資的折扣) + Σ(本月獎勵) − Σ(本月扣款)";
+  const raw = (data as { value: Partial<PayrollConstantsProps> } | null)?.value;
+  const constants: PayrollConstantsProps = { ...DEFAULTS };
+  if (raw && typeof raw === "object") {
+    for (const k of Object.keys(DEFAULTS) as (keyof PayrollConstantsProps)[]) {
+      const v = Number(raw[k]);
+      if (Number.isFinite(v)) constants[k] = v;
+    }
+  }
 
   return (
     <div className="p-6 space-y-4">
@@ -41,7 +48,7 @@ export default async function PayrollSettingsPage() {
           薪資設定
         </h1>
         <p className="text-sm text-zinc-500">
-          全店預設抽成方式與薪資計算公式說明。個別服務項目的抽成在
+          算台數薪資的全店常數。各品項的「每台技術獎金」在
           <Link
             href="/settings/services"
             className="text-brand-600 hover:underline"
@@ -54,21 +61,10 @@ export default async function PayrollSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>預設抽成（fallback）</CardTitle>
+          <CardTitle>薪資常數</CardTitle>
         </CardHeader>
-        <CardBody className="space-y-3">
-          <p className="text-sm text-zinc-600">
-            服務項目沒設定抽成（或設為「預設」）時，套用以下數值：
-          </p>
-          <DefaultCommissionForm
-            defaultType={defaultType}
-            defaultValue={defaultValue}
-          />
-          <div className="rounded-lg bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
-            <strong>百分比範例：</strong>「60%」表示服務金額的 60% 給師傅，店家收 40%。
-            <br />
-            <strong>固定金額範例：</strong>「500」表示不管該服務多少錢，師傅一件抽 NT$ 500。
-          </div>
+        <CardBody>
+          <PayrollConstantsForm constants={constants} />
         </CardBody>
       </Card>
 
@@ -81,24 +77,34 @@ export default async function PayrollSettingsPage() {
         </CardHeader>
         <CardBody className="space-y-3">
           <pre className="overflow-x-auto rounded-lg bg-zinc-900 px-4 py-3 text-xs text-emerald-300">
-            {formula}
+{`應發 = 本薪
+     + 台數獎金（超過基本台數的台數 × 超額每台獎金）
+     + 技術獎金（每台機型加給合計 + 未拆解台數 × 未拆解加給）
+     + 全勤獎金（當月無休假登記才有）
+     + 伙食津貼（固定 + 出勤日 × 日額）
+     + 行銷獎金（超過門檻的積分 × 每分獎金）
+     + 維修 / 執行 / 浮動（本月獎勵 − 本月扣款，手動填）`}
           </pre>
           <ul className="space-y-1.5 text-sm text-zinc-600">
             <li>
-              <strong>每件抽成</strong>：每筆訂單明細按該服務項目的抽成設定計算（沒設就套用上面的預設值）
+              <strong>台數</strong>：當月派給該師傅的機器台數（一台機器一筆），
+              標記「不服務」與已取消的訂單不算。
             </li>
             <li>
-              <strong>進薪資的加價 / 折扣</strong>：在「
+              <strong>機型加給</strong>：依師傅實際選的品項，套用「
               <Link
-                href="/settings/adjustments"
+                href="/settings/services"
                 className="text-brand-600 hover:underline"
               >
-                折扣 / 加價項目
+                服務項目
               </Link>
-              」勾選「進薪資」的項目才算進去。例如「加大費」勾、「節慶折扣」不勾。
+              」的每台獎金（例：滾筒 760、吊隱式 340）。
             </li>
             <li>
-              <strong>本月獎勵 / 扣款</strong>：師傅薪資詳細頁底部可手動加，每筆要填原因
+              <strong>出勤日</strong>：當月有派案的日數（自動推算）。
+            </li>
+            <li>
+              <strong>維修 / 執行 / 浮動</strong>：師傅薪資詳細頁底部手動加，每筆要填原因。
             </li>
           </ul>
         </CardBody>
@@ -116,11 +122,9 @@ export default async function PayrollSettingsPage() {
             月底在師傅薪資頁按「<strong>結算本月</strong>」會把當月計算結果 snapshot 起來。
           </p>
           <p>
-            已結算的月份：之後改抽成設定<strong>不會回頭影響</strong>歷史薪資。
+            已結算的月份：之後改薪資常數<strong>不會回頭影響</strong>歷史薪資。
           </p>
-          <p>
-            未結算的月份：永遠用最新設定即時計算。
-          </p>
+          <p>未結算的月份：永遠用最新設定即時計算。</p>
         </CardBody>
       </Card>
     </div>

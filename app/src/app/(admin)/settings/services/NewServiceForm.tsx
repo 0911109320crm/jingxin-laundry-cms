@@ -28,7 +28,7 @@ export function NewServiceForm({
     <form
       ref={formRef}
       action={onSubmit}
-      className="grid grid-cols-1 md:grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] md:items-center gap-2"
+      className="grid grid-cols-1 md:grid-cols-[100px_1fr_90px_120px_110px_56px_70px_60px_auto] md:items-center gap-2"
     >
       <Input name="code" placeholder="代碼" required />
       <Input name="name" placeholder="名稱" required />
@@ -46,21 +46,15 @@ export function NewServiceForm({
           </option>
         ))}
       </Select>
-      <div className="flex gap-1">
-        <Select name="commission_type" defaultValue="default" className="w-24">
-          <option value="default">預設</option>
-          <option value="percent">%</option>
-          <option value="amount">$</option>
-        </Select>
-        <Input
-          name="commission_value"
-          type="number"
-          min={0}
-          step="any"
-          defaultValue={0}
-          className="w-16"
-        />
-      </div>
+      <Input
+        name="unit_bonus"
+        type="number"
+        min={0}
+        step="any"
+        defaultValue={0}
+        placeholder="每台獎金"
+        title="師傅做這個品項每台的技術獎金"
+      />
       <Input
         name="sort_order"
         type="number"

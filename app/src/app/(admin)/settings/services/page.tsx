@@ -22,7 +22,7 @@ export default async function ServicesSettingsPage({
   let q = supabase
     .from("service_items")
     .select(
-      "id, code, name, default_price, category, sort_order, active, commission_type, commission_value, is_basic_choice",
+      "id, code, name, default_price, category, sort_order, active, unit_bonus, is_basic_choice",
     )
     .order("sort_order");
   if (activeCategory) q = q.eq("category", activeCategory);
@@ -51,6 +51,10 @@ export default async function ServicesSettingsPage({
         <p className="mt-1 text-xs text-amber-700">
           ⭐ 勾選「建單基本」表示老闆娘建單頁會看到此項（每個機型大類至少勾 1 項）。
           其他細項仍會出現在師傅 PWA 換實際品項的清單裡。
+        </p>
+        <p className="mt-1 text-xs text-emerald-700">
+          「每台獎金」是師傅做這個品項一台的技術獎金（例：滾筒 760、吊隱式 340），
+          直接算進薪資，填 0 表示無加給。
         </p>
       </header>
 
@@ -103,12 +107,12 @@ export default async function ServicesSettingsPage({
           <CardTitle>項目清單（{items.length}）</CardTitle>
         </CardHeader>
         <CardBody className="p-0">
-          <div className="hidden md:grid md:grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] gap-2 border-b border-zinc-200 bg-zinc-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <div className="hidden md:grid md:grid-cols-[100px_1fr_90px_120px_110px_56px_70px_60px_auto] gap-2 border-b border-zinc-200 bg-zinc-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
             <div>代碼</div>
             <div>名稱</div>
             <div>預設價</div>
             <div>分類</div>
-            <div>抽成</div>
+            <div>每台獎金</div>
             <div>排序</div>
             <div>建單基本</div>
             <div>狀態</div>

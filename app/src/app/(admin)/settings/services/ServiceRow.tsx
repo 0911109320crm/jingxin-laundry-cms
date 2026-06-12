@@ -8,11 +8,8 @@ import {
 } from "@/app/(admin)/settings/services/actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { formatNTD } from "@/lib/utils";
 import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABEL } from "./categories";
-
-export type CommissionType = "default" | "percent" | "amount";
 
 export type Service = {
   id: string;
@@ -22,36 +19,10 @@ export type Service = {
   category: string | null;
   sort_order: number;
   active: boolean;
-  commission_type: CommissionType;
-  commission_value: number;
+  /** 算台數薪資：師傅做這個品項每台的技術獎金 */
+  unit_bonus: number;
   is_basic_choice: boolean;
 };
-
-function CommissionDisplay({
-  type,
-  value,
-}: {
-  type: CommissionType;
-  value: number;
-}) {
-  if (type === "default") {
-    return (
-      <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-500">
-        套用預設
-      </span>
-    );
-  }
-  if (type === "percent") {
-    return (
-      <span className="font-mono text-sm text-emerald-700">{value}%</span>
-    );
-  }
-  return (
-    <span className="font-mono text-sm text-emerald-700">
-      {formatNTD(value)} / 件
-    </span>
-  );
-}
 
 export function ServiceRow({ service }: { service: Service }) {
   const [editing, setEditing] = useState(false);
@@ -77,7 +48,7 @@ export function ServiceRow({ service }: { service: Service }) {
     return (
       <form
         action={onSave}
-        className={"grid grid-cols-1 md:grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] md:items-center gap-2 px-5 py-3"}
+        className={"grid grid-cols-1 md:grid-cols-[100px_1fr_90px_120px_110px_56px_70px_60px_auto] md:items-center gap-2 px-5 py-3"}
       >
         <Input name="code" defaultValue={service.code} required />
         <Input name="name" defaultValue={service.name} required />
@@ -98,25 +69,14 @@ export function ServiceRow({ service }: { service: Service }) {
             </option>
           ))}
         </select>
-        <div className="flex gap-1">
-          <Select
-            name="commission_type"
-            defaultValue={service.commission_type}
-            className="w-24"
-          >
-            <option value="default">預設</option>
-            <option value="percent">%</option>
-            <option value="amount">$</option>
-          </Select>
-          <Input
-            name="commission_value"
-            type="number"
-            min={0}
-            step="any"
-            defaultValue={service.commission_value}
-            className="w-16"
-          />
-        </div>
+        <Input
+          name="unit_bonus"
+          type="number"
+          min={0}
+          step="any"
+          defaultValue={Number(service.unit_bonus)}
+          title="師傅做這個品項每台的技術獎金"
+        />
         <Input
           name="sort_order"
           type="number"
@@ -157,7 +117,7 @@ export function ServiceRow({ service }: { service: Service }) {
 
   return (
     <div
-      className="grid grid-cols-1 md:grid-cols-[100px_1fr_90px_120px_160px_56px_70px_60px_auto] md:items-center gap-2 px-5 py-3 text-sm"
+      className="grid grid-cols-1 md:grid-cols-[100px_1fr_90px_120px_110px_56px_70px_60px_auto] md:items-center gap-2 px-5 py-3 text-sm"
     >
       <code className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-mono">
         {service.code}
@@ -169,10 +129,13 @@ export function ServiceRow({ service }: { service: Service }) {
           ? SERVICE_CATEGORY_LABEL[service.category] ?? service.category
           : "—"}
       </div>
-      <CommissionDisplay
-        type={service.commission_type}
-        value={Number(service.commission_value)}
-      />
+      {Number(service.unit_bonus) > 0 ? (
+        <span className="font-mono text-sm text-emerald-700">
+          +{formatNTD(Number(service.unit_bonus))} /台
+        </span>
+      ) : (
+        <span className="text-zinc-300">—</span>
+      )}
       <div className="text-zinc-400 text-xs">#{service.sort_order}</div>
       <div className="text-center">
         {service.is_basic_choice ? (

@@ -17,6 +17,7 @@ import { OrderWorkflow } from "./OrderWorkflow";
 import { MachineEditor } from "./MachineEditor";
 import { ServiceItemSwapper } from "./ServiceItemSwapper";
 import { ExcludeToggle } from "./ExcludeToggle";
+import { UndismantledToggle } from "./UndismantledToggle";
 
 type Detail = {
   id: string;
@@ -45,6 +46,7 @@ type Detail = {
     id: string;
     item_code: string | null;
     excluded: boolean;
+    undismantled: boolean;
     confirmed: boolean;
     service_item_id: string;
     quantity: number;
@@ -113,9 +115,7 @@ export default async function StaffOrderPage({
   // 唯讀只做在前端（不出按鈕）：對受信任的 owner/manager 是「防誤按」而非「防弊」，
   // 後端 action 維持 owner/manager 兜底全權不削弱（老闆娘代收款/修單仍要能用）。
   const canPreview =
-    me.profile.role === "owner" ||
-    me.profile.role === "manager" ||
-    Boolean(me.profile.can_view_all);
+    me.profile.role === "owner" || me.profile.role === "manager";
   const asId =
     typeof sp.as === "string" && UUID_RE.test(sp.as) ? sp.as : null;
   const previewing = !!asId && canPreview && asId !== me.id;
@@ -135,7 +135,7 @@ export default async function StaffOrderPage({
        customer:customers(name, phone,
                           phones:customer_phones(id, phone, label, is_primary)),
        address:customer_addresses(county, district, address),
-       items:order_items(id, item_code, excluded, confirmed, service_item_id, quantity, unit_price, subtotal, tag, note,
+       items:order_items(id, item_code, excluded, undismantled, confirmed, service_item_id, quantity, unit_price, subtotal, tag, note,
                          technician_id,
                          service:service_items(code, name, category),
                          machine:machines(id, type, brand, model, code)),
@@ -385,7 +385,12 @@ export default async function StaffOrderPage({
                     預覽模式：隱藏不服務/換品項，機器資訊仍顯示但唯讀。 */}
                 {o.status !== "done" && !previewing && (
                   <>
-                    <div className="flex justify-end">
+                    <div className="flex items-center justify-between gap-2">
+                      <UndismantledToggle
+                        orderId={o.id}
+                        orderItemId={it.id}
+                        undismantled={it.undismantled}
+                      />
                       <ExcludeToggle
                         orderId={o.id}
                         orderItemId={it.id}
