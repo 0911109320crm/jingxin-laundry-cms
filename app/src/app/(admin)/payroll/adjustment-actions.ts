@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireRole, getCurrentUser } from "@/lib/dal";
+import { requireWriteRole, getCurrentUser } from "@/lib/dal";
 
 const AddSchema = z.object({
   technician_id: z.string().uuid(),
@@ -17,7 +17,7 @@ const AddSchema = z.object({
 export type Res = { ok: true } | { ok: false; error: string };
 
 export async function addPayrollAdjustment(fd: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const me = await getCurrentUser();
   if (!me) return { ok: false, error: "未登入" };
 
@@ -63,7 +63,7 @@ export async function addPayrollAdjustment(fd: FormData): Promise<Res> {
 }
 
 export async function deletePayrollAdjustment(id: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
 
   // 找出歸屬 technician + month 後檢查 snapshot
   const admin = createAdminClient();

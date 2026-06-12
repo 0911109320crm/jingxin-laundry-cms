@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/dal";
+import { requireWriteRole } from "@/lib/dal";
 
 const PromoSchema = z.object({
   code: z
@@ -20,7 +20,7 @@ const PromoSchema = z.object({
 export type Res = { ok: true } | { ok: false; error: string };
 
 export async function createPromotionType(formData: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = PromoSchema.safeParse({
     code: formData.get("code"),
     label: formData.get("label"),
@@ -40,7 +40,7 @@ export async function updatePromotionType(
   id: string,
   formData: FormData,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = PromoSchema.partial({ code: true }).safeParse({
     label: formData.get("label"),
     points: formData.get("points") ?? 1,
@@ -59,7 +59,7 @@ export async function updatePromotionType(
 }
 
 export async function deletePromotionType(id: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase.from("promotion_types").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
@@ -72,7 +72,7 @@ const KpiSchema = z.object({
 });
 
 export async function updateKpi(formData: FormData): Promise<Res> {
-  await requireRole(["owner"]);
+  await requireWriteRole(["owner"]);
   const parsed = KpiSchema.safeParse({ value: formData.get("value") });
   if (!parsed.success) return { ok: false, error: "KPI 必須是 0-99 之間整數" };
 

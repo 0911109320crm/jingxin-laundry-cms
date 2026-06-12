@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/dal";
+import { requireWriteRole } from "@/lib/dal";
 
 const BrandSchema = z.object({
   // 與 categories.ts 的 5 個分類一致（之前漏了 washing_twin_tub → 雙槽式分頁新增會失敗）
@@ -21,7 +21,7 @@ const BrandSchema = z.object({
 export type Res = { ok: true } | { ok: false; error: string };
 
 export async function createBrand(formData: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = BrandSchema.safeParse({
     category: formData.get("category"),
     name: formData.get("name"),
@@ -50,7 +50,7 @@ export async function createBrand(formData: FormData): Promise<Res> {
 }
 
 export async function updateBrand(id: string, formData: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   // 只改名稱與啟停；sort_order 不在 UI 上，保留原值不覆寫。
   const parsed = z
     .object({
@@ -78,7 +78,7 @@ export async function updateBrand(id: string, formData: FormData): Promise<Res> 
  * 再重新編號 sort_order=10,20,30…；「(未知)」維持 99990 墊底。
  */
 export async function reorderBrand(id: string, newPos: number): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   if (!Number.isFinite(newPos)) return { ok: false, error: "順序須為數字" };
   const supabase = await createClient();
 
@@ -120,7 +120,7 @@ export async function reorderBrand(id: string, newPos: number): Promise<Res> {
 }
 
 export async function deleteBrand(id: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase.from("machine_brands").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };

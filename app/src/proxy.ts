@@ -2,6 +2,21 @@ import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 /**
+ * 全站 security headers。
+ * X-Frame-Options 用 SAMEORIGIN 不用 DENY：/demo/pwa 以同源 iframe 嵌 /staff?embed=1。
+ */
+function withSecurityHeaders<T extends NextResponse>(res: T): T {
+  res.headers.set("X-Frame-Options", "SAMEORIGIN");
+  res.headers.set("X-Content-Type-Options", "nosniff");
+  res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.headers.set(
+    "Strict-Transport-Security",
+    "max-age=63072000; includeSubDomains",
+  );
+  return res;
+}
+
+/**
  * Next.js 16 proxy (was middleware.ts).
  * - Refreshes Supabase session cookies on every request.
  * - Redirects unauthenticated users away from protected routes.
@@ -19,13 +34,13 @@ export async function proxy(request: NextRequest) {
     pathname === "/favicon.ico" ||
     pathname === "/manifest.webmanifest";
 
-  if (isPublic) return response;
+  if (isPublic) return withSecurityHeaders(response);
 
   if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     if (pathname !== "/") url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    return withSecurityHeaders(NextResponse.redirect(url));
   }
 
   // 查帳唯讀帳號（app_metadata.readonly）：只能瀏覽 /customers 與 /orders 的「檢視」頁，
@@ -46,11 +61,11 @@ export async function proxy(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/customers";
       url.search = "";
-      return NextResponse.redirect(url);
+      return withSecurityHeaders(NextResponse.redirect(url));
     }
   }
 
-  return response;
+  return withSecurityHeaders(response);
 }
 
 export const config = {

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole, getCurrentUser } from "@/lib/dal";
+import { requireRole, requireWriteRole, getCurrentUser } from "@/lib/dal";
 import { OrderSchema, type OrderInput } from "@/lib/validators/order";
 import { logAudit } from "@/lib/audit";
 
@@ -11,7 +11,7 @@ export type Res = { ok: true; id?: string } | { ok: false; error: string };
 
 /** Fetch a customer's addresses and machines for the order form. */
 export async function getCustomerContext(customerId: string) {
-  await requireRole(["owner", "manager"]);
+  await requireRole(["owner", "manager"]); // 純讀取，readonly 查帳帳號可用
   const supabase = await createClient();
   const [{ data: addresses }, { data: machines }, { data: customer }] =
     await Promise.all([
@@ -61,7 +61,7 @@ export async function getCustomerContext(customerId: string) {
  * overwritten next time the order is dragged back onto the calendar.
  */
 export async function unscheduleOrderAction(orderId: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase
     .from("orders")
@@ -84,7 +84,7 @@ export async function cancelOrderAction(
   orderId: string,
   reason: string,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const trimmed = reason.trim();
   if (!trimmed) return { ok: false, error: "請填取消原因" };
 
@@ -112,7 +112,7 @@ export async function cancelOrderAction(
 
 /** Preview the next order code for a given date (for display in the form). */
 export async function previewOrderCodeAction(dateStr?: string): Promise<string> {
-  await requireRole(["owner", "manager"]);
+  await requireRole(["owner", "manager"]); // 純讀取（預覽編號），readonly 查帳帳號可用
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("generate_order_code", dateStr ? { p_date: dateStr } : {});
   if (error || !data) {
@@ -135,7 +135,7 @@ async function nextOrderCode(supabase: Awaited<ReturnType<typeof createClient>>)
 }
 
 export async function createOrderAction(input: OrderInput): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = OrderSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "資料錯誤" };
@@ -242,7 +242,7 @@ export async function updateOrderAction(
   id: string,
   input: OrderInput,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = OrderSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "資料錯誤" };
@@ -267,50 +267,29 @@ export async function updateOrderAction(
     .eq("id", id);
   if (upErr) return { ok: false, error: upErr.message };
 
-  // Replace-all items and adjustments
-  await supabase.from("order_items").delete().eq("order_id", id);
-  let insertedItemIds: string[] = [];
-  if (data.items.length > 0) {
-    const { data: insertedItems, error } = await supabase
-      .from("order_items")
-      .insert(
-        data.items.map((it) => ({
-          order_id: id,
-          machine_id: it.machine_id ?? null,
-          service_item_id: it.service_item_id,
-          technician_id: it.technician_id ?? null,
-          quantity: it.quantity,
-          unit_price: it.unit_price,
-          subtotal: it.quantity * it.unit_price,
-          tag: it.tag ?? null,
-          note: it.note ?? null,
-        })),
-      )
-      .select("id");
-    if (error) return { ok: false, error: `明細寫入失敗：${error.message}` };
-    insertedItemIds = ((insertedItems as { id: string }[] | null) ?? []).map(
-      (r) => r.id,
-    );
-  }
-
-  await supabase.from("order_adjustments").delete().eq("order_id", id);
-  if (data.adjustments.length > 0) {
-    const { error } = await supabase.from("order_adjustments").insert(
-      data.adjustments.map((a) => ({
-        order_id: id,
-        adjustment_item_id: a.adjustment_item_id ?? null,
-        order_item_id:
-          a.order_item_index != null
-            ? insertedItemIds[a.order_item_index] ?? null
-            : null,
-        name_snapshot: a.name_snapshot,
-        type: a.type,
-        amount: a.amount,
-        note: a.note ?? null,
-      })),
-    );
-    if (error) return { ok: false, error: `加減項寫入失敗：${error.message}` };
-  }
+  // Replace-all items and adjustments：包在 DB function 的單一交易裡（migration 0043），
+  // 任一步失敗整包 rollback，不會留下「品項已刪、新品項沒進去、total 歸 0」的半套狀態。
+  const { error: rpcErr } = await supabase.rpc("replace_order_lines", {
+    p_order_id: id,
+    p_items: data.items.map((it) => ({
+      machine_id: it.machine_id ?? null,
+      service_item_id: it.service_item_id,
+      technician_id: it.technician_id ?? null,
+      quantity: it.quantity,
+      unit_price: it.unit_price,
+      tag: it.tag ?? null,
+      note: it.note ?? null,
+    })),
+    p_adjustments: data.adjustments.map((a) => ({
+      adjustment_item_id: a.adjustment_item_id ?? null,
+      order_item_index: a.order_item_index ?? null,
+      name_snapshot: a.name_snapshot,
+      type: a.type,
+      amount: a.amount,
+      note: a.note ?? null,
+    })),
+  });
+  if (rpcErr) return { ok: false, error: `明細寫入失敗：${rpcErr.message}` };
 
   revalidatePath("/orders");
   revalidatePath(`/orders/${id}`);
@@ -319,7 +298,7 @@ export async function updateOrderAction(
 }
 
 export async function deleteOrderAction(id: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase.from("orders").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
@@ -342,7 +321,7 @@ export async function quickScheduleAction(input: {
   endIso: string;
   technicianId?: string | null;
 }): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
 
   const { error: oErr } = await supabase
@@ -375,7 +354,7 @@ export async function rescheduleOrderAction(
   startIso: string,
   endIso?: string,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const payload: Record<string, string | null> = { scheduled_at: startIso };
   if (endIso !== undefined) payload.scheduled_end_at = endIso;
@@ -403,7 +382,7 @@ export async function setPaymentMethodAction(
   method: "unpaid" | "cash" | "transfer" | "card" | "line_pay",
   transferLast5?: string,
 ): Promise<Res> {
-  const me = await requireRole(["owner", "manager", "technician"]);
+  const me = await requireWriteRole(["owner", "manager", "technician"]);
   // 轉帳後五碼：有填就必須是 5 位數字（含前導 0）；留空＝客戶稍後才轉
   const cleanLast5 =
     method === "transfer" && transferLast5 && /^\d{5}$/.test(transferLast5)
@@ -448,12 +427,15 @@ export async function setPaymentMethodAction(
         };
       }
     }
+    // settlement_status 一併拉回 pending：若已回繳(settled)後才發現收錯、改回未收款，
+    // 不重置的話再次收款會停在 settled，這筆現金就從待回繳清單漏掉。
     const { error } = await admin
       .from("orders")
       .update({
         payment_method: "unpaid",
         collected_by_technician_id: null,
         transfer_last5: null,
+        settlement_status: "pending",
       })
       .eq("id", orderId);
     if (error) return { ok: false, error: error.message };
@@ -503,7 +485,7 @@ export async function setPaymentMethodAction(
  * 當整單所有未排除品項都 confirmed，收款鈕才會在最後確認的師傅面前出現。
  */
 export async function confirmMyItemsAction(orderId: string): Promise<Res> {
-  const me = await requireRole(["owner", "manager", "technician"]);
+  const me = await requireWriteRole(["owner", "manager", "technician"]);
   if (me.profile.role === "technician") {
     const owns = await technicianOwnsOrder(orderId, me.id);
     if (!owns) return { ok: false, error: "不是你的訂單" };
@@ -532,7 +514,7 @@ export async function confirmMyItemsAction(orderId: string): Promise<Res> {
  * 已收款的單不可解除——請先「改回未收款」。
  */
 export async function unconfirmMyItemsAction(orderId: string): Promise<Res> {
-  const me = await requireRole(["owner", "manager", "technician"]);
+  const me = await requireWriteRole(["owner", "manager", "technician"]);
   if (me.profile.role === "technician") {
     const owns = await technicianOwnsOrder(orderId, me.id);
     if (!owns) return { ok: false, error: "不是你的訂單" };
@@ -568,7 +550,7 @@ export async function unconfirmMyItemsAction(orderId: string): Promise<Res> {
  * 用於師傅做完忘了在手機確認就離開、導致最後收款師傅卡住收不了款的情況。
  */
 export async function confirmAllItemsAction(orderId: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
   const { error } = await admin
@@ -594,7 +576,7 @@ export async function completeOrderAction(
   orderId: string,
   extra?: { service_tags?: string[]; service_notes?: string | null },
 ): Promise<Res> {
-  const me = await requireRole(["owner", "manager", "technician"]);
+  const me = await requireWriteRole(["owner", "manager", "technician"]);
   if (me.profile.role === "technician") {
     const owns = await technicianOwnsOrder(orderId, me.id);
     if (!owns) return { ok: false, error: "不是你的訂單" };
@@ -632,7 +614,7 @@ export async function updateServiceNotesAction(
   orderId: string,
   patch: { service_tags: string[]; service_notes: string | null },
 ): Promise<Res> {
-  const me = await requireRole(["owner", "manager", "technician"]);
+  const me = await requireWriteRole(["owner", "manager", "technician"]);
   if (me.profile.role === "technician") {
     const owns = await technicianOwnsOrder(orderId, me.id);
     if (!owns) return { ok: false, error: "不是你的訂單" };
@@ -665,7 +647,7 @@ export async function addOrderPromotionAction(
   promotionTypeId: string,
   creditedTo: string | null,
 ): Promise<Res & { realId?: string }> {
-  const me = await requireRole(["owner", "manager", "technician"]);
+  const me = await requireWriteRole(["owner", "manager", "technician"]);
   const supabase = await createClient();
 
   // 取目前分值
@@ -726,7 +708,7 @@ export async function addOrderPromotionAction(
 export async function removeOrderPromotionAction(
   orderPromotionId: string,
 ): Promise<Res> {
-  await requireRole(["owner", "manager", "technician"]);
+  await requireWriteRole(["owner", "manager", "technician"]);
   const supabase = await createClient();
   // 取 order_id 給 revalidate
   const { data: row } = await supabase
@@ -760,7 +742,7 @@ export async function updateOrderPromotionCreditAction(
   orderPromotionId: string,
   creditedTo: string,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   if (!creditedTo) return { ok: false, error: "請選擇師傅" };
   const supabase = await createClient();
   const { data: row, error } = await supabase
@@ -795,7 +777,7 @@ export async function addOrderAdjustmentAction(
     order_item_id?: string | null;
   },
 ): Promise<Res & { realId?: string }> {
-  const me = await requireRole(["owner", "manager", "technician"]);
+  const me = await requireWriteRole(["owner", "manager", "technician"]);
   if (me.profile.role === "technician") {
     const owns = await technicianOwnsOrder(orderId, me.id);
     if (!owns) return { ok: false, error: "不是你的訂單" };
@@ -829,7 +811,7 @@ export async function removeOrderAdjustmentAction(
   adjustmentId: string,
   orderId: string,
 ): Promise<Res> {
-  const me = await requireRole(["owner", "manager", "technician"]);
+  const me = await requireWriteRole(["owner", "manager", "technician"]);
   if (me.profile.role === "technician") {
     const owns = await technicianOwnsOrder(orderId, me.id);
     if (!owns) return { ok: false, error: "不是你的訂單" };
@@ -849,18 +831,27 @@ export async function removeOrderAdjustmentAction(
 
 /** Mark a batch of orders as settled (老闆娘 收到師傅回繳現金). */
 export async function settleOrdersAction(orderIds: string[]): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   if (orderIds.length === 0) return { ok: false, error: "未選擇訂單" };
   const supabase = await createClient();
-  const { error } = await supabase
+  // 只結算「待回繳/待對帳」(pending) 的訂單：擋掉竄改 id 清單把 not_required
+  // (卡/Line Pay) 或來路不明的單硬標成 settled 的路徑。
+  const { data: settled, error } = await supabase
     .from("orders")
     .update({ settlement_status: "settled" })
-    .in("id", orderIds);
+    .in("id", orderIds)
+    .eq("settlement_status", "pending")
+    .select("id");
   if (error) return { ok: false, error: error.message };
+  const settledIds = ((settled as { id: string }[] | null) ?? []).map((r) => r.id);
   await logAudit({
     action: "settlement.bulk_settle",
     target_type: "order",
-    payload: { ids: orderIds, count: orderIds.length },
+    payload: {
+      requested: orderIds.length,
+      settled: settledIds.length,
+      ids: settledIds,
+    },
   });
   revalidatePath("/payroll/settlements");
   revalidatePath("/payroll/transfers");
@@ -878,7 +869,7 @@ export async function updateOrderCollectorAction(
   orderId: string,
   technicianId: string,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   if (!technicianId) return { ok: false, error: "請選擇收款師傅" };
   const supabase = await createClient();
   const { error } = await supabase
@@ -900,7 +891,7 @@ export async function updateOrderCollectorAction(
 
 /** Revert a settled order back to pending (if 對帳發現錯誤). */
 export async function unsettleOrderAction(orderId: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase
     .from("orders")

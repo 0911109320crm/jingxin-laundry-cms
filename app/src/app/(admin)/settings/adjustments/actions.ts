@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/dal";
+import { requireWriteRole } from "@/lib/dal";
 import { typeForCategory } from "./categories";
 
 const AdjustmentSchema = z.object({
@@ -28,7 +28,7 @@ function toRow(data: {
 }
 
 export async function createAdjustment(fd: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = AdjustmentSchema.safeParse({
     name: fd.get("name"),
     category: fd.get("category"),
@@ -45,7 +45,7 @@ export async function createAdjustment(fd: FormData): Promise<Res> {
 }
 
 export async function updateAdjustment(id: string, fd: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = AdjustmentSchema.safeParse({
     name: fd.get("name"),
     category: fd.get("category"),
@@ -65,7 +65,7 @@ export async function updateAdjustment(id: string, fd: FormData): Promise<Res> {
 }
 
 export async function deleteAdjustment(id: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase
     .from("adjustment_items")

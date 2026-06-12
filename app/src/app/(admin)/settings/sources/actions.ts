@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/dal";
+import { requireWriteRole } from "@/lib/dal";
 
 const SourceSchema = z.object({
   name: z.string().min(1, "請填名稱").max(40),
@@ -14,7 +14,7 @@ const SourceSchema = z.object({
 export type Res = { ok: true } | { ok: false; error: string };
 
 export async function createSource(formData: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = SourceSchema.safeParse({
     name: formData.get("name"),
     sort_order: formData.get("sort_order") ?? 0,
@@ -29,7 +29,7 @@ export async function createSource(formData: FormData): Promise<Res> {
 }
 
 export async function updateSource(id: string, formData: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = SourceSchema.safeParse({
     name: formData.get("name"),
     sort_order: formData.get("sort_order") ?? 0,
@@ -47,7 +47,7 @@ export async function updateSource(id: string, formData: FormData): Promise<Res>
 }
 
 export async function deleteSource(id: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase.from("customer_sources").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };

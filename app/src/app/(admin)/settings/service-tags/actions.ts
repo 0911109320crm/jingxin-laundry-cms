@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/dal";
+import { requireWriteRole } from "@/lib/dal";
 
 const TagSchema = z.object({
   category: z.enum(["washing_vertical", "washing_drum", "ac_split", "mattress"]),
@@ -15,7 +15,7 @@ const TagSchema = z.object({
 export type Res = { ok: true } | { ok: false; error: string };
 
 export async function createServiceTag(formData: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = TagSchema.safeParse({
     category: formData.get("category"),
     label: formData.get("label"),
@@ -31,7 +31,7 @@ export async function createServiceTag(formData: FormData): Promise<Res> {
 }
 
 export async function updateServiceTag(id: string, formData: FormData): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = TagSchema.partial({ category: true }).safeParse({
     label: formData.get("label"),
     sort_order: formData.get("sort_order") ?? 0,
@@ -49,7 +49,7 @@ export async function updateServiceTag(id: string, formData: FormData): Promise<
 }
 
 export async function deleteServiceTag(id: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase.from("service_tag_presets").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };

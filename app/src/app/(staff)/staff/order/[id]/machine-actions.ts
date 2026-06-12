@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/dal";
+import { requireWriteRole } from "@/lib/dal";
 import { ALL_MACHINE_TYPES } from "@/lib/validators/customer";
 
 export type Res = { ok: true; machineId?: string } | { ok: false; error: string };
@@ -33,7 +33,7 @@ export async function updateMachineByStaff(input: {
   model: string | null;
   code: string | null;
 }): Promise<Res> {
-  await requireRole(["technician", "owner", "manager"]);
+  await requireWriteRole(["technician", "owner", "manager"]);
   const parsed = UpdateSchema.safeParse(input);
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0].message };
@@ -64,7 +64,7 @@ export async function createMachineForOrderItem(input: {
   code: string | null;
   address_id?: string | null;
 }): Promise<Res> {
-  await requireRole(["technician", "owner", "manager"]);
+  await requireWriteRole(["technician", "owner", "manager"]);
   const parsed = CreateSchema.safeParse(input);
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0].message };

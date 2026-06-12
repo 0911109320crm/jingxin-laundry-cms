@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth, requireRole } from "@/lib/dal";
+import { requireAuth, requireRole, requireWriteRole } from "@/lib/dal";
 import { CustomerSchema, type CustomerInput } from "@/lib/validators/customer";
 import { logAudit } from "@/lib/audit";
 
@@ -19,7 +19,7 @@ export async function mergeAddressesAction(
   keepId: string,
   mergeIds: string[],
 ): Promise<{ ok: true; movedOrders: number } | { ok: false; error: string }> {
-  const me = await requireRole(["owner", "manager"]);
+  const me = await requireWriteRole(["owner", "manager"]);
   const ids = Array.from(new Set(mergeIds.filter((x) => x && x !== keepId)));
   if (!keepId || ids.length === 0) {
     return { ok: false, error: "請選擇要保留的地址與至少一筆要併入的地址" };
@@ -128,7 +128,7 @@ const QuickAddressSchema = z.object({
 export async function addCustomerAddressAction(
   input: z.infer<typeof QuickAddressSchema>,
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = QuickAddressSchema.safeParse(input);
   if (!parsed.success)
     return { ok: false, error: parsed.error.issues[0].message };
@@ -225,7 +225,7 @@ export async function updateCustomerSourceAction(
   customerId: string,
   sourceId: string | null,
 ): Promise<ActionResult> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase
     .from("customers")
@@ -239,7 +239,7 @@ export async function updateCustomerSourceAction(
 export async function createCustomerAction(
   input: CustomerInput,
 ): Promise<ActionResult> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = CustomerSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "資料錯誤" };
@@ -321,7 +321,7 @@ export async function updateCustomerAction(
   id: string,
   input: CustomerInput,
 ): Promise<ActionResult> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const parsed = CustomerSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "資料錯誤" };
@@ -446,7 +446,7 @@ export async function updateCustomerAction(
 }
 
 export async function deleteCustomerAction(id: string): Promise<ActionResult> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
 
   // 先檢查是否還有訂單引用此客戶——外鍵會擋下，但原始 SQL 錯誤對使用者是天書，
@@ -482,7 +482,7 @@ export async function checkDuplicateAddressAction(
   address: string,
   excludeCustomerId?: string,
 ): Promise<DuplicateAddressResult> {
-  await requireRole(["owner", "manager"]);
+  await requireRole(["owner", "manager"]); // 純讀取（查重複地址），readonly 查帳帳號可用
   const trimmed = address.trim();
   if (!trimmed || trimmed.length < 3) return null;
 

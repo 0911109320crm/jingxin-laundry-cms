@@ -111,15 +111,12 @@ export default async function StaffHome({
   const me = await getCurrentUser();
   if (!me) redirect("/login");
 
-  // ── 老闆娘 / RC / 主管 預覽某師傅 PWA：?as=<techId> ──
-  // 防越權：是否能以他人身份預覽，完全由「真實登入者的角色/旗標」決定，不信任網址參數。
-  // 可預覽者＝owner / manager / can_view_all(主管級)。
-  // ⚠ can_view_all 視為「主管級」權限：能看全部+預覽他人(含金額)，勿隨便給一般師傅。
+  // ── 老闆娘 / RC 預覽某師傅 PWA：?as=<techId> ──
+  // 防越權：是否能以他人身份預覽，完全由「真實登入者的角色」決定，不信任網址參數。
+  // 可預覽者＝owner / manager。can_view_all 只給「看全部排班」，不得預覽他人金額/PII。
   const sp = await searchParams;
   const isPrivileged =
-    me.profile.role === "owner" ||
-    me.profile.role === "manager" ||
-    Boolean(me.profile.can_view_all);
+    me.profile.role === "owner" || me.profile.role === "manager";
   const asId =
     typeof sp.as === "string" && UUID_RE.test(sp.as) ? sp.as : null;
   // 被 /demo/pwa 預覽框 iframe 嵌入時隱藏後台入口卡（防巢狀遞迴＋切換列重複）

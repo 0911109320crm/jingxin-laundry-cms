@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireRole, getCurrentUser } from "@/lib/dal";
+import { requireWriteRole, getCurrentUser } from "@/lib/dal";
 import { fetchPayroll } from "@/lib/payroll";
 
 const MonthSchema = z.string().regex(/^\d{4}-\d{2}$/, "月份格式錯誤");
@@ -19,7 +19,7 @@ export async function finalizeTechMonth(
   technicianId: string,
   monthStr: string,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const me = await getCurrentUser();
   if (!me) return { ok: false, error: "未登入" };
 
@@ -65,7 +65,7 @@ export async function unfinalizeTechMonth(
   technicianId: string,
   monthStr: string,
 ): Promise<Res> {
-  await requireRole(["owner"]);
+  await requireWriteRole(["owner"]);
 
   const monthParse = MonthSchema.safeParse(monthStr);
   if (!monthParse.success)
@@ -88,7 +88,7 @@ export async function unfinalizeTechMonth(
 export async function finalizeAllTechsForMonth(
   monthStr: string,
 ): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
-  await requireRole(["owner"]);
+  await requireWriteRole(["owner"]);
 
   const monthParse = MonthSchema.safeParse(monthStr);
   if (!monthParse.success)

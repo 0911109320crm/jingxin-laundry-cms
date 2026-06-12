@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole, getCurrentUser } from "@/lib/dal";
+import { requireWriteRole, getCurrentUser } from "@/lib/dal";
 
 export type Res = { ok: true } | { ok: false; error: string };
 
 export async function markReminderSent(id: string): Promise<Res> {
-  const me = await requireRole(["owner", "manager"]);
+  const me = await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase
     .from("reminders")
@@ -25,7 +25,7 @@ export async function markReminderSent(id: string): Promise<Res> {
 }
 
 export async function markReminderSkipped(id: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase
     .from("reminders")
@@ -38,7 +38,7 @@ export async function markReminderSkipped(id: string): Promise<Res> {
 }
 
 export async function refreshReminders(): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase.rpc("refresh_annual_reminders");
   if (error) return { ok: false, error: error.message };

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/dal";
+import { requireWriteRole } from "@/lib/dal";
 import { logAudit } from "@/lib/audit";
 
 export type Res = { ok: true } | { ok: false; error: string };
@@ -17,7 +17,7 @@ export async function setTechnicianLeave(
   dateStr: string,
   period: LeavePeriod,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   if (!technicianId || !dateStr) return { ok: false, error: "缺少師傅或日期" };
   if (!["full", "am", "pm"].includes(period))
     return { ok: false, error: "時段錯誤" };
@@ -61,7 +61,7 @@ export async function removeTechnicianLeave(
   technicianId: string,
   dateStr: string,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   if (!technicianId || !dateStr) return { ok: false, error: "缺少師傅或日期" };
   const supabase = await createClient();
   const { error } = await supabase

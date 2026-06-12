@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/dal";
+import { requireWriteRole } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 
 type Res = { ok: boolean; error?: string; realId?: string };
@@ -12,7 +12,7 @@ export async function addTechnicianExpenseAction(
   name: string,
   amount: number,
 ): Promise<Res> {
-  const me = await requireRole(["owner", "manager"]);
+  const me = await requireWriteRole(["owner", "manager"]);
   const trimmed = name.trim();
   if (!trimmed) return { ok: false, error: "請填支出項目名稱" };
   if (!Number.isFinite(amount) || amount < 0)
@@ -36,7 +36,7 @@ export async function addTechnicianExpenseAction(
 
 /** 刪除一筆代墊支出。 */
 export async function removeTechnicianExpenseAction(id: string): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase
     .from("technician_expenses")
@@ -52,7 +52,7 @@ export async function setExpenseReimbursedAction(
   id: string,
   reimbursed: boolean,
 ): Promise<Res> {
-  await requireRole(["owner", "manager"]);
+  await requireWriteRole(["owner", "manager"]);
   const supabase = await createClient();
   const { error } = await supabase
     .from("technician_expenses")
