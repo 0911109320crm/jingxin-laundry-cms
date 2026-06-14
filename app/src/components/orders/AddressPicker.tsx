@@ -35,15 +35,18 @@ export function AddressPicker({
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
+  // 用 pointerdown 而非 mousedown：iOS Safari 對「點非互動元素的空白處」不會送 mousedown，
+  // 在 iPad 上會讓下拉浮層關不掉、蓋住下方欄位攔截觸控（建單頁 iPad 卡死的根因）。
+  // pointerdown 在桌機/觸控皆可靠觸發；點到面板內的結果按鈕時 contains() 為真不會誤關。
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
-    window.addEventListener("mousedown", handler);
-    return () => window.removeEventListener("mousedown", handler);
+    window.addEventListener("pointerdown", handler);
+    return () => window.removeEventListener("pointerdown", handler);
   }, [open]);
 
   const selected = addresses.find((a) => a.id === value) ?? null;
