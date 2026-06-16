@@ -105,6 +105,9 @@ export function PendingPanel({ orders }: { orders: PendingOrder[] }) {
   }, [orders.map((o) => o.id).join(",")]);
 
   return (
+    // id 供月曆 eventDragStop 判斷「拖回待派工」的放置範圍；拖曳中由 CalendarView
+    // 加上 .pending-dropzone-active 高亮這塊。
+    <div id="calendar-pending-dropzone" className="rounded-2xl transition-colors">
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -205,5 +208,6 @@ export function PendingPanel({ orders }: { orders: PendingOrder[] }) {
         )}
       </CardBody>
     </Card>
+    </div>
   );
 }

@@ -494,6 +494,15 @@ export function CustomerForm({
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   <Field label="類型">
                     <Select {...register(`machines.${idx}.type`)}>
+                      {/* 舊機器型別（washing_machine / air_conditioner 等）不在新細分清單裡，
+                          若不補這個選項，原生 select 找不到對應值會顯示空白、看起來像「沒這台機器」。
+                          有舊值時先補一個對應選項，老闆娘可維持原樣或順手改成細分類型。 */}
+                      {machineType &&
+                        !(MACHINE_TYPES as readonly string[]).includes(machineType) && (
+                          <option value={machineType}>
+                            {MACHINE_TYPE_LABEL[machineType] ?? machineType}
+                          </option>
+                        )}
                       {MACHINE_TYPES.map((t) => (
                         <option key={t} value={t}>
                           {MACHINE_TYPE_LABEL[t]}

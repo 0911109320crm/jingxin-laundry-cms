@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth, requireRole, requireWriteRole } from "@/lib/dal";
-import { CustomerSchema, type CustomerInput } from "@/lib/validators/customer";
+import {
+  CustomerSchema,
+  type CustomerInput,
+  ALL_MACHINE_TYPES,
+} from "@/lib/validators/customer";
 import { logAudit } from "@/lib/audit";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -172,6 +176,61 @@ export async function addCustomerAddressAction(
 
   revalidatePath(`/customers/${parsed.data.customer_id}`);
   return { ok: true, id: (data as { id: string }).id };
+}
+
+/** 在訂單表單裡 inline 新增一台機器，回傳整台機器物件供前端直接塞入下拉並選用 */
+export type QuickMachine = {
+  id: string;
+  type: string;
+  brand: string | null;
+  model: string | null;
+  sub_type: string | null;
+  address_id: string | null;
+};
+
+const QuickMachineSchema = z.object({
+  customer_id: z.string().uuid(),
+  type: z.enum(ALL_MACHINE_TYPES),
+  brand: z.string().max(40).optional().nullable(),
+  model: z.string().max(80).optional().nullable(),
+  address_id: z.string().uuid().optional().nullable(),
+  note: z.string().max(200).optional().nullable(),
+});
+
+export async function addCustomerMachineAction(
+  input: z.infer<typeof QuickMachineSchema>,
+): Promise<{ ok: true; machine: QuickMachine } | { ok: false; error: string }> {
+  await requireWriteRole(["owner", "manager"]);
+  const parsed = QuickMachineSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("machines")
+    .insert({
+      customer_id: parsed.data.customer_id,
+      type: parsed.data.type,
+      brand: parsed.data.brand?.trim() || null,
+      model: parsed.data.model?.trim() || null,
+      address_id: parsed.data.address_id || null,
+      note: parsed.data.note?.trim() || null,
+    })
+    .select("id, type, brand, model, sub_type, address_id")
+    .single();
+  if (error || !data) {
+    return { ok: false, error: error?.message ?? "新增機器失敗" };
+  }
+
+  await logAudit({
+    action: "customer.add_machine",
+    target_type: "customer",
+    target_id: parsed.data.customer_id,
+    payload: { type: parsed.data.type, brand: parsed.data.brand ?? null },
+  });
+
+  revalidatePath(`/customers/${parsed.data.customer_id}`);
+  return { ok: true, machine: data as QuickMachine };
 }
 
 export type CustomerPickerResult = {

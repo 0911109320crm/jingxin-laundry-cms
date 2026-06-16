@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -152,6 +152,28 @@ function findFreeSlot(
   };
 }
 
+// 觸控放開時座標在 changedTouches，不在 clientX/clientY；要同時兼容滑鼠與觸控，
+// 否則平板上拿不到放置座標、「拖回待派工」必失效（Gemini 提醒的雷區）。
+function pointFromJsEvent(
+  js: MouseEvent | TouchEvent | null | undefined,
+): { x: number; y: number } | null {
+  if (!js) return null;
+  const t = (js as TouchEvent).changedTouches;
+  if (t && t.length > 0) return { x: t[0].clientX, y: t[0].clientY };
+  const m = js as MouseEvent;
+  if (typeof m.clientX === "number") return { x: m.clientX, y: m.clientY };
+  return null;
+}
+
+const PENDING_DROPZONE_ID = "calendar-pending-dropzone";
+
+function pointInPendingPanel(pt: { x: number; y: number }): boolean {
+  const el = document.getElementById(PENDING_DROPZONE_ID);
+  if (!el) return false;
+  const r = el.getBoundingClientRect();
+  return pt.x >= r.left && pt.x <= r.right && pt.y >= r.top && pt.y <= r.bottom;
+}
+
 type ActionTarget = { id: string; customer: string };
 
 const LEAVE_PERIOD_LABEL: Record<CalendarLeave["period"], string> = {
@@ -176,6 +198,8 @@ export function CalendarView({
   const [actionTarget, setActionTarget] = useState<ActionTarget | null>(null);
   const [reasonOpen, setReasonOpen] = useState(false);
   const [reason, setReason] = useState("");
+  // 拖曳結束時若落在「待派工」面板上，標記此旗標，讓接著觸發的 eventDrop 取消改期、改走回待派工。
+  const droppedOnPendingRef = useRef(false);
 
   const closeAll = () => {
     setActionTarget(null);
@@ -325,8 +349,33 @@ export function CalendarView({
         events={allEvents}
         editable
         droppable
+        // 平板觸控要長按才進入拖曳（否則手指輕滑會被當成捲動）；250ms 兼顧反應與誤觸。
+        longPressDelay={250}
+        eventLongPressDelay={250}
+        selectLongPressDelay={250}
         eventDisplay="block"
         displayEventTime={false}
+        eventDragStart={(info) => {
+          if (info.event.extendedProps.isLeave) return;
+          document
+            .getElementById(PENDING_DROPZONE_ID)
+            ?.classList.add("pending-dropzone-active");
+        }}
+        eventDragStop={(info) => {
+          const panel = document.getElementById(PENDING_DROPZONE_ID);
+          panel?.classList.remove("pending-dropzone-active");
+          if (info.event.extendedProps.isLeave) return;
+          const pt = pointFromJsEvent(info.jsEvent);
+          if (!pt || !pointInPendingPanel(pt)) return;
+          // 放在待派工面板上 → 回到待派工。標記旗標讓隨後的 eventDrop 略過改期。
+          droppedOnPendingRef.current = true;
+          const orderId = info.event.id;
+          startTransition(async () => {
+            const res = await unscheduleOrderAction(orderId);
+            if (!res.ok) alert(`回到待派工失敗：${res.error}`);
+            else router.refresh();
+          });
+        }}
         eventDidMount={(info) => {
           const tip = info.event.extendedProps.tooltip as string | undefined;
           if (tip) info.el.setAttribute("title", tip);
@@ -346,6 +395,12 @@ export function CalendarView({
           router.push(`/orders/new?date=${info.dateStr}T09:00&from=calendar`)
         }
         eventDrop={(info) => {
+          // 已在 eventDragStop 判定拖回待派工 → 不要再改期，讓事件回原位（router.refresh 後會消失）
+          if (droppedOnPendingRef.current) {
+            droppedOnPendingRef.current = false;
+            info.revert();
+            return;
+          }
           if (!info.event.start) {
             info.revert();
             return;
@@ -520,7 +575,7 @@ export function CalendarView({
                 type="button"
                 onClick={onCancel}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="absolute right-0.5 top-0.5 z-10 hidden h-4 w-4 items-center justify-center rounded bg-black/40 text-[10px] font-bold leading-none text-white hover:bg-red-600 group-hover:flex"
+                className="absolute right-0.5 top-0.5 z-10 flex h-4 w-4 items-center justify-center rounded bg-black/40 text-[10px] font-bold leading-none text-white hover:bg-red-600"
                 title="移出此排程"
               >
                 ×

@@ -29,6 +29,7 @@ import {
   previewOrderCodeAction,
 } from "@/app/(admin)/orders/actions";
 import { AddAddressDialog } from "@/components/orders/AddAddressDialog";
+import { AddMachineDialog } from "@/components/orders/AddMachineDialog";
 import { CustomerPicker } from "@/components/customers/CustomerPicker";
 import { updateCustomerSourceAction } from "@/app/(admin)/customers/actions";
 import { AddressPicker } from "@/components/orders/AddressPicker";
@@ -674,14 +675,14 @@ export function OrderForm({
               </div>
               <div
                 className={
-                  mode === "edit" || machines.length > 0
+                  mode === "edit" || machines.length > 0 || !!customerId
                     ? "grid grid-cols-1 gap-3 md:grid-cols-[1fr_140px]"
                     : "grid grid-cols-1 gap-3"
                 }
               >
                 {/* 5a：建單時若此客戶已登錄機器，老闆娘可直接帶入（不再只能選預設基本價）。
                     客戶沒登錄機器時（create 模式）就不顯示，維持精簡。 */}
-                {(mode === "edit" || machines.length > 0) && (
+                {(mode === "edit" || machines.length > 0 || !!customerId) && (
                   <Field
                     label={
                       mode === "create"
@@ -689,15 +690,30 @@ export function OrderForm({
                         : "機器（可選）"
                     }
                   >
-                    <Select {...register(`items.${idx}.machine_id`)}>
-                      <option value="">— 不指定機器 —</option>
-                      {machines.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {MACHINE_TYPE_LABEL[m.type as keyof typeof MACHINE_TYPE_LABEL] ?? m.type} ·{" "}
-                          {[m.brand, m.model].filter(Boolean).join(" ") || "未填型號"}
-                        </option>
-                      ))}
-                    </Select>
+                    <div className="flex gap-2">
+                      <div className="min-w-0 flex-1">
+                        <Select {...register(`items.${idx}.machine_id`)}>
+                          <option value="">— 不指定機器 —</option>
+                          {machines.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {MACHINE_TYPE_LABEL[m.type as keyof typeof MACHINE_TYPE_LABEL] ?? m.type} ·{" "}
+                              {[m.brand, m.model].filter(Boolean).join(" ") || "未填型號"}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      {customerId && (
+                        <AddMachineDialog
+                          customerId={customerId}
+                          addresses={addresses}
+                          defaultAddressId={watchedAddressId || null}
+                          onSaved={(machine) => {
+                            setMachines((prev) => [...prev, machine]);
+                            setValue(`items.${idx}.machine_id`, machine.id);
+                          }}
+                        />
+                      )}
+                    </div>
                     {(() => {
                       const selectedMachineId = watchedItems?.[idx]?.machine_id;
                       if (!selectedMachineId) return null;

@@ -90,6 +90,12 @@
   outline-offset: -3px;
   transition: background-color 0.08s ease;
 }
+/* 從月曆把訂單往「待派工」面板拖時，高亮該面板提示可放下回到待派工。 */
+#calendar-pending-dropzone.pending-dropzone-active {
+  outline: 3px dashed #f59e0b; /* amber-500 */
+  outline-offset: -3px;
+  background-color: #fffbeb; /* amber-50 */
+}
 .calendar-wrapper .fc-daygrid-day-top {
   display: flex;
   align-items: center;
