@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -152,28 +152,6 @@ function findFreeSlot(
   };
 }
 
-// 觸控放開時座標在 changedTouches，不在 clientX/clientY；要同時兼容滑鼠與觸控，
-// 否則平板上拿不到放置座標、「拖回待派工」必失效（Gemini 提醒的雷區）。
-function pointFromJsEvent(
-  js: MouseEvent | TouchEvent | null | undefined,
-): { x: number; y: number } | null {
-  if (!js) return null;
-  const t = (js as TouchEvent).changedTouches;
-  if (t && t.length > 0) return { x: t[0].clientX, y: t[0].clientY };
-  const m = js as MouseEvent;
-  if (typeof m.clientX === "number") return { x: m.clientX, y: m.clientY };
-  return null;
-}
-
-const PENDING_DROPZONE_ID = "calendar-pending-dropzone";
-
-function pointInPendingPanel(pt: { x: number; y: number }): boolean {
-  const el = document.getElementById(PENDING_DROPZONE_ID);
-  if (!el) return false;
-  const r = el.getBoundingClientRect();
-  return pt.x >= r.left && pt.x <= r.right && pt.y >= r.top && pt.y <= r.bottom;
-}
-
 type ActionTarget = { id: string; customer: string };
 
 const LEAVE_PERIOD_LABEL: Record<CalendarLeave["period"], string> = {
@@ -198,13 +176,16 @@ export function CalendarView({
   const [actionTarget, setActionTarget] = useState<ActionTarget | null>(null);
   const [reasonOpen, setReasonOpen] = useState(false);
   const [reason, setReason] = useState("");
-  // 拖曳結束時若落在「待派工」面板上，標記此旗標，讓接著觸發的 eventDrop 取消改期、改走回待派工。
-  const droppedOnPendingRef = useRef(false);
 
   const closeAll = () => {
     setActionTarget(null);
     setReasonOpen(false);
     setReason("");
+  };
+
+  const handleViewDetail = () => {
+    if (!actionTarget) return;
+    router.push(`/orders/${actionTarget.id}?from=calendar`);
   };
 
   const handleUnschedule = () => {
@@ -355,27 +336,6 @@ export function CalendarView({
         selectLongPressDelay={250}
         eventDisplay="block"
         displayEventTime={false}
-        eventDragStart={(info) => {
-          if (info.event.extendedProps.isLeave) return;
-          document
-            .getElementById(PENDING_DROPZONE_ID)
-            ?.classList.add("pending-dropzone-active");
-        }}
-        eventDragStop={(info) => {
-          const panel = document.getElementById(PENDING_DROPZONE_ID);
-          panel?.classList.remove("pending-dropzone-active");
-          if (info.event.extendedProps.isLeave) return;
-          const pt = pointFromJsEvent(info.jsEvent);
-          if (!pt || !pointInPendingPanel(pt)) return;
-          // 放在待派工面板上 → 回到待派工。標記旗標讓隨後的 eventDrop 略過改期。
-          droppedOnPendingRef.current = true;
-          const orderId = info.event.id;
-          startTransition(async () => {
-            const res = await unscheduleOrderAction(orderId);
-            if (!res.ok) alert(`回到待派工失敗：${res.error}`);
-            else router.refresh();
-          });
-        }}
         eventDidMount={(info) => {
           const tip = info.event.extendedProps.tooltip as string | undefined;
           if (tip) info.el.setAttribute("title", tip);
@@ -389,18 +349,17 @@ export function CalendarView({
             );
             return;
           }
-          router.push(`/orders/${info.event.id}?from=calendar`);
+          // 一般訂單：輕點跳出動作選單（查看詳情 / 回待派工 / 取消），不直接進詳情。
+          // 平板上這個點擊目標大又穩，回待派工/取消比戳角落小按鈕好按。
+          setActionTarget({
+            id: info.event.id,
+            customer: (info.event.extendedProps.customer as string) ?? "此訂單",
+          });
         }}
         dateClick={(info) =>
           router.push(`/orders/new?date=${info.dateStr}T09:00&from=calendar`)
         }
         eventDrop={(info) => {
-          // 已在 eventDragStop 判定拖回待派工 → 不要再改期，讓事件回原位（router.refresh 後會消失）
-          if (droppedOnPendingRef.current) {
-            droppedOnPendingRef.current = false;
-            info.revert();
-            return;
-          }
           if (!info.event.start) {
             info.revert();
             return;
@@ -565,21 +524,8 @@ export function CalendarView({
           const customer = arg.event.extendedProps.customer as string;
           const area = arg.event.extendedProps.area as string | null;
           const serviceSummary = arg.event.extendedProps.service_summary as string | null;
-          const onCancel = (e: React.MouseEvent) => {
-            e.stopPropagation();
-            setActionTarget({ id: arg.event.id, customer });
-          };
           return (
-            <div className="group relative px-1 text-xs leading-tight space-y-0.5">
-              <button
-                type="button"
-                onClick={onCancel}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="absolute right-0.5 top-0.5 z-10 flex h-4 w-4 items-center justify-center rounded bg-black/40 text-[10px] font-bold leading-none text-white hover:bg-red-600"
-                title="移出此排程"
-              >
-                ×
-              </button>
+            <div className="px-1 text-xs leading-tight space-y-0.5">
               <div className="font-semibold tracking-tight">
                 {start}–{end}
               </div>
@@ -612,9 +558,19 @@ export function CalendarView({
                   「{actionTarget.customer}」這筆排程
                 </h2>
                 <p className="mt-1 text-sm text-zinc-500">
-                  要怎麼處理？
+                  要做什麼？
                 </p>
                 <div className="mt-4 grid gap-2">
+                  <button
+                    type="button"
+                    onClick={handleViewDetail}
+                    className="w-full rounded-lg border border-brand-300 bg-brand-50 px-4 py-2.5 text-left text-sm font-medium text-brand-900 hover:bg-brand-100"
+                  >
+                    <span className="block">📋 查看訂單詳情</span>
+                    <span className="block text-xs font-normal text-brand-700/80">
+                      看完整內容、品項、金額、收款
+                    </span>
+                  </button>
                   <button
                     type="button"
                     onClick={handleUnschedule}
