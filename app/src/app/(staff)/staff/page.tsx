@@ -144,8 +144,12 @@ export default async function StaffHome({
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
   // 顯示範圍：往前 7 天 + 未來所有未完成 (避免載入過多歷史)
+  // 另外：所有「尚未結算 (settlement_status=pending)」的單一律顯示，不論日期，
+  // 否則 7 天前還沒收款/回繳的舊單師傅在清單點不到（但「待回繳現金」卡片仍會計入）。
   const startWindow = new Date();
   startWindow.setDate(startWindow.getDate() - 7);
+  // PostgREST：.gte 與 .or 之間是 AND，要達成「(近7天+未來) OR (未結算)」需把兩者寫進同一個 .or()。
+  const windowOrUnsettled = `scheduled_at.gte.${startWindow.toISOString()},settlement_status.eq.pending`;
 
   let orders: StaffOrder[] = [];
   let pendingCashRows: { total: number }[] = [];
@@ -175,8 +179,8 @@ export default async function StaffHome({
             .select(STAFF_ORDER_SELECT)
             .in("id", orderIds)
             .not("scheduled_at", "is", null)
-            .gte("scheduled_at", startWindow.toISOString())
             .not("status", "in", "(cancelled)")
+            .or(windowOrUnsettled)
             .order("scheduled_at")
         : Promise.resolve({ data: [] as unknown }),
       admin
@@ -209,8 +213,8 @@ export default async function StaffHome({
         .from("orders")
         .select(STAFF_ORDER_SELECT)
         .not("scheduled_at", "is", null)
-        .gte("scheduled_at", startWindow.toISOString())
         .not("status", "in", "(cancelled)")
+        .or(windowOrUnsettled)
         .order("scheduled_at"),
       // 只算「我收的現金」：collected_by=我，或舊資料(null)回退（RLS 已限定我有參與的單）
       supabase
@@ -339,7 +343,7 @@ export default async function StaffHome({
           <CardBody className="flex flex-col items-center gap-2 py-12">
             <CalendarDays className="h-10 w-10 text-zinc-300" />
             <p className="text-sm text-zinc-500">近期沒有案件</p>
-            <p className="text-xs text-zinc-400">（顯示 7 天前到未來所有未取消）</p>
+            <p className="text-xs text-zinc-400">（顯示 7 天前到未來，以及所有尚未收款結算的舊單）</p>
           </CardBody>
         </Card>
       ) : (
