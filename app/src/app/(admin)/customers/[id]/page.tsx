@@ -586,7 +586,10 @@ export default async function CustomerDetailPage({
                         <StatusBadge value={o.status} />
                         <PaymentBadge value={o.payment_method} />
                         {o.settlement_status !== "not_required" && (
-                          <SettlementBadge value={o.settlement_status} />
+                          <SettlementBadge
+                            value={o.settlement_status}
+                            payment={o.payment_method}
+                          />
                         )}
                       </div>
                       <div className="flex items-center gap-3">

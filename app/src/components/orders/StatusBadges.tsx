@@ -57,7 +57,21 @@ export function PaymentBadge({ value }: { value: Payment }) {
   );
 }
 
-export function SettlementBadge({ value }: { value: Settlement }) {
+// 「待回繳」是現金語意（師傅手上有現金要交回）。匯款/刷卡/LINE Pay 沒有現金在師傅手上，
+// 錢直接進公司帳戶，pending 真正的意思是「老闆娘還沒對帳確認入帳」，所以這些付款方式顯示「待對帳」。
+const NONCASH_PENDING = new Set<Payment>(["transfer", "card", "line_pay"]);
+
+export function SettlementBadge({
+  value,
+  payment,
+}: {
+  value: Settlement;
+  payment?: Payment;
+}) {
+  const label =
+    value === "pending" && payment && NONCASH_PENDING.has(payment)
+      ? "待對帳"
+      : SETTLEMENT_STATUS_LABEL[value];
   return (
     <span
       className={cn(
@@ -65,7 +79,7 @@ export function SettlementBadge({ value }: { value: Settlement }) {
         SETTLEMENT_COLOR[value],
       )}
     >
-      {SETTLEMENT_STATUS_LABEL[value]}
+      {label}
     </span>
   );
 }

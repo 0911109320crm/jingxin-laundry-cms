@@ -440,7 +440,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: SP })
                         {!isCancelledTab && (
                           <>
                             <PaymentBadge value={o.payment_method} />
-                            <SettlementBadge value={o.settlement_status} />
+                            <SettlementBadge
+                              value={o.settlement_status}
+                              payment={o.payment_method}
+                            />
                           </>
                         )}
                       </div>

@@ -286,7 +286,10 @@ export default async function StaffOrderPage({
           <StatusBadge value={o.status} />
           <PaymentBadge value={o.payment_method} />
           {o.settlement_status !== "not_required" && (
-            <SettlementBadge value={o.settlement_status} />
+            <SettlementBadge
+              value={o.settlement_status}
+              payment={o.payment_method}
+            />
           )}
         </div>
         <p className="text-xs text-zinc-500">

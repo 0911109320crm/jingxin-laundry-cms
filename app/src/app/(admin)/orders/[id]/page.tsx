@@ -277,7 +277,10 @@ export default async function OrderDetailPage({
           <span className="font-mono text-xs text-zinc-900">{o.order_code}</span>
           <StatusBadge value={o.status} />
           <PaymentBadge value={o.payment_method} />
-          <SettlementBadge value={o.settlement_status} />
+          <SettlementBadge
+            value={o.settlement_status}
+            payment={o.payment_method}
+          />
           {o.payment_method === "transfer" && (
             <span className="rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
               {o.transfer_last5 ? `轉帳末五碼 ${o.transfer_last5}` : "轉帳·後五碼待補"}
