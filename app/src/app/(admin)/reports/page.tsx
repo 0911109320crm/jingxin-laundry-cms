@@ -314,7 +314,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
           </form>
           <a href={`/api/reports/export?${csvParams.toString()}`} target="_blank">
             <Button variant="outline" size="sm">
-              <Download className="h-4 w-4" /> 匯出 CSV
+              <Download className="h-4 w-4" /> 匯出 Excel
             </Button>
           </a>
         </div>

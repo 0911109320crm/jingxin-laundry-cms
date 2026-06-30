@@ -1,17 +1,9 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/dal";
+import { buildXlsxResponse } from "@/lib/xlsx-export";
 
 export const dynamic = "force-dynamic";
-
-function csvEscape(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  const s = String(v);
-  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
-}
 
 type Row = {
   id: string;
@@ -137,8 +129,7 @@ export async function GET(req: NextRequest) {
     "備註",
   ];
 
-  const lines: string[] = [header.map(csvEscape).join(",")];
-  for (const c of rows) {
+  const dataRows: (string | number)[][] = rows.map((c) => {
     const liveAddresses = c.addresses.filter((a) => !a.merged_into_id);
     const main =
       liveAddresses.find((a) => a.is_default) ?? liveAddresses[0] ?? null;
@@ -157,34 +148,27 @@ export async function GET(req: NextRequest) {
       .filter((p) => !p.is_primary)
       .map((p) => `${p.phone}${p.label ? `（${p.label}）` : ""}`)
       .join(" / ");
-    lines.push(
-      [
-        c.code,
-        c.name,
-        c.phone,
-        extras,
-        main?.county ?? "",
-        main?.district ?? "",
-        main?.address ?? "",
-        c.source?.name ?? "",
-        c.created_at ? c.created_at.slice(0, 10) : "",
-        machineLabel,
-        c.note ?? "",
-      ]
-        .map(csvEscape)
-        .join(","),
-    );
-  }
+    return [
+      c.code,
+      c.name,
+      c.phone,
+      extras,
+      main?.county ?? "",
+      main?.district ?? "",
+      main?.address ?? "",
+      c.source?.name ?? "",
+      c.created_at ? c.created_at.slice(0, 10) : "",
+      machineLabel,
+      c.note ?? "",
+    ];
+  });
 
-  const bom = "﻿";
-  const body = bom + lines.join("\r\n");
-  const filename = `客戶名單_${new Date().toISOString().slice(0, 10)}.csv`;
+  const filename = `客戶名單_${new Date().toISOString().slice(0, 10)}.xlsx`;
 
-  return new Response(body, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
-      "Cache-Control": "no-store",
-    },
+  return buildXlsxResponse({
+    header,
+    rows: dataRows,
+    sheetName: "客戶名單",
+    filename,
   });
 }

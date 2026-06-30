@@ -2,17 +2,9 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/dal";
 import { computeCustomerStats, formatMonths } from "@/lib/customer-stats";
+import { buildXlsxResponse } from "@/lib/xlsx-export";
 
 export const dynamic = "force-dynamic";
-
-function csvEscape(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  const s = String(v);
-  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
-}
 
 type Row = {
   id: string;
@@ -120,44 +112,36 @@ export async function GET(req: NextRequest) {
     "備註",
   ];
 
-  const lines: string[] = [header.map(csvEscape).join(",")];
-  for (const o of out) {
+  const dataRows: (string | number)[][] = out.map((o) => {
     const c = o.row;
     const liveAddresses = (c.addresses ?? []).filter((a) => !a.merged_into_id);
     const main =
       liveAddresses.find((a) => a.is_default) ?? liveAddresses[0] ?? null;
-    lines.push(
-      [
-        o.neverPurchased ? "僅建檔・未消費" : "舊客・已沉睡",
-        c.code,
-        c.name,
-        c.phone,
-        main?.county ?? "",
-        main?.district ?? "",
-        main?.address ?? "",
-        c.source?.name ?? "",
-        c.created_at ? c.created_at.slice(0, 10) : "",
-        o.lastServiceAt ? o.lastServiceAt.slice(0, 10) : "（從未消費）",
-        o.neverPurchased ? "（從未消費）" : formatMonths(o.monthsSinceLast),
-        o.doneCount,
-        c.note ?? "",
-      ]
-        .map(csvEscape)
-        .join(","),
-    );
-  }
+    return [
+      o.neverPurchased ? "僅建檔・未消費" : "舊客・已沉睡",
+      c.code,
+      c.name,
+      c.phone,
+      main?.county ?? "",
+      main?.district ?? "",
+      main?.address ?? "",
+      c.source?.name ?? "",
+      c.created_at ? c.created_at.slice(0, 10) : "",
+      o.lastServiceAt ? o.lastServiceAt.slice(0, 10) : "（從未消費）",
+      o.neverPurchased ? "（從未消費）" : formatMonths(o.monthsSinceLast),
+      o.doneCount,
+      c.note ?? "",
+    ];
+  });
 
-  const bom = "﻿";
-  const body = bom + lines.join("\r\n");
   const filename = `未消費客戶名單_${years}年_${new Date()
     .toISOString()
-    .slice(0, 10)}.csv`;
+    .slice(0, 10)}.xlsx`;
 
-  return new Response(body, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
-      "Cache-Control": "no-store",
-    },
+  return buildXlsxResponse({
+    header,
+    rows: dataRows,
+    sheetName: `${years}年未消費`,
+    filename,
   });
 }

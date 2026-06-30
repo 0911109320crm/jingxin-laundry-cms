@@ -196,7 +196,7 @@ export default async function CustomersPage({
             target="_blank"
           >
             <Button variant="outline">
-              匯出 CSV
+              匯出 Excel
             </Button>
           </a>
           <a href="/api/customers/inactive-export?years=1" target="_blank">

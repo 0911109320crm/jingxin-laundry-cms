@@ -7,6 +7,7 @@ import {
   PAYMENT_METHOD_LABEL,
   SETTLEMENT_STATUS_LABEL,
 } from "@/lib/validators/order";
+import { buildXlsxResponse } from "@/lib/xlsx-export";
 
 export const dynamic = "force-dynamic";
 
@@ -50,15 +51,6 @@ function dateRange(range: Range, from?: string, to?: string) {
       break;
   }
   return { start, end };
-}
-
-function csvEscape(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  const s = String(v);
-  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
 }
 
 function fmtDateTime(iso: string | null): string {
@@ -160,8 +152,7 @@ export async function GET(req: NextRequest) {
     "取消原因",
   ];
 
-  const lines: string[] = [header.map(csvEscape).join(",")];
-  for (const r of rows) {
+  const dataRows: (string | number)[][] = rows.map((r) => {
     const services = r.items
       .map((it) => it.service?.name)
       .filter(Boolean)
@@ -173,33 +164,27 @@ export async function GET(req: NextRequest) {
           .filter(Boolean),
       ),
     ).join(" / ");
-    lines.push(
-      [
-        r.order_code,
-        fmtDateTime(r.scheduled_at),
-        fmtDateTime(r.service_at),
-        ORDER_STATUS_LABEL[r.status] ?? r.status,
-        PAYMENT_METHOD_LABEL[r.payment_method as keyof typeof PAYMENT_METHOD_LABEL] ?? r.payment_method,
-        SETTLEMENT_STATUS_LABEL[r.settlement_status as keyof typeof SETTLEMENT_STATUS_LABEL] ?? r.settlement_status,
-        r.customer?.code ?? "",
-        r.customer?.name ?? "",
-        r.customer?.phone ?? "",
-        r.address?.county ?? "",
-        r.address?.district ?? "",
-        r.address?.address ?? "",
-        services,
-        techs,
-        r.subtotal,
-        r.adjustments_total,
-        r.total,
-        r.cancellation_reason ?? "",
-      ].map(csvEscape).join(","),
-    );
-  }
-
-  // BOM + content so Excel opens UTF-8 correctly
-  const bom = "﻿";
-  const body = bom + lines.join("\r\n");
+    return [
+      r.order_code,
+      fmtDateTime(r.scheduled_at),
+      fmtDateTime(r.service_at),
+      ORDER_STATUS_LABEL[r.status] ?? r.status,
+      PAYMENT_METHOD_LABEL[r.payment_method as keyof typeof PAYMENT_METHOD_LABEL] ?? r.payment_method,
+      SETTLEMENT_STATUS_LABEL[r.settlement_status as keyof typeof SETTLEMENT_STATUS_LABEL] ?? r.settlement_status,
+      r.customer?.code ?? "",
+      r.customer?.name ?? "",
+      r.customer?.phone ?? "",
+      r.address?.county ?? "",
+      r.address?.district ?? "",
+      r.address?.address ?? "",
+      services,
+      techs,
+      r.subtotal,
+      r.adjustments_total,
+      r.total,
+      r.cancellation_reason ?? "",
+    ];
+  });
 
   const RANGE_LABEL: Record<Range, string> = {
     today: "今日",
@@ -214,13 +199,12 @@ export async function GET(req: NextRequest) {
     .slice(0, 10);
   const filename = `營運報表_${RANGE_LABEL[range]}_${start
     .toISOString()
-    .slice(0, 10)}_至_${endLabel}.csv`;
+    .slice(0, 10)}_至_${endLabel}.xlsx`;
 
-  return new Response(body, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
-      "Cache-Control": "no-store",
-    },
+  return buildXlsxResponse({
+    header,
+    rows: dataRows,
+    sheetName: "營運報表",
+    filename,
   });
 }
