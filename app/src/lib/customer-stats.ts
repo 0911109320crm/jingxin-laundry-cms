@@ -8,6 +8,8 @@ export type CustomerStats = {
   totalSpent: number;
   doneCount: number;
   cancelCount: number;
+  /** 未完成但未取消的訂單數（pending / scheduled / in_progress）＝已預約／處理中、即將到府服務 */
+  activeCount: number;
   lastServiceAt: string | null;
   monthsSinceLast: number | null;
   avgCycleMonths: number | null;
@@ -23,6 +25,10 @@ export function computeCustomerStats(
     .reduce((s, o) => s + Number(o.total), 0);
   const doneCount = orders.filter((o) => o.status === "done").length;
   const cancelCount = orders.filter((o) => o.status === "cancelled").length;
+  // 已預約／處理中但尚未完成的訂單（非 done、非 cancelled）＝客戶已在約洗，不算未消費
+  const activeCount = orders.filter(
+    (o) => o.status !== "done" && o.status !== "cancelled",
+  ).length;
 
   const doneOrders = orders
     .filter((o) => o.status === "done" && o.service_at)
@@ -52,6 +58,7 @@ export function computeCustomerStats(
     totalSpent,
     doneCount,
     cancelCount,
+    activeCount,
     lastServiceAt,
     monthsSinceLast,
     avgCycleMonths,

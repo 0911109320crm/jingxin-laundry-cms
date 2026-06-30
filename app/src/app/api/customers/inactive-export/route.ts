@@ -61,6 +61,9 @@ export async function GET(req: NextRequest) {
   const out: Out[] = [];
   for (const c of rows) {
     const stats = computeCustomerStats(c.orders ?? []);
+    // 已預約／處理中（已排案、待派工…）的客戶代表正在約洗或即將到府服務，
+    // 不該出現在「未消費／需回訪」名單裡，整筆跳過。
+    if (stats.activeCount > 0) continue;
     const neverPurchased = stats.doneCount === 0;
     if (neverPurchased) {
       // 只建檔、從未完成消費 → 一律納入
