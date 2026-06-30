@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
     const main =
       liveAddresses.find((a) => a.is_default) ?? liveAddresses[0] ?? null;
     return [
-      o.neverPurchased ? "僅建檔・未消費" : "舊客・已沉睡",
+      o.neverPurchased ? "僅建檔・從未消費" : "舊客",
       c.code,
       c.name,
       c.phone,
