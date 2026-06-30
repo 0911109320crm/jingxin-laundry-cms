@@ -190,7 +190,7 @@ export default async function CustomersPage({
             支援姓名 / 電話（含副電話）/ 編號 / 備註全域搜尋，可按縣市鄉鎮篩選
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
           <a
             href={`/api/customers/export?q=${encodeURIComponent(q)}&county=${encodeURIComponent(county)}&district=${encodeURIComponent(district)}`}
             target="_blank"
@@ -198,6 +198,12 @@ export default async function CustomersPage({
             <Button variant="outline">
               匯出 CSV
             </Button>
+          </a>
+          <a href="/api/customers/inactive-export?years=1" target="_blank">
+            <Button variant="outline">匯出 1 年未消費</Button>
+          </a>
+          <a href="/api/customers/inactive-export?years=2" target="_blank">
+            <Button variant="outline">匯出 2 年未消費</Button>
           </a>
           {!me.profile.readonly && (
             <Link href="/customers/new">
