@@ -37,18 +37,28 @@ export async function GET(req: NextRequest) {
   const thresholdMonths = Math.round(years * 12);
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("customers")
-    .select(
-      `id, code, name, phone, note, created_at,
-       source:customer_sources(name),
-       addresses:customer_addresses(county, district, address, is_default, merged_into_id),
-       orders(status, service_at, total)`,
-    )
-    .order("created_at", { ascending: false })
-    .limit(5000);
-
-  const rows = (data as Row[] | null) ?? [];
+  // Supabase/PostgREST 單次查詢有 1000 筆硬上限，`.limit(5000)` 會被默默砍成 1000，
+  // 導致只掃到「最新建檔的 1000 位」客戶、漏列其餘全部。改成分頁逐批抓到全撈完。
+  const PAGE = 1000;
+  const rows: Row[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("customers")
+      .select(
+        `id, code, name, phone, note, created_at,
+         source:customer_sources(name),
+         addresses:customer_addresses(county, district, address, is_default, merged_into_id),
+         orders(status, service_at, total)`,
+      )
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE - 1);
+    if (error) {
+      return new Response("Export failed", { status: 500 });
+    }
+    const batch = (data as unknown as Row[] | null) ?? [];
+    rows.push(...batch);
+    if (batch.length < PAGE) break;
+  }
 
   type Out = {
     row: Row;
