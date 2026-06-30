@@ -199,12 +199,29 @@ export default async function CustomersPage({
               匯出 Excel
             </Button>
           </a>
-          <a href="/api/customers/inactive-export?years=1" target="_blank">
-            <Button variant="outline">匯出 1 年未消費</Button>
-          </a>
-          <a href="/api/customers/inactive-export?years=2" target="_blank">
-            <Button variant="outline">匯出 2 年未消費</Button>
-          </a>
+          <form
+            action="/api/customers/inactive-export"
+            method="get"
+            target="_blank"
+            className="flex items-center gap-1.5"
+          >
+            <Input
+              name="years"
+              type="number"
+              min="1"
+              step="1"
+              defaultValue="1"
+              inputMode="numeric"
+              aria-label="幾年沒洗"
+              className="w-16 text-center"
+            />
+            <span className="whitespace-nowrap text-sm text-zinc-500">
+              年沒洗
+            </span>
+            <Button type="submit" variant="outline">
+              匯出未消費
+            </Button>
+          </form>
           {!me.profile.readonly && (
             <Link href="/customers/new">
               <Button>

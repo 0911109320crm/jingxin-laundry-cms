@@ -30,10 +30,11 @@ export async function GET(req: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  // years=1 → 12 個月沒消費；years=2 → 24 個月沒消費
+  // years 由老闆娘自訂（以年為單位，可含小數）；years=1 → 12 個月、years=2.5 → 30 個月沒消費
   const yearsRaw = Number(req.nextUrl.searchParams.get("years"));
-  const years = yearsRaw === 2 ? 2 : 1;
-  const thresholdMonths = years * 12;
+  const years =
+    Number.isFinite(yearsRaw) && yearsRaw > 0 ? Math.min(yearsRaw, 50) : 1;
+  const thresholdMonths = Math.round(years * 12);
 
   const supabase = await createClient();
   const { data } = await supabase
