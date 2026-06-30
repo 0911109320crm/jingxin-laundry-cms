@@ -164,6 +164,8 @@ export function OrderForm({
 
   const itemArr = useFieldArray({ control, name: "items" });
   const adjArr = useFieldArray({ control, name: "adjustments" });
+  // 加減項名稱欄：哪些列正處於「其他（自訂）」手動輸入模式（以 field.id 記）
+  const [customAdjRows, setCustomAdjRows] = useState<Set<string>>(new Set());
   const customerId = useWatch({ control, name: "customer_id" });
   const watchedItems = useWatch({ control, name: "items" });
   const watchedAdjustments = useWatch({ control, name: "adjustments" });
@@ -814,40 +816,82 @@ export function OrderForm({
                 <Controller
                   control={control}
                   name={`adjustments.${idx}.name_snapshot`}
-                  render={({ field: f }) => (
-                    <Input
-                      list={`adj-suggestions-${watchedAdjustments?.[idx]?.type ?? "addon"}`}
-                      value={f.value ?? ""}
-                      onChange={(e) => {
-                        f.onChange(e.target.value);
-                        // auto-fill amount if matches a master item
-                        const item = adjustments.find(
-                          (a) => a.name === e.target.value,
-                        );
-                        if (item) {
-                          setValue(`adjustments.${idx}.amount`, item.default_amount);
-                          setValue(`adjustments.${idx}.adjustment_item_id`, item.id);
-                          setValue(`adjustments.${idx}.type`, item.type);
-                        }
-                      }}
-                      placeholder="例如：加大、拆壞零件、節慶折扣"
-                    />
-                  )}
+                  render={({ field: f }) => {
+                    const curType = watchedAdjustments?.[idx]?.type ?? "addon";
+                    const presets = adjustments.filter(
+                      (a) => a.type === curType,
+                    );
+                    const curName = f.value ?? "";
+                    const matchedPreset = presets.find(
+                      (a) => a.name === curName,
+                    );
+                    // 自訂模式：手動切過、或現值不在預設清單內（含舊資料）
+                    const isCustom =
+                      customAdjRows.has(field.id) ||
+                      (curName !== "" && !matchedPreset);
+                    if (isCustom) {
+                      return (
+                        <div className="space-y-1">
+                          <Input
+                            value={curName}
+                            onChange={(e) => f.onChange(e.target.value)}
+                            placeholder="自訂名稱"
+                          />
+                          <button
+                            type="button"
+                            className="text-xs text-brand-600 hover:underline"
+                            onClick={() => {
+                              setCustomAdjRows((prev) => {
+                                const next = new Set(prev);
+                                next.delete(field.id);
+                                return next;
+                              });
+                              f.onChange("");
+                            }}
+                          >
+                            ← 改用清單選擇
+                          </button>
+                        </div>
+                      );
+                    }
+                    return (
+                      <Select
+                        value={curName}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === "__custom__") {
+                            setCustomAdjRows((prev) =>
+                              new Set(prev).add(field.id),
+                            );
+                            f.onChange("");
+                            return;
+                          }
+                          f.onChange(v);
+                          const item = presets.find((a) => a.name === v);
+                          if (item) {
+                            setValue(
+                              `adjustments.${idx}.amount`,
+                              item.default_amount,
+                            );
+                            setValue(
+                              `adjustments.${idx}.adjustment_item_id`,
+                              item.id,
+                            );
+                            setValue(`adjustments.${idx}.type`, item.type);
+                          }
+                        }}
+                      >
+                        <option value="">請選擇…</option>
+                        {presets.map((a) => (
+                          <option key={a.id} value={a.name}>
+                            {a.name}
+                          </option>
+                        ))}
+                        <option value="__custom__">其他（自訂）…</option>
+                      </Select>
+                    );
+                  }}
                 />
-                <datalist id="adj-suggestions-addon">
-                  {adjustments
-                    .filter((a) => a.type === "addon")
-                    .map((a) => (
-                      <option key={a.id} value={a.name} />
-                    ))}
-                </datalist>
-                <datalist id="adj-suggestions-discount">
-                  {adjustments
-                    .filter((a) => a.type === "discount")
-                    .map((a) => (
-                      <option key={a.id} value={a.name} />
-                    ))}
-                </datalist>
               </Field>
               <Field label="類型">
                 <Select {...register(`adjustments.${idx}.type`)}>
