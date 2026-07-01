@@ -825,70 +825,67 @@ export function OrderForm({
                     const matchedPreset = presets.find(
                       (a) => a.name === curName,
                     );
-                    // 自訂模式：手動切過、或現值不在預設清單內（含舊資料）
-                    const isCustom =
-                      customAdjRows.has(field.id) ||
-                      (curName !== "" && !matchedPreset);
-                    if (isCustom) {
-                      return (
-                        <div className="space-y-1">
+                    // 手動選了「其他（自訂）…」才進入自訂輸入模式
+                    const inCustom = customAdjRows.has(field.id);
+                    // 現值是清單外的自訂/舊資料名稱 → 額外塞一個選項讓它顯示為選中，
+                    // 這樣下拉永遠都在，隨時能直接改選別的預設，不必先刪字。
+                    const showCurrentAsOption =
+                      !inCustom && curName !== "" && !matchedPreset;
+                    return (
+                      <div className="space-y-1">
+                        <Select
+                          value={inCustom ? "__custom__" : curName}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === "__custom__") {
+                              setCustomAdjRows((prev) =>
+                                new Set(prev).add(field.id),
+                              );
+                              f.onChange("");
+                              return;
+                            }
+                            // 選了清單項目 → 離開自訂模式
+                            setCustomAdjRows((prev) => {
+                              if (!prev.has(field.id)) return prev;
+                              const next = new Set(prev);
+                              next.delete(field.id);
+                              return next;
+                            });
+                            f.onChange(v);
+                            const item = presets.find((a) => a.name === v);
+                            if (item) {
+                              setValue(
+                                `adjustments.${idx}.amount`,
+                                item.default_amount,
+                              );
+                              setValue(
+                                `adjustments.${idx}.adjustment_item_id`,
+                                item.id,
+                              );
+                              setValue(`adjustments.${idx}.type`, item.type);
+                            }
+                          }}
+                        >
+                          <option value="">請選擇…</option>
+                          {presets.map((a) => (
+                            <option key={a.id} value={a.name}>
+                              {a.name}
+                            </option>
+                          ))}
+                          {showCurrentAsOption && (
+                            <option value={curName}>{curName}（自訂）</option>
+                          )}
+                          <option value="__custom__">其他（自訂）…</option>
+                        </Select>
+                        {inCustom && (
                           <Input
                             value={curName}
                             onChange={(e) => f.onChange(e.target.value)}
                             placeholder="自訂名稱"
+                            autoFocus
                           />
-                          <button
-                            type="button"
-                            className="text-xs text-brand-600 hover:underline"
-                            onClick={() => {
-                              setCustomAdjRows((prev) => {
-                                const next = new Set(prev);
-                                next.delete(field.id);
-                                return next;
-                              });
-                              f.onChange("");
-                            }}
-                          >
-                            ← 改用清單選擇
-                          </button>
-                        </div>
-                      );
-                    }
-                    return (
-                      <Select
-                        value={curName}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === "__custom__") {
-                            setCustomAdjRows((prev) =>
-                              new Set(prev).add(field.id),
-                            );
-                            f.onChange("");
-                            return;
-                          }
-                          f.onChange(v);
-                          const item = presets.find((a) => a.name === v);
-                          if (item) {
-                            setValue(
-                              `adjustments.${idx}.amount`,
-                              item.default_amount,
-                            );
-                            setValue(
-                              `adjustments.${idx}.adjustment_item_id`,
-                              item.id,
-                            );
-                            setValue(`adjustments.${idx}.type`, item.type);
-                          }
-                        }}
-                      >
-                        <option value="">請選擇…</option>
-                        {presets.map((a) => (
-                          <option key={a.id} value={a.name}>
-                            {a.name}
-                          </option>
-                        ))}
-                        <option value="__custom__">其他（自訂）…</option>
-                      </Select>
+                        )}
+                      </div>
                     );
                   }}
                 />
