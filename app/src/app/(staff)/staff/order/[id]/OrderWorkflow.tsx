@@ -745,14 +745,24 @@ export function OrderWorkflow({
                   </p>
                 </>
               ) : (
-                <Button
-                  size="lg"
-                  className="w-full"
-                  disabled={pending}
-                  onClick={openComplete}
-                >
-                  <CheckCircle2 className="h-5 w-5" /> 完成此案件
-                </Button>
+                <div className="space-y-2">
+                  {/* 收款完成後最容易漏按這一步 → 明顯提醒 + 放大按鈕 */}
+                  <div className="flex items-center justify-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-center text-sm font-semibold text-green-800">
+                    <span className="text-lg motion-safe:animate-bounce">👇</span>
+                    最後一步！收完款要按這顆才算完成
+                  </div>
+                  <Button
+                    size="lg"
+                    disabled={pending}
+                    onClick={openComplete}
+                    className="h-16 w-full rounded-xl bg-green-600 text-lg font-bold shadow-lg shadow-green-600/30 ring-2 ring-green-300 ring-offset-2 hover:bg-green-700 active:scale-[0.99]"
+                  >
+                    <CheckCircle2 className="h-7 w-7" /> 完成此案件
+                  </Button>
+                  <p className="text-center text-xs text-green-700">
+                    完成後才會登記促銷積分、拍照與備註
+                  </p>
+                </div>
               )
             ) : (
               <>
