@@ -283,6 +283,25 @@ export function OrderForm({
   );
   const total = subtotal + adjTotal;
 
+  // 防呆：偵測「重複的相同品項」(同服務項目 + 同機器/皆未指定)。
+  // 沒填機器型號時兩列長得一樣，最容易多按一項卻沒發現而把金額算多(曾發生 007 單多算一台冷氣)。
+  const duplicateGroups = (() => {
+    const counts = new Map<string, number>();
+    for (const it of watchedItems ?? []) {
+      if (!it?.service_item_id) continue;
+      const key = `${it.service_item_id}__${it.machine_id ?? "none"}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const out: string[] = [];
+    for (const [key, n] of counts) {
+      if (n < 2) continue;
+      const svcId = key.split("__")[0];
+      const name = serviceLookup.find((s) => s.id === svcId)?.name ?? "品項";
+      out.push(`${name} ×${n}`);
+    }
+    return out;
+  })();
+
   // 品項級加減項用：把某 index 的品項顯示成可讀標籤（給「套用對象」下拉）
   const itemLabel = (i: number) => {
     const it = watchedItems?.[i];
@@ -590,6 +609,12 @@ export function OrderForm({
           </div>
         )}
         <CardBody className="space-y-3">
+          {duplicateGroups.length > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              ⚠ 這張單有<b>重複的相同品項</b>:{duplicateGroups.join("、")}。
+              若客戶真的有多台請忽略;若是不小心多按的,請按該項右上角刪除,以免金額算多。
+            </div>
+          )}
           {itemArr.fields.map((field, idx) => (
             <div
               key={field.id}
