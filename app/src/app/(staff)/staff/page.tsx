@@ -210,15 +210,43 @@ export default async function StaffHome({
     kpiRow = (kpiQ.data as { value: unknown } | null) ?? null;
   } else {
     const supabase = await createClient();
+    // 效能：先抓「我有參與的訂單 id」(走 idx_items_technician，只掃我的幾十筆)，
+    // 再用 .in(id) 查訂單。否則讓 RLS 對全部 2 萬多筆訂單逐列跑 EXISTS 判斷，
+    // 光訂單清單就要 ~1.2 秒(且隨資料量惡化)。與「預覽他人」路徑同一套作法。
+    const { data: myItemRows, error: itemErr } = await supabase
+      .from("order_items")
+      .select("order_id")
+      .eq("technician_id", me.id);
+    if (itemErr) {
+      const code = (itemErr as { code?: string }).code ?? "";
+      const msg = (itemErr as { message?: string }).message ?? "";
+      if (
+        code === "PGRST301" ||
+        code === "401" ||
+        /jwt|token|expired|unauthor/i.test(msg)
+      ) {
+        redirect("/login?next=/staff&reason=session");
+      }
+    }
+    const myOrderIds = [
+      ...new Set(
+        ((myItemRows as { order_id: string }[] | null) ?? []).map(
+          (r) => r.order_id,
+        ),
+      ),
+    ];
     // RLS scopes orders to ones where this user has any order_item
     const [a, b, c, d] = await Promise.all([
-      supabase
-        .from("orders")
-        .select(STAFF_ORDER_SELECT)
-        .not("scheduled_at", "is", null)
-        .not("status", "in", "(cancelled)")
-        .or(windowOrUnsettled)
-        .order("scheduled_at"),
+      myOrderIds.length
+        ? supabase
+            .from("orders")
+            .select(STAFF_ORDER_SELECT)
+            .in("id", myOrderIds)
+            .not("scheduled_at", "is", null)
+            .not("status", "in", "(cancelled)")
+            .or(windowOrUnsettled)
+            .order("scheduled_at")
+        : Promise.resolve({ data: [] as unknown, error: null }),
       // 只算「我收的現金」：collected_by=我，或舊資料(null)回退（RLS 已限定我有參與的單）
       supabase
         .from("orders")
