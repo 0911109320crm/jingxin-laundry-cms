@@ -280,9 +280,11 @@ export default async function StaffOrderPage({
         </div>
       )}
 
-      <header className="space-y-2">
+      <header className="space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-sm text-zinc-500">{o.order_code}</span>
+          <span className="text-base font-semibold text-zinc-800">
+            預約：{formatDateTime(o.scheduled_at)}
+          </span>
           <StatusBadge value={o.status} />
           <PaymentBadge value={o.payment_method} />
           {o.settlement_status !== "not_required" && (
@@ -292,9 +294,7 @@ export default async function StaffOrderPage({
             />
           )}
         </div>
-        <p className="text-xs text-zinc-500">
-          預約：{formatDateTime(o.scheduled_at)}
-        </p>
+        <p className="font-mono text-xs text-zinc-400">{o.order_code}</p>
       </header>
 
       {o.customer && (
