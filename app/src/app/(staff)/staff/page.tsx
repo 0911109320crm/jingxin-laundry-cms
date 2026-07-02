@@ -155,6 +155,9 @@ export default async function StaffHome({
   let pendingCashRows: { total: number }[] = [];
   let myPromosThisMonth: { points_snapshot: number }[] = [];
   let kpiRow: { value: unknown } | null = null;
+  // 訂單查詢錯誤（工作階段失效/網路）要跟「真的沒有案件」區分開，
+  // 否則會誤顯示「近期沒有案件」把師傅卡死（只能登出重登）。
+  let loadError: string | null = null;
 
   if (impersonating) {
     // 預覽模式：用 admin client 繞過 RLS，但明確以該師傅的 technician_id 過濾
@@ -237,6 +240,18 @@ export default async function StaffHome({
         .eq("key", "monthly_promotion_kpi")
         .maybeSingle(),
     ]);
+    // 訂單查詢失敗時不能當成「沒有案件」。工作階段失效(JWT過期/refresh token 競用)
+    // 直接導回登入自動重建 session；其他錯誤顯示可重試的錯誤卡，不再是假的空清單。
+    if (a.error) {
+      const code = (a.error as { code?: string }).code ?? "";
+      const msg = (a.error as { message?: string }).message ?? "";
+      const isAuthError =
+        code === "PGRST301" ||
+        code === "401" ||
+        /jwt|token|expired|unauthor/i.test(msg);
+      if (isAuthError) redirect("/login?next=/staff&reason=session");
+      loadError = msg || "載入失敗";
+    }
     orders = (a.data as StaffOrder[] | null) ?? [];
     pendingCashRows = (b.data as { total: number }[] | null) ?? [];
     myPromosThisMonth = (c.data as { points_snapshot: number }[] | null) ?? [];
@@ -338,7 +353,25 @@ export default async function StaffHome({
         </Card>
       </Link>
 
-      {groups.length === 0 ? (
+      {loadError ? (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardBody className="flex flex-col items-center gap-3 py-10 text-center">
+            <CalendarDays className="h-10 w-10 text-amber-400" />
+            <p className="text-sm font-medium text-amber-800">
+              案件載入失敗，請重新整理
+            </p>
+            <p className="text-xs text-amber-600">
+              （可能是網路或連線逾時，並非沒有案件；若持續失敗請登出再登入）
+            </p>
+            <a
+              href="/staff"
+              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white active:bg-amber-700"
+            >
+              重新整理
+            </a>
+          </CardBody>
+        </Card>
+      ) : groups.length === 0 ? (
         <Card>
           <CardBody className="flex flex-col items-center gap-2 py-12">
             <CalendarDays className="h-10 w-10 text-zinc-300" />
