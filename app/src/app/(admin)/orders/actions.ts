@@ -9,6 +9,15 @@ import { logAudit } from "@/lib/audit";
 
 export type Res = { ok: true; id?: string } | { ok: false; error: string };
 
+/**
+ * 後台改到訂單時，同步讓師傅 PWA 的清單與該訂單頁快取失效。
+ * 否則老闆娘在後台改了金額/品項/排程，師傅手機仍顯示舊資料(曾造成後台 7600、師傅畫面 10100)。
+ */
+function revalidateStaff(orderId?: string) {
+  revalidatePath("/staff");
+  if (orderId) revalidatePath(`/staff/order/${orderId}`);
+}
+
 /** Fetch a customer's addresses and machines for the order form. */
 export async function getCustomerContext(customerId: string) {
   await requireRole(["owner", "manager"]); // 純讀取，readonly 查帳帳號可用
@@ -76,6 +85,7 @@ export async function unscheduleOrderAction(orderId: string): Promise<Res> {
   revalidatePath("/calendar");
   revalidatePath("/orders");
   revalidatePath(`/orders/${orderId}`);
+  revalidateStaff(orderId);
   return { ok: true };
 }
 
@@ -107,6 +117,7 @@ export async function cancelOrderAction(
   revalidatePath("/calendar");
   revalidatePath("/orders");
   revalidatePath(`/orders/${orderId}`);
+  revalidateStaff(orderId);
   return { ok: true };
 }
 
@@ -235,6 +246,7 @@ export async function createOrderAction(input: OrderInput): Promise<Res> {
 
   revalidatePath("/orders");
   revalidatePath("/calendar");
+  revalidateStaff(orderRow.id);
   return { ok: true, id: orderRow.id };
 }
 
@@ -294,6 +306,7 @@ export async function updateOrderAction(
   revalidatePath("/orders");
   revalidatePath(`/orders/${id}`);
   revalidatePath("/calendar");
+  revalidateStaff(id);
   return { ok: true, id };
 }
 
@@ -305,6 +318,7 @@ export async function deleteOrderAction(id: string): Promise<Res> {
   await logAudit({ action: "order.delete", target_type: "order", target_id: id });
   revalidatePath("/orders");
   revalidatePath("/calendar");
+  revalidateStaff(id);
   // 不再 redirect，交給呼叫端決定（編輯頁要跳列表、列表頁要保持當前 filter）
   return { ok: true };
 }
@@ -345,6 +359,7 @@ export async function quickScheduleAction(input: {
   revalidatePath("/calendar");
   revalidatePath("/orders");
   revalidatePath("/dashboard");
+  revalidateStaff(input.orderId);
   return { ok: true };
 }
 
@@ -362,6 +377,7 @@ export async function rescheduleOrderAction(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/calendar");
   revalidatePath(`/orders/${id}`);
+  revalidateStaff(id);
   return { ok: true };
 }
 
