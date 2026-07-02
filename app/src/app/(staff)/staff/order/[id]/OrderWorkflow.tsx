@@ -179,9 +179,6 @@ export function OrderWorkflow({
   const adjSum = (list: Adjustment[]) =>
     list.reduce((s, a) => s + (a.type === "addon" ? a.amount : -a.amount), 0);
   const localAdjTotal = adjSum(localAdj);
-  // 拆「品項級」與「訂單級」分別加總，讓小計看得出折扣歸在哪
-  const itemAdjTotal = adjSum(localAdj.filter((a) => a.order_item_id));
-  const orderAdjTotal = adjSum(localAdj.filter((a) => !a.order_item_id));
   const localTotal = subtotal + localAdjTotal;
   const totalPoints = localPromos.reduce((s, p) => s + p.points_snapshot, 0);
 
@@ -441,32 +438,7 @@ export function OrderWorkflow({
               <span>項目小計（牌價）</span>
               <span className="font-mono">{formatNTD(subtotal)}</span>
             </div>
-            {itemAdjTotal !== 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-zinc-600">品項加減（綁定品項）</span>
-                <span
-                  className={`font-mono ${
-                    itemAdjTotal > 0 ? "text-orange-700" : "text-emerald-700"
-                  }`}
-                >
-                  {itemAdjTotal > 0 ? "+" : ""}
-                  {formatNTD(itemAdjTotal)}
-                </span>
-              </div>
-            )}
-            {orderAdjTotal !== 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-zinc-600">訂單加減（整單）</span>
-                <span
-                  className={`font-mono ${
-                    orderAdjTotal > 0 ? "text-orange-700" : "text-emerald-700"
-                  }`}
-                >
-                  {orderAdjTotal > 0 ? "+" : ""}
-                  {formatNTD(orderAdjTotal)}
-                </span>
-              </div>
-            )}
+            <AdjustmentSummaryLines list={localAdj} itemNameById={itemNameById} />
             <div className="flex items-center justify-between border-t border-zinc-200 pt-2">
               <span className="text-sm font-medium text-zinc-800">應收總額</span>
               <span className="font-mono text-3xl font-bold text-brand-700">
@@ -651,32 +623,7 @@ export function OrderWorkflow({
             <span>項目小計（牌價）</span>
             <span className="font-mono">{formatNTD(subtotal)}</span>
           </div>
-          {itemAdjTotal !== 0 && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-600">品項加減（綁定品項）</span>
-              <span
-                className={`font-mono ${
-                  itemAdjTotal > 0 ? "text-orange-700" : "text-emerald-700"
-                }`}
-              >
-                {itemAdjTotal > 0 ? "+" : ""}
-                {formatNTD(itemAdjTotal)}
-              </span>
-            </div>
-          )}
-          {orderAdjTotal !== 0 && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-600">訂單加減（整單）</span>
-              <span
-                className={`font-mono ${
-                  orderAdjTotal > 0 ? "text-orange-700" : "text-emerald-700"
-                }`}
-              >
-                {orderAdjTotal > 0 ? "+" : ""}
-                {formatNTD(orderAdjTotal)}
-              </span>
-            </div>
-          )}
+          <AdjustmentSummaryLines list={localAdj} itemNameById={itemNameById} />
           <div className="flex items-center justify-between border-t border-zinc-200 pt-2">
             <span className="text-sm font-medium text-zinc-800">應收總額</span>
             <span className="font-mono text-3xl font-bold text-brand-700">
@@ -1303,6 +1250,61 @@ function CompletionTagsAndNotesEditor({
         </p>
       </section>
     </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 應收總額卡內的加減項逐筆明細：每個金額都帶名稱＋套用對象，
+// 讓師傅一眼看懂「+250 是什麼」，能直接跟客人說明（不再只顯示加總）。
+function AdjustmentSummaryLines({
+  list,
+  itemNameById,
+}: {
+  list: Adjustment[];
+  itemNameById: Map<string, string>;
+}) {
+  if (list.length === 0) return null;
+  return (
+    <div className="space-y-1 border-t border-zinc-100 pt-1.5">
+      {list.map((a) => (
+        <div
+          key={a.id}
+          className="flex items-start justify-between gap-2 text-sm"
+        >
+          <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-zinc-700">
+            <span
+              className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
+                a.type === "addon"
+                  ? "bg-orange-100 text-orange-700"
+                  : "bg-emerald-100 text-emerald-700"
+              }`}
+            >
+              {a.type === "addon" ? "加" : "折"}
+            </span>
+            {a.name_snapshot}
+            <span
+              className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
+                a.order_item_id
+                  ? "bg-sky-100 text-sky-700"
+                  : "bg-zinc-200 text-zinc-600"
+              }`}
+            >
+              {a.order_item_id
+                ? itemNameById.get(a.order_item_id) ?? "品項"
+                : "整單"}
+            </span>
+          </span>
+          <span
+            className={`shrink-0 font-mono ${
+              a.type === "addon" ? "text-orange-700" : "text-emerald-700"
+            }`}
+          >
+            {a.type === "addon" ? "+" : "-"}
+            {formatNTD(a.amount)}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
 
