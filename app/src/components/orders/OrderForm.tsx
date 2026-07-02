@@ -611,8 +611,9 @@ export function OrderForm({
         <CardBody className="space-y-3">
           {duplicateGroups.length > 0 && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              ⚠ 這張單有<b>重複的相同品項</b>:{duplicateGroups.join("、")}。
-              若客戶真的有多台請忽略;若是不小心多按的,請按該項右上角刪除,以免金額算多。
+              ⚠ 這張單有<b>尚未登錄型號的機器</b>:{duplicateGroups.join("、")}。
+              因為沒填型號,系統無法分辨是不同機器還是重複多按。請確認台數是否正確;
+              若確實有多台,建議補上品牌/型號以利區分,若是多按的請按該項右上角刪除。
             </div>
           )}
           {itemArr.fields.map((field, idx) => (
